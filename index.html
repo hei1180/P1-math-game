@@ -2,27 +2,21 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <!-- CRITICAL: This meta tag prevents zooming on mobile/iPad devices -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Math Market Mini-Boss</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Base & Anti-Zoom Styles */
-        * { touch-action: manipulation; } /* Prevents double-tap zoom on elements */
+        * { touch-action: manipulation; } 
         body { 
             font-family: 'Comic Sans MS', 'Chalkboard SE', sans-serif; 
             background-color: #fef08a; 
-            position: fixed; /* Locks body to screen */
-            top: 0; left: 0; right: 0; bottom: 0;
-            overflow: hidden; /* Prevents any scrolling */
-            user-select: none; 
-            -webkit-user-select: none;
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            overflow: hidden; user-select: none; -webkit-user-select: none;
         }
 
         .bubbly-btn { transition: transform 0.1s; box-shadow: 0 6px 0 rgba(0,0,0,0.2); }
         .bubbly-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
         
-        /* Responsive Ten Frames */
         .ten-frame { display: grid; grid-template-columns: repeat(5, 1fr); gap: 2px; background: white; padding: 4px; border-radius: 8px; border: 3px solid #cbd5e1; margin: 0 auto; }
         .frame-cell { width: 32px; height: 32px; border: 2px dashed #94a3b8; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
         @media (min-width: 768px) {
@@ -30,7 +24,6 @@
             .ten-frame { gap: 6px; padding: 8px; border-radius: 16px; border-width: 5px; }
         }
 
-        /* Animations */
         @keyframes pop { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
         .animate-pop { animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
         @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
@@ -45,40 +38,47 @@
         }
         @keyframes feverShake {
             0%, 100% { transform: translate(0, 0) rotate(0deg); }
-            25% { transform: translate(1px, 1px) rotate(0.5deg); }
-            50% { transform: translate(-1px, -1px) rotate(-0.5deg); }
-            75% { transform: translate(-1px, 1px) rotate(0deg); }
+            25% { transform: translate(3px, 3px) rotate(1.5deg); }
+            50% { transform: translate(-3px, -3px) rotate(-1.5deg); }
+            75% { transform: translate(-3px, 3px) rotate(0deg); }
         }
         @keyframes textPulse {
-            0% { transform: scale(1); opacity: 0.7; }
-            50% { transform: scale(1.1); opacity: 1; text-shadow: 0 0 20px #ef4444; }
-            100% { transform: scale(1); opacity: 0.7; }
+            0% { transform: translateY(-50%) scale(1); opacity: 0.2; }
+            50% { transform: translateY(-50%) scale(1.1); opacity: 0.5; text-shadow: 0 0 20px #ef4444; }
+            100% { transform: translateY(-50%) scale(1); opacity: 0.2; }
         }
         .fever-mode {
-            animation: extremeFeverBg 0.4s infinite alternate, feverShake 0.2s infinite !important;
+            animation: extremeFeverBg 0.4s infinite alternate !important;
             border: 8px solid #ef4444 !important;
             box-shadow: inset 0 0 50px rgba(255,0,0,0.5);
         }
+        .fever-wiggle {
+            animation: feverShake 0.15s ease-in-out;
+        }
+        
+        /* Fever Text as a Background Watermark */
         #feverOverlayText {
-            display: none; position: absolute; top: 15%; left: 0; right: 0;
-            text-align: center; font-size: clamp(3rem, 10vw, 6rem); font-weight: 900;
-            color: #ffed4a; -webkit-text-stroke: 3px #ef4444; pointer-events: none;
-            z-index: 10; animation: textPulse 0.5s infinite; letter-spacing: 2px;
+            display: none; position: absolute; top: 50%; left: 0; right: 0;
+            transform: translateY(-50%);
+            text-align: center; font-size: clamp(3rem, 18vw, 8rem); font-weight: 900;
+            color: rgba(255, 237, 74, 0.7); -webkit-text-stroke: 3px rgba(239, 68, 68, 0.6); 
+            pointer-events: none; z-index: 1; /* Put it behind the game elements */
+            animation: textPulse 0.6s infinite; letter-spacing: 2px;
         }
 
-        /* Kahoot Style Rank Popup */
         #rankPopup { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 100; color: white; flex-direction: column; justify-content: center; align-items: center; }
         @keyframes slideUpFade { 0% { transform: translateY(50px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
         .rank-anim { font-size: clamp(3rem, 10vw, 6rem); font-weight: bold; color: #fbbf24; text-shadow: 0 6px 0 #b45309; animation: slideUpFade 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; text-align: center;}
 
-        /* Floating Particle VFX */
         @keyframes floatUp { 0% { transform: translateY(0) scale(1); opacity: 1; } 100% { transform: translateY(-60px) scale(1.8); opacity: 0; } }
         .particle { position: fixed; pointer-events: none; font-weight: 900; font-size: 2.5rem; color: #f97316; -webkit-text-stroke: 1px white; text-shadow: 3px 3px 0 rgba(0,0,0,0.2); animation: floatUp 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; z-index: 100; }
+        
+        /* Ensure elements stay above the watermark */
+        .game-layer { position: relative; z-index: 10; }
     </style>
 </head>
 <body class="h-[100dvh] w-full flex flex-col relative">
 
-    <!-- Screen 1: Login -->
     <div id="loginScreen" class="absolute inset-0 flex flex-col items-center justify-center bg-blue-400 z-50 p-4">
         <h1 class="text-4xl md:text-6xl font-bold text-white mb-8 text-center drop-shadow-lg leading-tight">🍎 Math Market 🐻</h1>
         <button id="loginBtn" class="bubbly-btn bg-white text-blue-500 font-bold text-xl md:text-2xl py-4 px-6 md:px-8 rounded-full border-4 border-blue-200 flex items-center justify-center gap-3 w-[90%] max-w-sm">
@@ -88,7 +88,6 @@
         <p class="text-white mt-4 font-bold">Welcome, Store Owner!</p>
     </div>
 
-    <!-- Screen 2: Main Menu -->
     <div id="menuScreen" class="hidden absolute inset-0 flex flex-col items-center justify-center bg-green-400 z-40 p-4">
         <button id="adminBtn" class="absolute top-4 right-4 bg-gray-800 text-white p-2 md:p-3 rounded-lg bubbly-btn font-bold">⚙️ Teacher</button>
         <h1 class="text-3xl md:text-5xl font-bold text-white mb-2 drop-shadow-md text-center leading-tight">Select Difficulty</h1>
@@ -101,33 +100,28 @@
         </div>
     </div>
 
-    <!-- Screen 3: Game Area (Flex Layout for universal fit) -->
     <div id="gameScreen" class="hidden h-full w-full flex flex-col bg-white overflow-hidden relative">
         <div id="feverOverlayText">🔥 FEVER x2! 🔥</div>
         
-        <!-- Header (Takes minimum space needed) -->
-        <div class="flex-none flex justify-between items-center p-2 md:p-4 bg-gray-100 border-b-4 border-gray-200">
+        <div class="flex-none flex justify-between items-center p-2 md:p-4 bg-gray-100 border-b-4 border-gray-200 game-layer">
             <div class="text-lg md:text-2xl font-bold text-gray-700">Time: <span id="timerDisplay" class="text-red-500">30</span>s</div>
             <div class="text-lg md:text-2xl font-bold text-gray-700">Score: <span id="scoreDisplay" class="text-yellow-500">0</span></div>
             <div class="text-sm md:text-xl font-bold text-purple-600 bg-purple-100 px-2 md:px-3 py-1 rounded-full">Combo: <span id="comboDisplay">0</span></div>
         </div>
 
-        <!-- Customer Area (Expands to fill available middle space) -->
-        <div class="flex-1 flex flex-col items-center justify-center bg-blue-50 relative p-2">
-            <div id="customerBubble" class="bg-white border-4 border-gray-800 px-4 py-3 md:p-6 rounded-3xl mb-2 md:mb-4 text-2xl md:text-4xl font-bold relative animate-pop text-center">
+        <div class="flex-1 flex flex-col items-center justify-center bg-blue-50/80 relative p-2 game-layer">
+            <div id="customerBubble" class="bg-white border-4 border-gray-800 px-4 py-3 md:p-6 rounded-3xl mb-2 md:mb-4 text-2xl md:text-4xl font-bold relative animate-pop text-center shadow-lg">
                 I need <span id="targetAmount" class="text-red-500 text-3xl md:text-5xl">5</span> <span id="targetItem">🍎</span>!
                 <div class="absolute -bottom-3 md:-bottom-4 left-1/2 transform -translate-x-1/2 w-4 h-4 bg-white border-b-4 border-r-4 border-gray-800 rotate-45"></div>
             </div>
-            <div class="text-6xl md:text-8xl">🐻</div>
+            <div class="text-6xl md:text-8xl drop-shadow-md">🐻</div>
         </div>
 
-        <!-- Counter Area (Takes only needed space, centers frames) -->
-        <div class="flex-none bg-orange-100 border-t-8 border-orange-300 p-2 md:p-4 flex flex-col items-center justify-center gap-2 min-h-[80px]">
+        <div class="flex-none bg-orange-100 border-t-8 border-orange-300 p-2 md:p-4 flex flex-col items-center justify-center gap-2 min-h-[80px] game-layer">
             <div id="tenFrameContainer" class="flex flex-wrap justify-center gap-2 md:gap-4 w-full"></div>
         </div>
 
-        <!-- Controls Area (Fixed bottom layout) -->
-        <div class="flex-none p-3 md:p-4 bg-orange-200 flex justify-center gap-2 md:gap-6 items-center">
+        <div class="flex-none p-3 md:p-4 bg-orange-200 flex justify-center gap-2 md:gap-6 items-center game-layer">
             <button id="undoBtn" class="bubbly-btn bg-gray-300 text-gray-700 font-bold text-sm md:text-xl py-2 md:py-3 px-3 md:px-6 rounded-xl md:rounded-2xl border-4 border-gray-400 hidden">↩️<br>Undo</button>
             
             <div class="flex flex-col items-center gap-1 md:gap-2">
@@ -142,13 +136,11 @@
         </div>
     </div>
 
-    <!-- Kahoot Rank Popup -->
     <div id="rankPopup">
         <h2 class="text-3xl md:text-5xl mb-4 text-center font-bold px-4">You finished the game!</h2>
         <div id="rankText" class="rank-anim px-4">Top 10!</div>
     </div>
 
-    <!-- Screen 4: Leaderboard -->
     <div id="leaderboardScreen" class="hidden absolute inset-0 flex flex-col items-center bg-purple-500 z-40 p-4 md:p-8 overflow-y-auto">
         <h1 class="text-4xl md:text-5xl font-bold text-white mb-4 md:mb-6 drop-shadow-md mt-4 text-center">🏆 Leaderboard</h1>
         <div class="bg-white rounded-3xl w-full max-w-md p-4 md:p-6 shadow-xl border-4 border-purple-300 mb-6">
@@ -160,7 +152,6 @@
         <button onclick="showMenu()" class="bubbly-btn bg-yellow-400 text-yellow-900 font-bold text-xl md:text-2xl py-3 px-8 rounded-full border-4 border-yellow-500 mb-8">Back to Menu</button>
     </div>
 
-    <!-- Admin PIN Modal -->
     <div id="adminModal" class="hidden absolute inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
         <div class="bg-white p-6 md:p-8 rounded-3xl w-full max-w-sm shadow-2xl">
             <div id="pinView">
@@ -208,7 +199,7 @@
         const provider = new GoogleAuthProvider();
 
         let playerInfo = { name: "Guest", uid: null, localHighScore: 0 };
-        let gameState = { mode: 'easy', score: 0, combo: 0, timeLeft: 30, timerId: null, isFever: false, currentAmount: 0, currentItem: '🍎', targetAmount: 0, clickHistory: [] };
+        let gameState = { mode: 'easy', score: 0, combo: 0, timeLeft: 30, timerId: null, isFever: false, feverTimeout: null, currentAmount: 0, currentItem: '🍎', targetAmount: 0, clickHistory: [] };
         let teacherSettings = { timeLimit: 30, unlockMedium: false, unlockHard: false };
 
         const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -245,6 +236,23 @@
             document.body.appendChild(el);
             setTimeout(() => el.remove(), 600);
         }
+        
+        function triggerWiggle() {
+            if (!gameState.isFever) return;
+            const screen = document.getElementById('gameScreen');
+            screen.classList.remove('fever-wiggle');
+            void screen.offsetWidth; // Trigger reflow
+            screen.classList.add('fever-wiggle');
+        }
+
+        function endFever() {
+            clearTimeout(gameState.feverTimeout);
+            gameState.isFever = false;
+            gameState.combo = 0;
+            document.getElementById('gameScreen').classList.remove('fever-mode', 'fever-wiggle');
+            document.getElementById('feverOverlayText').style.display = 'none';
+            updateUI();
+        }
 
         document.getElementById('loginBtn').addEventListener('click', () => {
             initAudio(); 
@@ -277,13 +285,13 @@
             if (mode === 'hard' && (playerInfo.localHighScore < 250 || !teacherSettings.unlockHard)) return;
 
             initAudio();
-            gameState.mode = mode; gameState.score = 0; gameState.combo = 0; gameState.timeLeft = teacherSettings.timeLimit; gameState.isFever = false;
+            gameState.mode = mode; gameState.score = 0; gameState.combo = 0; gameState.timeLeft = teacherSettings.timeLimit;
+            
+            endFever(); // Reset fever states securely
             
             document.getElementById('menuScreen').classList.add('hidden');
             document.getElementById('leaderboardScreen').classList.add('hidden');
             document.getElementById('gameScreen').classList.remove('hidden');
-            document.getElementById('feverOverlayText').style.display = 'none';
-            document.getElementById('gameScreen').classList.remove('fever-mode');
             
             document.getElementById('helperBtns').classList.toggle('hidden', mode === 'easy');
             document.getElementById('undoBtn').classList.remove('hidden');
@@ -325,11 +333,15 @@
             if (gameState.currentAmount + amount <= 40) { 
                 gameState.currentAmount += amount; gameState.clickHistory.push(amount); renderTenFrames(); playSound('click');
                 if (e && e.clientX) spawnParticle(e.clientX, e.clientY, amount);
+                triggerWiggle();
             }
         }
 
         document.getElementById('undoBtn').addEventListener('click', () => {
-            if (gameState.clickHistory.length > 0) { gameState.currentAmount -= gameState.clickHistory.pop(); renderTenFrames(); }
+            if (gameState.clickHistory.length > 0) { 
+                gameState.currentAmount -= gameState.clickHistory.pop(); renderTenFrames(); 
+                triggerWiggle();
+            }
         });
 
         function renderTenFrames() {
@@ -351,22 +363,31 @@
         }
 
         document.getElementById('giveBtn').addEventListener('pointerdown', () => {
+            triggerWiggle();
+            
             if (gameState.currentAmount === gameState.targetAmount) {
                 playSound('success'); gameState.combo++;
                 let points = gameState.mode === 'hard' ? 30 : (gameState.mode === 'medium' ? 20 : 10);
                 
                 if (gameState.combo >= 5) {
-                    gameState.isFever = true;
-                    document.getElementById('gameScreen').classList.add('fever-mode');
-                    document.getElementById('feverOverlayText').style.display = 'block';
+                    if (!gameState.isFever) {
+                        gameState.isFever = true;
+                        document.getElementById('gameScreen').classList.add('fever-mode');
+                        document.getElementById('feverOverlayText').style.display = 'block';
+                    }
                     points *= 2; 
+                    
+                    // Start/Reset the 10-second Fever Timer
+                    clearTimeout(gameState.feverTimeout);
+                    gameState.feverTimeout = setTimeout(() => {
+                        endFever();
+                    }, 10000);
                 }
 
                 gameState.score += points; updateUI(); nextCustomer();
             } else {
-                playSound('error'); gameState.combo = 0; gameState.isFever = false;
-                document.getElementById('gameScreen').classList.remove('fever-mode');
-                document.getElementById('feverOverlayText').style.display = 'none';
+                playSound('error'); 
+                endFever(); // Break fever on a wrong answer
                 
                 document.getElementById('customerBubble').classList.remove('animate-shake');
                 void document.getElementById('customerBubble').offsetWidth;
@@ -383,8 +404,7 @@
 
         async function endGame() {
             clearInterval(gameState.timerId);
-            document.getElementById('gameScreen').classList.remove('fever-mode');
-            document.getElementById('feverOverlayText').style.display = 'none';
+            endFever(); // Clear all fever effects
             
             if (gameState.score > playerInfo.localHighScore) playerInfo.localHighScore = gameState.score;
 

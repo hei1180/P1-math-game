@@ -199,7 +199,7 @@
         const provider = new GoogleAuthProvider();
 
         let playerInfo = { name: "Guest", uid: null, localHighScore: 0 };
-       let gameState = { mode: 'easy', score: 0, combo: 0, maxCombo: 0, totalAttempts: 0, correctAttempts: 0, timeLeft: 30, timerId: null, isFever: false, feverTimeout: null, currentAmount: 0, currentItem: '🍎', targetAmount: 0, clickHistory: [] };
+        let gameState = { mode: 'easy', score: 0, combo: 0, timeLeft: 30, timerId: null, isFever: false, feverTimeout: null, currentAmount: 0, currentItem: '🍎', targetAmount: 0, clickHistory: [] };
         let teacherSettings = { timeLimit: 30, unlockMedium: false, unlockHard: false };
 
         const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -285,7 +285,7 @@
             if (mode === 'hard' && (playerInfo.localHighScore < 250 || !teacherSettings.unlockHard)) return;
 
             initAudio();
-           gameState.mode = mode; gameState.score = 0; gameState.combo = 0; gameState.maxCombo = 0; gameState.totalAttempts = 0; gameState.correctAttempts = 0; gameState.timeLeft = teacherSettings.timeLimit;
+            gameState.mode = mode; gameState.score = 0; gameState.combo = 0; gameState.timeLeft = teacherSettings.timeLimit;
             
             endFever(); // Reset fever states securely
             
@@ -365,20 +365,8 @@
         document.getElementById('giveBtn').addEventListener('pointerdown', () => {
             triggerWiggle();
             
-document.getElementById('giveBtn').addEventListener('pointerdown', () => {
-            triggerWiggle();
-            gameState.totalAttempts++; // Track every time they submit an answer
-            
             if (gameState.currentAmount === gameState.targetAmount) {
-                gameState.correctAttempts++; // Track correct answers
-                playSound('success'); 
-                gameState.combo++;
-                
-                // Track highest combo
-                if (gameState.combo > gameState.maxCombo) {
-                    gameState.maxCombo = gameState.combo;
-                }
-                
+                playSound('success'); gameState.combo++;
                 let points = gameState.mode === 'hard' ? 30 : (gameState.mode === 'medium' ? 20 : 10);
                 
                 if (gameState.combo >= 5) {
@@ -389,14 +377,17 @@ document.getElementById('giveBtn').addEventListener('pointerdown', () => {
                     }
                     points *= 2; 
                     
+                    // Start/Reset the 10-second Fever Timer
                     clearTimeout(gameState.feverTimeout);
-                    gameState.feverTimeout = setTimeout(() => { endFever(); }, 10000);
+                    gameState.feverTimeout = setTimeout(() => {
+                        endFever();
+                    }, 10000);
                 }
 
                 gameState.score += points; updateUI(); nextCustomer();
             } else {
                 playSound('error'); 
-                endFever(); 
+                endFever(); // Break fever on a wrong answer
                 
                 document.getElementById('customerBubble').classList.remove('animate-shake');
                 void document.getElementById('customerBubble').offsetWidth;

@@ -47,6 +47,7 @@
             50% { transform: translateY(-50%) scale(1.1); opacity: 0.5; text-shadow: 0 0 20px #ef4444; }
             100% { transform: translateY(-50%) scale(1); opacity: 0.2; }
         }
+        
         .fever-mode {
             animation: extremeFeverBg 0.4s infinite alternate !important;
             border: 8px solid #ef4444 !important;
@@ -62,7 +63,7 @@
             transform: translateY(-50%);
             text-align: center; font-size: clamp(3rem, 18vw, 8rem); font-weight: 900;
             color: rgba(255, 237, 74, 0.7); -webkit-text-stroke: 3px rgba(239, 68, 68, 0.6); 
-            pointer-events: none; z-index: 1; /* Put it behind the game elements */
+            pointer-events: none; z-index: 1; 
             animation: textPulse 0.6s infinite; letter-spacing: 2px;
         }
 
@@ -73,7 +74,6 @@
         @keyframes floatUp { 0% { transform: translateY(0) scale(1); opacity: 1; } 100% { transform: translateY(-60px) scale(1.8); opacity: 0; } }
         .particle { position: fixed; pointer-events: none; font-weight: 900; font-size: 2.5rem; color: #f97316; -webkit-text-stroke: 1px white; text-shadow: 3px 3px 0 rgba(0,0,0,0.2); animation: floatUp 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; z-index: 100; }
         
-        /* Ensure elements stay above the watermark */
         .game-layer { position: relative; z-index: 10; }
     </style>
 </head>
@@ -95,8 +95,9 @@
         
         <div class="flex flex-col gap-4 w-[90%] max-w-sm">
             <button onclick="startGame('easy')" class="bubbly-btn bg-green-100 text-green-700 font-bold text-xl md:text-2xl py-3 md:py-4 rounded-2xl border-4 border-green-300 w-full">Easy (1-10)</button>
-            <button id="medBtn" onclick="startGame('medium')" class="bubbly-btn bg-yellow-100 text-yellow-700 font-bold text-xl md:text-2xl py-3 md:py-4 rounded-2xl border-4 border-yellow-300 opacity-50 cursor-not-allowed w-full">Medium (11-20) 🔒</button>
+            <button id="medBtn" onclick="startGame('medium')" class="bubbly-btn bg-yellow-100 text-yellow-700 font-bold text-xl md:text-2xl py-3 md:py-4 rounded-2xl border-4 border-yellow-300 opacity-50 cursor-not-allowed w-full">Medium (1-20) 🔒</button>
             <button id="hardBtn" onclick="startGame('hard')" class="bubbly-btn bg-red-100 text-red-700 font-bold text-xl md:text-2xl py-3 md:py-4 rounded-2xl border-4 border-red-300 opacity-50 cursor-not-allowed w-full">Hard (Mix) 🔒</button>
+            <button onclick="showLeaderboardFromMenu()" class="bubbly-btn bg-purple-100 text-purple-700 font-bold text-xl md:text-2xl py-3 md:py-4 rounded-2xl border-4 border-purple-300 w-full mt-2 shadow-md">🏆 Leaderboard</button>
         </div>
     </div>
 
@@ -143,7 +144,14 @@
 
     <div id="leaderboardScreen" class="hidden absolute inset-0 flex flex-col items-center bg-purple-500 z-40 p-4 md:p-8 overflow-y-auto">
         <h1 class="text-4xl md:text-5xl font-bold text-white mb-4 md:mb-6 drop-shadow-md mt-4 text-center">🏆 Leaderboard</h1>
-        <div class="bg-white rounded-3xl w-full max-w-md p-4 md:p-6 shadow-xl border-4 border-purple-300 mb-6">
+        
+        <div class="flex w-full max-w-md rounded-t-2xl overflow-hidden shadow-md">
+            <button id="tab-easy" onclick="changeLeaderboardTab('easy')" class="flex-1 py-3 font-bold bg-white text-purple-600 transition-colors">Easy</button>
+            <button id="tab-medium" onclick="changeLeaderboardTab('medium')" class="flex-1 py-3 font-bold bg-purple-300 text-purple-700 transition-colors">Medium</button>
+            <button id="tab-hard" onclick="changeLeaderboardTab('hard')" class="flex-1 py-3 font-bold bg-purple-300 text-purple-700 transition-colors">Hard</button>
+        </div>
+
+        <div class="bg-white rounded-b-3xl w-full max-w-md p-4 md:p-6 shadow-xl border-x-4 border-b-4 border-purple-300 mb-6">
             <table class="w-full text-left text-sm md:text-base" id="leaderboardTable">
                 <thead><tr class="text-gray-400 border-b-2"><th>Rank</th><th>Name</th><th>Score</th></tr></thead>
                 <tbody id="leaderboardBody"></tbody>
@@ -181,7 +189,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
-        import { getFirestore, collection, doc, getDoc, setDoc, getDocs, query, orderBy, limit, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
+        import { getFirestore, collection, doc, getDoc, setDoc, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAdCj3BAfeU737QdpBQMPkfp1wWrNcBWc0",
@@ -198,8 +206,7 @@
         const db = getFirestore(app);
         const provider = new GoogleAuthProvider();
 
-        let playerInfo = { name: "Guest", uid: null, localHighScore: 0 };
-        // Added maxCombo, totalAttempts, and correctAttempts tracking
+        let playerInfo = { name: "Guest", uid: null, localHighScores: { easy: 0, medium: 0, hard: 0 } };
         let gameState = { mode: 'easy', score: 0, combo: 0, maxCombo: 0, totalAttempts: 0, correctAttempts: 0, timeLeft: 30, timerId: null, isFever: false, feverTimeout: null, currentAmount: 0, currentItem: '🍎', targetAmount: 0, clickHistory: [] };
         let teacherSettings = { timeLimit: 30, unlockMedium: false, unlockHard: false };
 
@@ -242,14 +249,13 @@
             if (!gameState.isFever) return;
             const screen = document.getElementById('gameScreen');
             screen.classList.remove('fever-wiggle');
-            void screen.offsetWidth; // Trigger reflow
+            void screen.offsetWidth; 
             screen.classList.add('fever-wiggle');
         }
 
         function endFever() {
             clearTimeout(gameState.feverTimeout);
             gameState.isFever = false;
-            gameState.combo = 0;
             document.getElementById('gameScreen').classList.remove('fever-mode', 'fever-wiggle');
             document.getElementById('feverOverlayText').style.display = 'none';
             updateUI();
@@ -265,31 +271,47 @@
                 playerInfo.name = user.displayName || user.email.split('@')[0];
                 playerInfo.uid = user.uid;
                 loadGlobalSettings();
+                loadPlayerScores(); // Fetch past high scores on login
                 document.getElementById('playerNameDisplay').innerText = `Welcome, ${playerInfo.name}!`;
                 document.getElementById('loginScreen').classList.add('hidden');
                 document.getElementById('menuScreen').classList.remove('hidden');
-                updateMenuLocks();
             }
         });
+        
+        async function loadPlayerScores() {
+            try {
+                const qSnap = await getDocs(collection(db, "scores"));
+                qSnap.forEach(doc => {
+                    const d = doc.data();
+                    if (d.uid === playerInfo.uid) {
+                        if (d.mode === 'easy' && d.score > playerInfo.localHighScores.easy) playerInfo.localHighScores.easy = d.score;
+                        if (d.mode === 'medium' && d.score > playerInfo.localHighScores.medium) playerInfo.localHighScores.medium = d.score;
+                        if (d.mode === 'hard' && d.score > playerInfo.localHighScores.hard) playerInfo.localHighScores.hard = d.score;
+                    }
+                });
+                updateMenuLocks();
+            } catch(e) {}
+        }
 
         function updateMenuLocks() {
             const mBtn = document.getElementById('medBtn');
             const hBtn = document.getElementById('hardBtn');
-            if (playerInfo.localHighScore >= 150 && teacherSettings.unlockMedium) { mBtn.classList.remove('opacity-50', 'cursor-not-allowed'); mBtn.innerText = "Medium (11-20)"; } 
-            else { mBtn.classList.add('opacity-50', 'cursor-not-allowed'); mBtn.innerText = "Medium (11-20) 🔒"; }
-            if (playerInfo.localHighScore >= 250 && teacherSettings.unlockHard) { hBtn.classList.remove('opacity-50', 'cursor-not-allowed'); hBtn.innerText = "Hard (Mix)"; } 
+            if (playerInfo.localHighScores.easy >= 150 && teacherSettings.unlockMedium) { mBtn.classList.remove('opacity-50', 'cursor-not-allowed'); mBtn.innerText = "Medium (1-20)"; } 
+            else { mBtn.classList.add('opacity-50', 'cursor-not-allowed'); mBtn.innerText = "Medium (1-20) 🔒"; }
+            if (playerInfo.localHighScores.medium >= 250 && teacherSettings.unlockHard) { hBtn.classList.remove('opacity-50', 'cursor-not-allowed'); hBtn.innerText = "Hard (Mix)"; } 
             else { hBtn.classList.add('opacity-50', 'cursor-not-allowed'); hBtn.innerText = "Hard (Mix) 🔒"; }
         }
 
         window.startGame = function(mode) {
-            if (mode === 'medium' && (playerInfo.localHighScore < 150 || !teacherSettings.unlockMedium)) return;
-            if (mode === 'hard' && (playerInfo.localHighScore < 250 || !teacherSettings.unlockHard)) return;
+            if (mode === 'medium' && (playerInfo.localHighScores.easy < 150 || !teacherSettings.unlockMedium)) return;
+            if (mode === 'hard' && (playerInfo.localHighScores.medium < 250 || !teacherSettings.unlockHard)) return;
 
             initAudio();
-            // Reset all counters when game starts
-            gameState.mode = mode; gameState.score = 0; gameState.combo = 0; gameState.maxCombo = 0; gameState.totalAttempts = 0; gameState.correctAttempts = 0; gameState.timeLeft = teacherSettings.timeLimit;
+            gameState.mode = mode; gameState.score = 0; gameState.combo = 0; 
+            gameState.maxCombo = 0; gameState.totalAttempts = 0; gameState.correctAttempts = 0;
+            gameState.timeLeft = teacherSettings.timeLimit;
             
-            endFever(); // Reset fever states securely
+            endFever(); 
             
             document.getElementById('menuScreen').classList.add('hidden');
             document.getElementById('leaderboardScreen').classList.add('hidden');
@@ -315,7 +337,7 @@
             gameState.currentItem = items[Math.floor(Math.random() * items.length)];
             
             if (gameState.mode === 'easy') gameState.targetAmount = Math.floor(Math.random() * 10) + 1;
-            else if (gameState.mode === 'medium') gameState.targetAmount = Math.floor(Math.random() * 10) + 11;
+            else if (gameState.mode === 'medium') gameState.targetAmount = Math.floor(Math.random() * 20) + 1;
             else gameState.targetAmount = Math.floor(Math.random() * 20) + 10; 
 
             document.getElementById('targetAmount').innerText = gameState.targetAmount;
@@ -366,14 +388,13 @@
 
         document.getElementById('giveBtn').addEventListener('pointerdown', () => {
             triggerWiggle();
-            gameState.totalAttempts++; // Track submission attempt
+            gameState.totalAttempts++;
             
             if (gameState.currentAmount === gameState.targetAmount) {
-                gameState.correctAttempts++; // Track correct answers
+                gameState.correctAttempts++;
                 playSound('success'); 
                 gameState.combo++;
                 
-                // Track highest combo
                 if (gameState.combo > gameState.maxCombo) {
                     gameState.maxCombo = gameState.combo;
                 }
@@ -388,17 +409,19 @@
                     }
                     points *= 2; 
                     
-                    // Start/Reset the 10-second Fever Timer
                     clearTimeout(gameState.feverTimeout);
                     gameState.feverTimeout = setTimeout(() => {
                         endFever();
+                        gameState.combo = 0; // Reset combo if fever expires
+                        updateUI();
                     }, 10000);
                 }
 
                 gameState.score += points; updateUI(); nextCustomer();
             } else {
                 playSound('error'); 
-                endFever(); // Break fever on a wrong answer
+                endFever(); 
+                gameState.combo = 0;
                 
                 document.getElementById('customerBubble').classList.remove('animate-shake');
                 void document.getElementById('customerBubble').offsetWidth;
@@ -415,18 +438,20 @@
 
         async function endGame() {
             clearInterval(gameState.timerId);
-            endFever(); // Clear all fever effects
+            endFever(); 
             
-            if (gameState.score > playerInfo.localHighScore) playerInfo.localHighScore = gameState.score;
+            if (gameState.score > playerInfo.localHighScores[gameState.mode]) {
+                playerInfo.localHighScores[gameState.mode] = gameState.score;
+            }
 
-            // Calculate Accuracy %
             let accuracyPercent = 0;
             if (gameState.totalAttempts > 0) {
                 accuracyPercent = Math.round((gameState.correctAttempts / gameState.totalAttempts) * 100);
             }
 
             try {
-                const playerRef = doc(db, "scores", playerInfo.uid); 
+                // Save specific to the mode played
+                const playerRef = doc(db, "scores", playerInfo.uid + "_" + gameState.mode); 
                 const playerSnap = await getDoc(playerRef);
                 let shouldSave = true;
                 
@@ -439,8 +464,8 @@
                         playerName: playerInfo.name, 
                         uid: playerInfo.uid, 
                         score: gameState.score,
-                        maxCombo: gameState.maxCombo,    // Saves the highest combo achieved
-                        accuracy: accuracyPercent,       // Saves accuracy
+                        maxCombo: gameState.maxCombo,
+                        accuracy: accuracyPercent,
                         mode: gameState.mode, 
                         timestamp: serverTimestamp()
                     });
@@ -456,32 +481,63 @@
             
             setTimeout(() => {
                 rankText.innerText = gameState.score > 100 ? "Top 10! 🏆" : "Great Job! ⭐";
-                setTimeout(() => { popup.style.display = 'none'; showLeaderboard(); }, 3000);
+                setTimeout(() => { popup.style.display = 'none'; changeLeaderboardTab(gameState.mode); }, 3000);
             }, 1000);
+        }
+
+        let currentLeaderboardMode = 'easy';
+
+        window.changeLeaderboardTab = function(mode) {
+            currentLeaderboardMode = mode;
+            ['easy', 'medium', 'hard'].forEach(m => {
+                const btn = document.getElementById('tab-' + m);
+                if (m === mode) {
+                    btn.classList.replace('bg-purple-300', 'bg-white');
+                    btn.classList.replace('text-purple-700', 'text-purple-600');
+                } else {
+                    btn.classList.replace('bg-white', 'bg-purple-300');
+                    btn.classList.replace('text-purple-600', 'text-purple-700');
+                }
+            });
+            showLeaderboard();
         }
 
         async function showLeaderboard() {
             document.getElementById('gameScreen').classList.add('hidden');
             document.getElementById('leaderboardScreen').classList.remove('hidden');
             const tbody = document.getElementById('leaderboardBody');
-            tbody.innerHTML = '<tr><td colspan="3" class="text-center py-4">Loading...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-gray-500">Loading...</td></tr>';
 
             try {
-                const q = query(collection(db, "scores"), orderBy("score", "desc"), limit(10));
-                const querySnapshot = await getDocs(q); tbody.innerHTML = '';
+                // Safely get all scores and sort them locally to prevent complex index errors
+                const querySnapshot = await getDocs(collection(db, "scores"));
+                let allScores = [];
+                querySnapshot.forEach(doc => allScores.push(doc.data()));
                 
+                let filteredScores = allScores.filter(s => s.mode === currentLeaderboardMode);
+                filteredScores.sort((a, b) => b.score - a.score);
+                let top10 = filteredScores.slice(0, 10);
+                
+                tbody.innerHTML = '';
                 let rank = 1;
-                querySnapshot.forEach((doc) => {
-                    const data = doc.data();
+                top10.forEach((data) => {
                     let rowClass = data.uid === playerInfo.uid ? 'bg-yellow-100 font-bold text-gray-900' : 'text-gray-700';
                     tbody.innerHTML += `<tr class="${rowClass} border-b border-purple-200"><td class="py-3 px-2">${rank}</td><td class="px-2">${data.playerName}</td><td class="px-2">${data.score}</td></tr>`;
                     rank++;
                 });
-                if(querySnapshot.empty) tbody.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-white">You are first!</td></tr>';
-            } catch (e) { tbody.innerHTML = `<tr><td colspan="3" class="text-center py-4 text-red-200">Offline Score: ${gameState.score}</td></tr>`; }
+                
+                if(top10.length === 0) tbody.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-gray-500">No scores yet in this mode!</td></tr>';
+            } catch (e) { 
+                tbody.innerHTML = `<tr><td colspan="3" class="text-center py-4 text-red-500">Offline Score: ${gameState.score}</td></tr>`; 
+            }
         }
 
         window.showMenu = function() { updateMenuLocks(); document.getElementById('leaderboardScreen').classList.add('hidden'); document.getElementById('menuScreen').classList.remove('hidden'); }
+
+        window.showLeaderboardFromMenu = function() {
+            document.getElementById('menuScreen').classList.add('hidden');
+            changeLeaderboardTab('easy'); // Open leaderboard defaulting to the Easy tab
+        }
 
         async function loadGlobalSettings() {
             try {

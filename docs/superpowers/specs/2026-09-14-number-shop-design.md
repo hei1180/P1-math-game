@@ -1,0 +1,115 @@
+# Number Shop (數字小店) — Design Spec
+
+Date: 2026-09-14
+Status: approved by teacher (owner), pending implementation plan
+
+## Goal
+
+Second game on the P1 math platform, same store world as Math Market. Trains
+number comparison (1-20), odd/even (奇數/偶數), and number-line sense. Four
+levels, unlocked by score. Reuses login, teacher PIN, fever/combo, leaderboard.
+
+## Architecture
+
+Repo root served by GitHub Pages.
+
+| File | Role |
+|---|---|
+| `index.html` | Hub. Login → game picker (🍎 Math Market / 🔢 Number Shop) → existing Market menu + game. |
+| `numbers.html` | Number Shop: level menu → game → leaderboard. |
+| `shared.js` | ES module used by both pages. Firebase init, auth, audio, particles, combo/fever engine, timer, score save/load, teacher settings + PIN, leaderboard rendering. |
+| `shared.css` | bubbly-btn, ten-frame, fever, particle, rank popup keyframes. |
+| `numbers-logic.js` | Pure round generators + answer checks for Number Shop. No Firebase import so it runs under `node --test`. |
+| `tests/logic.test.mjs` | Unit tests for `numbers-logic.js`. |
+
+`shared.js` exports:
+
+- `app, auth, db`, `signIn()`, `onUser(cb)`
+- `initAudio()`, `playSound('click'|'success'|'error')`, `spawnParticle(x, y, text)`
+- Combo/fever engine: `registerHit(correct)` → `{points multiplier, combo}`; fever starts at combo 5, x2 points, 10 s timeout refreshed on each correct, `endFever()`, `triggerWiggle()`
+- `startTimer(seconds, onTick, onEnd)`, `stopTimer()`
+- `saveScore(modeKey, {score, maxCombo, accuracy})` — writes `scores/{uid}_{modeKey}` only if higher
+- `getTop10(modeKey)`, `getMyHighScores()` → `{modeKey: score}`
+- `loadTeacherSettings()`, `saveTeacherSettings(obj)`, `checkPin(str)` (PIN 1128)
+- `renderLeaderboard(tabs, activeKey, tbodyEl, myUid)`
+
+Firebase Auth persistence is local, so login carries across `index.html` and
+`numbers.html` on the same origin. "Back" from Number Shop navigates to
+`index.html`.
+
+Math Market refactor: replace inline copies with imports from `shared.js`.
+Behaviour must stay identical (regression checklist below). Mode keys
+`easy/medium/hard` unchanged, no data migration.
+
+## Firestore
+
+- `scores/{uid}_{modeKey}`: `playerName, uid, score, maxCombo, accuracy, mode, timestamp`. New keys `num1`, `num2`, `num3`, `num4`.
+- `settings/global`: existing `timeLimit, unlockMedium, unlockHard` plus `numTimeLimit` (default 30). Missing field → 30.
+
+## Common gameplay rules (Number Shop)
+
+- Top bar: Time / Score / Combo, same as Market.
+- Customer 🐻 speech bubble carries the question. Text bilingual: big Traditional Chinese, small English under it.
+- Wrong answer: bubble shake, error sound, combo reset, fever ends, **same question stays**.
+- Correct: success sound, particle, next round.
+- Fever identical to Market: combo ≥5 → x2 points, 10 s refresh, watermark text, click wiggle.
+- Timer from `numTimeLimit`. Game ends at 0 → save score → rank popup → leaderboard tab of that level.
+- Accuracy = correct answer taps / total answer taps. Peeks, pairing taps, and undo are not counted.
+
+## Levels
+
+### Lv1 比較 Compare (1-20) — key `num1`, 10 pts/round
+
+- Two customers side by side (🐻 left, 🐰 right), each holds a number card 1-20.
+- Bubble: 誰比較多？Who has MORE? or 誰比較少？Who has LESS? (random).
+- About 15% of rounds the numbers are equal. Third button 一樣多 Same.
+- Tap a number card = peek: ten-frames (same 十格框 style) appear under that customer for 1.5 s then hide. Unlimited peeks.
+- Answer = tap a customer card or the Same button.
+
+### Lv2 奇數偶數 Odd / Even — key `num2`, 15 pts/round
+
+- Number card N (1-20; 60% drawn from 1-10, 40% from 11-20) plus N loose emoji items in a grid (max 5×4).
+- Tap item A (glows), tap item B → both animate into a pair box on a shelf row. Undo = unpair the last pair.
+- Buttons 奇數 Odd / 偶數 Even disabled until ≤1 loose item remains.
+- Correct answer = N mod 2.
+
+### Lv3 數線 Number line — key `num3`, 15 pts/round
+
+- Shelf shows 7 consecutive slots from 1-20 (start 1..14). 1 or 2 slots blank (50/50).
+- 4 tiles below: correct value(s) plus distractors from {n±1, n±2, n±10} clipped to 1-20, all unique, one tile per blank correct.
+- Leftmost blank pulses. Tap tile → checked immediately for that blank. Correct fills it; wrong shakes tile and counts as wrong.
+- Round complete when all blanks filled → points awarded once.
+
+### Lv4 奇偶數線 Odd/even line — key `num4`, 20 pts/round
+
+- Same shelf UI, 6 slots, step 2. Sequence is all odds (1..19) or all evens (2..20), random start so all 6 fit in range.
+- 1 or 2 blanks. Distractors: n±1 (the classic error) and n±4, clipped and unique.
+
+## Unlock (score gate only)
+
+| Level | Requirement |
+|---|---|
+| Lv1 | always open |
+| Lv2 | Lv1 high score ≥ 100 |
+| Lv3 | Lv2 high score ≥ 100 |
+| Lv4 | Lv3 high score ≥ 120 |
+
+Teacher unlock toggles do not apply to Number Shop. Locked buttons show 🔒 and 50% opacity, same as Market.
+
+## Teacher panel
+
+Same ⚙️ Teacher button and PIN on both pages. Fields: Unlock Medium, Unlock Hard, Market time (s), **Number Shop time (s)**. Save writes the whole `settings/global` doc.
+
+## Leaderboard
+
+Number Shop page: 4 tabs (Lv1 比較 / Lv2 奇偶 / Lv3 數線 / Lv4 奇偶線), top 10, own row highlighted. 🏆 button on level menu. Rank popup same as Market.
+
+## Error handling
+
+Firestore failures are caught and logged; game stays playable, score shown as "Offline Score" in leaderboard, same as today.
+
+## Testing
+
+- `node --test tests/` covers `numbers-logic.js`: values within 1-20, blank counts, distractor uniqueness, skip sequences stay odd/even, equal-case rate ≈ 15% over 2000 draws, answer checks.
+- Manual on iPad Safari and phone Chrome: fits screen, no double-tap zoom, peek shows/hides, pair + undo, buttons disabled until paired, fever visuals, timer end → rank → leaderboard.
+- Market regression after refactor: login, easy round, GIVE correct/wrong, fever, leaderboard tabs, teacher save.

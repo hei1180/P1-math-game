@@ -17,6 +17,8 @@ Two browser games for Primary 1, hosted on GitHub Pages, Google login via Fireba
     python3 -m http.server 8000   # open http://localhost:8000/
     npm test                      # node --test tests/
 
+Asset links carry `?v=<stamp>` for cache busting; bump the stamp in `index.html`, `numbers.html` and `shared.js` on each deploy (`./bump.sh` does it).
+
 Google login does not work from file://. Use localhost or the GitHub Pages URL.
 
 Design spec and plan: `docs/superpowers/`.

@@ -113,8 +113,11 @@
             }
             return html;
         }
-        /** Common answer handling: correct → next round, wrong → shake bubble. */
+        /** Common answer handling: correct → celebrate, then next round after a beat; wrong → shake bubble. */
+        const ROUND_DELAY = 500;
+        let roundPending = false;
         function answer(correct, e) {
+            if (roundPending) return;
             triggerWiggle();
             const pts = registerHit(correct, POINTS[mode]);
             const faces = $('stage').querySelectorAll('[data-face]');
@@ -122,7 +125,8 @@
                 if (e && e.clientX) { burst(e.clientX, e.clientY); spawnParticle(e.clientX, e.clientY, `+${pts}`); }
                 faces.forEach(f => { bounce(f); react(f, '🥳'); });
                 popScore($('scoreDisplay'));
-                LEVELS[mode].newRound();
+                roundPending = true;
+                setTimeout(() => { roundPending = false; if (engine.timerId) LEVELS[mode].newRound(); }, ROUND_DELAY);
             } else {
                 faces.forEach(f => react(f, '😵'));
                 flashRed($('gameScreen'));
@@ -133,7 +137,7 @@
         window.startGame = function(m) {
             if (!isUnlocked(PREV[m])) return;
             initAudio();
-            mode = m;
+            mode = m; roundPending = false;
             resetEngine(settings.numTimeLimit);
             show('gameScreen');
             LEVELS[mode].newRound();
@@ -156,22 +160,23 @@
             newRound() {
                 const r = this.round = genCompare();
                 const emoji = pick(ITEMS);
-                setBubble(r.ask === 'more' ? '誰比較多？' : '誰比較少？', r.ask === 'more' ? 'Who has MORE?' : 'Who has LESS?');
+                const [S, O] = r.subject === 'left' ? ['🐻', '🐰'] : ['🐰', '🐻'];
+                setBubble(`${S} 比 ${O} 多還是少？`, `Is ${S} more or less than ${O}?`);
                 $('stage').innerHTML = `
                   <div class="flex gap-6 md:gap-16 items-start justify-center w-full">
                     ${['left', 'right'].map((side, i) => `
                       <div class="flex flex-col items-center gap-2 w-[45%] max-w-[220px]">
-                        <button class="cust-btn text-6xl md:text-8xl drop-shadow-md" data-side="${side}" data-face>${i === 0 ? '🐻' : '🐰'}</button>
+                        <div class="text-6xl md:text-8xl drop-shadow-md ${side === r.subject ? 'ring-4 ring-yellow-400 rounded-full bg-yellow-100' : ''}" data-face>${i === 0 ? '🐻' : '🐰'}</div>
                         <button class="num-card text-4xl md:text-6xl" data-peek="${side}">${i === 0 ? r.a : r.b}</button>
                         <div class="peek flex flex-col gap-1 items-center" data-peekbox="${side}"></div>
                       </div>`).join('')}
                   </div>`;
                 $('controls').innerHTML = `
-                  <button class="bubbly-btn bg-white text-3xl md:text-4xl py-2 px-5 rounded-2xl border-4 border-gray-300" data-side="left">🐻</button>
-                  <button class="bubbly-btn bg-blue-400 text-white font-black text-xl md:text-2xl py-3 px-5 rounded-2xl border-4 border-blue-600" data-side="same">一樣多<br><span class="text-sm font-normal">Same</span></button>
-                  <button class="bubbly-btn bg-white text-3xl md:text-4xl py-2 px-5 rounded-2xl border-4 border-gray-300" data-side="right">🐰</button>`;
+                  <button class="bubbly-btn bg-green-300 text-green-900 font-black text-2xl md:text-3xl py-3 px-6 rounded-2xl border-4 border-green-500" data-ans="more">多<br><span class="text-sm font-normal">More</span></button>
+                  <button class="bubbly-btn bg-blue-400 text-white font-black text-xl md:text-2xl py-3 px-5 rounded-2xl border-4 border-blue-600" data-ans="same">一樣多<br><span class="text-sm font-normal">Same</span></button>
+                  <button class="bubbly-btn bg-orange-300 text-orange-900 font-black text-2xl md:text-3xl py-3 px-6 rounded-2xl border-4 border-orange-500" data-ans="less">少<br><span class="text-sm font-normal">Less</span></button>`;
                 $('stage').querySelectorAll('[data-peek]').forEach(b => b.addEventListener('pointerdown', () => this.peek(b.dataset.peek, emoji)));
-                document.querySelectorAll('#stage [data-side], #controls [data-side]').forEach(b => b.addEventListener('pointerdown', e => answer(b.dataset.side === compareAnswer(this.round), e)));
+                $('controls').querySelectorAll('[data-ans]').forEach(b => b.addEventListener('pointerdown', e => answer(b.dataset.ans === compareAnswer(this.round), e)));
             },
             peek(side, emoji) {
                 const n = side === 'left' ? this.round.a : this.round.b;
@@ -276,7 +281,8 @@
                 },
                 nextBlank() { return this.round.blanks.find(i => !this.filled.has(i)); },
                 render(justFilled) {
-                    const active = this.nextBlank();
+                    const next = this.nextBlank();
+                    const active = next === undefined ? justFilled : next; // bear stays under the last book when done
                     $('shelf').innerHTML = this.round.slots.map((v, i) => {
                         const isBlank = this.round.blanks.includes(i);
                         if (!isBlank) return `<div class="book-slot ${colorOf(v)}">${v}</div>`;
@@ -295,11 +301,10 @@
                         btn.disabled = true;
                         playSound('click'); triggerWiggle();
                         const slotEl = $('shelf').children[target];
-                        flyTo(btn, slotEl, `<div class="book-slot ${colorOf(v)}">${v}</div>`, () => {
-                            this.filled.add(target);
-                            this.render(target);
-                            if (this.nextBlank() === undefined) answer(true, e);
-                        });
+                        flyTo(btn, slotEl, `<div class="book-slot ${colorOf(v)}">${v}</div>`);
+                        this.filled.add(target);
+                        this.render(target);
+                        if (this.nextBlank() === undefined) answer(true, e);
                     } else {
                         replay(btn, 'animate-shake');
                         answer(false, e);

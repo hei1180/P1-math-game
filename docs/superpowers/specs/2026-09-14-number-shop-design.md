@@ -70,7 +70,8 @@ Behaviour must stay identical (regression checklist below). Mode keys
 ### Lv2 奇數偶數 Odd / Even — key `num2`, 15 pts/round
 
 - Number card N (1-20; 60% drawn from 1-10, 40% from 11-20) plus N loose emoji items in a grid (max 5×4).
-- Tap item A (glows), tap item B → both animate into a pair box on a shelf row. Undo = unpair the last pair.
+- Tap item A (glows), tap item B → both move into a ten-frame (十格框) on the shelf: each pair fills one column (top + bottom cell). Frames: ceil(N/10), so up to 2 frames for 20. Undo = unpair the last pair (its column empties).
+- When exactly one loose item is left it moves into the next column's top cell alone, highlighted (dashed red border) — the visual "odd one out". For even N the frame columns are all full.
 - Buttons 奇數 Odd / 偶數 Even disabled until ≤1 loose item remains.
 - Correct answer = N mod 2.
 

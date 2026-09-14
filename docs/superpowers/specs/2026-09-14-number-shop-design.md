@@ -45,7 +45,7 @@ Behaviour must stay identical (regression checklist below). Mode keys
 ## Firestore
 
 - `scores/{uid}_{modeKey}`: `playerName, uid, score, maxCombo, accuracy, mode, timestamp`. New keys `num1`, `num2`, `num3`, `num4`.
-- `settings/global`: existing `timeLimit, unlockMedium, unlockHard` plus `numTimeLimit` (default 30) and `trophy: {bronze, silver, gold}` (default 300 / 700 / 1200). Missing fields → defaults.
+- `settings/global`: existing `timeLimit, unlockMedium, unlockHard` plus `numTimeLimit` (default 30), `numUnlock: {num1..num4: bool}` (default all false) and `trophy: {bronze, silver, gold}` (default 300 / 700 / 1200). Missing fields → defaults.
 
 ## Common gameplay rules (Number Shop)
 
@@ -136,16 +136,18 @@ Unlock next level = Bronze cutoff on the previous level (default 300). Applies t
 | Market Easy | always open |
 | Market Medium | Easy high ≥ Bronze **and** teacher Unlock Medium |
 | Market Hard | Medium high ≥ Bronze **and** teacher Unlock Hard |
-| Number Lv1 | always open |
-| Number Lv2 | Lv1 high ≥ Bronze |
-| Number Lv3 | Lv2 high ≥ Bronze |
-| Number Lv4 | Lv3 high ≥ Bronze |
+| Number Lv1 | teacher Lv1 toggle |
+| Number Lv2 | Lv1 high ≥ Bronze **and** teacher Lv2 toggle |
+| Number Lv3 | Lv2 high ≥ Bronze **and** teacher Lv3 toggle |
+| Number Lv4 | Lv3 high ≥ Bronze **and** teacher Lv4 toggle |
 
-Teacher unlock toggles do not apply to Number Shop. Locked buttons show 🔒 and 50% opacity, same as Market. Every level button (both games) shows its unlock requirement as a small line under the title, e.g. `🔒 需要 Lv1 🥉 300 分 / Need Lv1 Bronze (300)`; once unlocked the line shows the player's best trophy for that level instead.
+All four Number Shop levels ship locked; the teacher opens them one by one (`settings/global.numUnlock.{num1..num4}`, default false). A locked first level shows 🔒 老師未開放.
+
+**Teacher test mode:** gear → PIN → "🧪 Test mode". This browser tab only (sessionStorage, cleared when the tab closes): every level of both games opens, level subtitles read 🧪 測試模式, a purple badge shows on the menus, and `saveScore` writes nothing (no Firestore, no local best), so the teacher's test runs never reach the leaderboard. Locked buttons show 🔒 and 50% opacity, same as Market. Every level button (both games) shows its unlock requirement as a small line under the title, e.g. `🔒 需要 Lv1 🥉 300 分 / Need Lv1 Bronze (300)`; once unlocked the line shows the player's best trophy for that level instead.
 
 ## Teacher panel
 
-Same ⚙️ Teacher button and PIN on both pages. Fields: Unlock Medium, Unlock Hard, Market time (s), **Number Shop time (s)**, **Trophy cutoffs: Bronze / Silver / Gold**. Save writes the whole `settings/global` doc. Validation: bronze < silver < gold, all > 0, else alert and no save.
+Same ⚙️ Teacher button and PIN on both pages. Fields: Unlock Medium, Unlock Hard, **Number Shop Lv1-Lv4 toggles**, Market time (s), **Number Shop time (s)**, **Trophy cutoffs: Bronze / Silver / Gold**, plus the **Test mode** button. Save writes the whole `settings/global` doc. Validation: bronze < silver < gold, all > 0, else alert and no save.
 
 ## Leaderboard
 

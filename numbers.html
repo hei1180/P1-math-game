@@ -19,7 +19,8 @@
         <a href="index.html" class="absolute top-4 left-4 bg-white/80 text-indigo-800 p-2 md:p-3 rounded-lg bubbly-btn font-bold">⬅ Games</a>
         <button id="adminBtn" class="absolute top-4 right-4 bg-gray-800 text-white p-2 md:p-3 rounded-lg bubbly-btn font-bold">⚙️ Teacher</button>
         <h1 class="text-3xl md:text-5xl font-bold text-white mb-1 drop-shadow-md text-center leading-tight">🔢 數字小店</h1>
-        <p id="playerNameDisplay" class="text-base md:text-xl text-indigo-100 mb-4 font-bold text-center w-full px-4 truncate"></p>
+        <p id="playerNameDisplay" class="text-base md:text-xl text-indigo-100 mb-1 font-bold text-center w-full px-4 truncate"></p>
+        <div class="test-badge hidden bg-purple-600 text-white font-bold px-3 py-1 rounded-full mb-3">🧪 測試模式 Test mode · no saving</div>
         <div class="flex flex-col gap-3 w-[90%] max-w-sm">
             <button id="btn-num1" onclick="startGame('num1')" class="level-btn bubbly-btn bg-green-100 text-green-700 font-bold py-3 rounded-2xl border-4 border-green-300 w-full"><span class="text-xl md:text-2xl">Lv1 比較 Compare</span><span class="level-sub text-xs md:text-sm font-normal"></span></button>
             <button id="btn-num2" onclick="startGame('num2')" class="level-btn bubbly-btn bg-yellow-100 text-yellow-700 font-bold py-3 rounded-2xl border-4 border-yellow-300 w-full"><span class="text-xl md:text-2xl">Lv2 奇數偶數 Odd/Even</span><span class="level-sub text-xs md:text-sm font-normal"></span></button>
@@ -87,10 +88,10 @@
             $(id).classList.remove('hidden');
         }
         function refreshMenu() {
-            refreshLevelButton($('btn-num1'), 'num1', null, '');
-            refreshLevelButton($('btn-num2'), 'num2', 'num1', 'Lv1');
-            refreshLevelButton($('btn-num3'), 'num3', 'num2', 'Lv2');
-            refreshLevelButton($('btn-num4'), 'num4', 'num3', 'Lv3');
+            refreshLevelButton($('btn-num1'), 'num1', null, '', settings.numUnlock.num1);
+            refreshLevelButton($('btn-num2'), 'num2', 'num1', 'Lv1', settings.numUnlock.num2);
+            refreshLevelButton($('btn-num3'), 'num3', 'num2', 'Lv2', settings.numUnlock.num3);
+            refreshLevelButton($('btn-num4'), 'num4', 'num3', 'Lv3', settings.numUnlock.num4);
         }
         window.showMenu = () => { refreshMenu(); show('menuScreen'); };
 
@@ -135,7 +136,7 @@
         }
 
         window.startGame = function(m) {
-            if (!isUnlocked(PREV[m])) return;
+            if (!isUnlocked(PREV[m], settings.numUnlock[m])) return;
             initAudio();
             mode = m; roundPending = false;
             resetEngine(settings.numTimeLimit);

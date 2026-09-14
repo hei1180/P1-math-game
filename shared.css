@@ -1,0 +1,94 @@
+        * { touch-action: manipulation; } 
+        body { 
+            font-family: 'Comic Sans MS', 'Chalkboard SE', sans-serif; 
+            background-color: #fef08a; 
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            overflow: hidden; user-select: none; -webkit-user-select: none;
+        }
+
+        .bubbly-btn { transition: transform 0.1s; box-shadow: 0 6px 0 rgba(0,0,0,0.2); }
+        .bubbly-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
+        
+        .ten-frame { display: grid; grid-template-columns: repeat(5, 1fr); gap: 2px; background: white; padding: 4px; border-radius: 8px; border: 3px solid #cbd5e1; margin: 0 auto; }
+        .frame-cell { width: 32px; height: 32px; border: 2px dashed #94a3b8; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+        @media (min-width: 768px) {
+            .frame-cell { width: 45px; height: 45px; font-size: 28px; border-radius: 10px; }
+            .ten-frame { gap: 6px; padding: 8px; border-radius: 16px; border-width: 5px; }
+        }
+
+        @keyframes pop { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        .animate-pop { animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+        .animate-shake { animation: shake 0.3s; }
+        
+        /* 🔥 EXTREME FEVER MODE 🔥 */
+        @keyframes extremeFeverBg {
+            0% { background-color: #ffe4e6; border-color: #fb7185; }
+            33% { background-color: #fef9c3; border-color: #facc15; }
+            66% { background-color: #d1fae5; border-color: #34d399; }
+            100% { background-color: #e0e7ff; border-color: #818cf8; }
+        }
+        @keyframes feverShake {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            25% { transform: translate(3px, 3px) rotate(1.5deg); }
+            50% { transform: translate(-3px, -3px) rotate(-1.5deg); }
+            75% { transform: translate(-3px, 3px) rotate(0deg); }
+        }
+        @keyframes textPulse {
+            0% { transform: translateY(-50%) scale(1); opacity: 0.2; }
+            50% { transform: translateY(-50%) scale(1.1); opacity: 0.5; text-shadow: 0 0 20px #ef4444; }
+            100% { transform: translateY(-50%) scale(1); opacity: 0.2; }
+        }
+        
+        .fever-mode {
+            animation: extremeFeverBg 0.4s infinite alternate !important;
+            border: 8px solid #ef4444 !important;
+            box-shadow: inset 0 0 50px rgba(255,0,0,0.5);
+        }
+        .fever-wiggle {
+            animation: feverShake 0.15s ease-in-out;
+        }
+        
+        /* Fever Text as a Background Watermark */
+        #feverOverlayText {
+            display: none; position: absolute; top: 50%; left: 0; right: 0;
+            transform: translateY(-50%);
+            text-align: center; font-size: clamp(3rem, 18vw, 8rem); font-weight: 900;
+            color: rgba(255, 237, 74, 0.7); -webkit-text-stroke: 3px rgba(239, 68, 68, 0.6); 
+            pointer-events: none; z-index: 1; 
+            animation: textPulse 0.6s infinite; letter-spacing: 2px;
+        }
+
+        #rankPopup { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 100; color: white; flex-direction: column; justify-content: center; align-items: center; }
+        @keyframes slideUpFade { 0% { transform: translateY(50px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
+        .rank-anim { font-size: clamp(3rem, 10vw, 6rem); font-weight: bold; color: #fbbf24; text-shadow: 0 6px 0 #b45309; animation: slideUpFade 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; text-align: center;}
+
+        @keyframes floatUp { 0% { transform: translateY(0) scale(1); opacity: 1; } 100% { transform: translateY(-60px) scale(1.8); opacity: 0; } }
+        .particle { position: fixed; pointer-events: none; font-weight: 900; font-size: 2.5rem; color: #f97316; -webkit-text-stroke: 1px white; text-shadow: 3px 3px 0 rgba(0,0,0,0.2); animation: floatUp 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; z-index: 100; }
+        
+        .game-layer { position: relative; z-index: 10; }
+
+/* ---------- Number Shop ---------- */
+.level-btn { display: flex; flex-direction: column; align-items: center; line-height: 1.2; }
+.level-sub { opacity: 0.8; margin-top: 2px; }
+
+.cust-btn { transition: transform 0.1s; }
+.cust-btn:active { transform: scale(0.92); }
+.num-card { background: white; border: 4px solid #1f2937; border-radius: 16px; font-weight: 900; padding: 4px 18px; box-shadow: 0 5px 0 rgba(0,0,0,0.2); }
+.num-card:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
+.peek { min-height: 40px; }
+
+.item-btn { width: 44px; height: 44px; font-size: 28px; border-radius: 10px; border: 3px solid #cbd5e1; background: white; display: flex; align-items: center; justify-content: center; transition: transform 0.1s; }
+.item-btn.selected { border-color: #f59e0b; background: #fef3c7; transform: scale(1.15); box-shadow: 0 0 0 4px rgba(245,158,11,0.4); }
+@media (min-width: 768px) { .item-btn { width: 56px; height: 56px; font-size: 34px; } }
+.pair-box { display: flex; gap: 2px; background: #dcfce7; border: 3px solid #4ade80; border-radius: 10px; padding: 3px; font-size: 22px; animation: pop 0.25s ease-out; }
+
+.slot { width: 40px; height: 48px; border-radius: 10px; border: 3px solid #94a3b8; background: white; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 22px; }
+.slot.blank { border-style: dashed; background: #f1f5f9; color: #cbd5e1; }
+.slot.active { border-color: #f59e0b; background: #fef3c7; animation: slotPulse 0.8s infinite alternate; }
+.slot.filled { border-color: #4ade80; background: #dcfce7; color: #166534; }
+@media (min-width: 768px) { .slot { width: 56px; height: 64px; font-size: 30px; } }
+@keyframes slotPulse { from { transform: scale(1); } to { transform: scale(1.08); } }
+.tile { width: 60px; height: 60px; border-radius: 14px; font-weight: 900; font-size: 26px; background: #fde68a; border: 4px solid #f59e0b; color: #78350f; }
+.tile:disabled { opacity: 0.35; }
+@media (min-width: 768px) { .tile { width: 76px; height: 76px; font-size: 34px; } }

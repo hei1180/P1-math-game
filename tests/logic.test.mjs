@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { genCompare, compareAnswer, genOddEven, genLine, genSkipLine } from '../numbers-logic.js';
+import { genCompare, compareAnswer, genOddEven, genLine, genSkipLine, genMixedLine } from '../numbers-logic.js';
 
 // Deterministic rng: cycles through the given values.
 function seq(values) { let i = 0; return () => values[i++ % values.length]; }
@@ -77,14 +77,20 @@ function checkLineRound(r, slotCount) {
   assert.equal(distractors.length, 4 - r.blanks.length);
 }
 
-test('genLine: 7 consecutive slots, valid blanks and tiles', () => {
+test('genLine: 7 consecutive slots asc or desc, valid blanks and tiles', () => {
   const rng = lcg(11);
+  let desc = 0;
   for (let i = 0; i < 1000; i++) {
     const r = genLine(rng);
     checkLineRound(r, 7);
-    for (let k = 1; k < 7; k++) assert.equal(r.slots[k], r.slots[k - 1] + 1, 'consecutive');
-    assert.ok(r.slots[0] >= 1 && r.slots[0] <= 14, 'start in 1-14');
+    assert.ok(['asc', 'desc'].includes(r.dir));
+    const step = r.dir === 'asc' ? 1 : -1;
+    if (r.dir === 'desc') desc++;
+    for (let k = 1; k < 7; k++) assert.equal(r.slots[k], r.slots[k - 1] + step, 'consecutive ' + r.dir);
+    const lo = Math.min(...r.slots);
+    assert.ok(lo >= 1 && lo <= 14, 'lowest in 1-14');
   }
+  assert.ok(desc > 420 && desc < 580, 'desc share ' + desc);
 });
 
 test('genLine blank count is ~50/50', () => {
@@ -102,19 +108,44 @@ test('genSkipLine: 6 slots step 2, same parity, valid blanks and tiles', () => {
     checkLineRound(r, 6);
     const parity = r.slots[0] % 2;
     if (parity === 1) odd++;
+    assert.ok(['asc', 'desc'].includes(r.dir));
+    const step = r.dir === 'asc' ? 2 : -2;
     for (let k = 0; k < 6; k++) assert.equal(r.slots[k] % 2, parity, 'same parity');
-    for (let k = 1; k < 6; k++) assert.equal(r.slots[k], r.slots[k - 1] + 2, 'step 2');
+    for (let k = 1; k < 6; k++) assert.equal(r.slots[k], r.slots[k - 1] + step, 'step ' + step);
     assert.equal(r.parity, parity === 1 ? 'odd' : 'even');
   }
   assert.ok(odd > 400 && odd < 600, 'odd share ' + odd);
 });
 
+test('genSkipLine descending example', () => {
+  // parity (0.9 → even), start index (0.99 → 4 → 10..20), dir (0.9 → desc), blank count (0.6 → 1), blank index (0.0 → 0)
+  const r = genSkipLine(seq([0.9, 0.99, 0.9, 0.6, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]));
+  assert.deepEqual(r.slots, [20, 18, 16, 14, 12, 10]);
+  assert.equal(r.dir, 'desc');
+  assert.deepEqual(r.blanks, [0]);
+  assert.ok(r.tiles.includes(20));
+});
+
 test('genSkipLine distractors prefer n±1 (wrong parity) when available', () => {
-  // rng call order: parity (0.9 → even), start index (0.0 → 0 → slots 2..12), blank count (0.6 → 1 blank), blank index (0.4 → floor(0.4*6)=2 → value 6), then shuffles.
-  const rng = seq([0.9, 0.0, 0.6, 0.4, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]);
+  // rng call order: parity (0.9 → even), start index (0.0 → 0 → slots 2..12), dir (0.2 → asc), blank count (0.6 → 1 blank), blank index (0.4 → floor(0.4*6)=2 → value 6), then shuffles.
+  const rng = seq([0.9, 0.0, 0.2, 0.6, 0.4, 0.0, 0.0, 0.0, 0.0, 0.0]);
   const r = genSkipLine(rng);
   assert.deepEqual(r.slots, [2, 4, 6, 8, 10, 12]);
   assert.deepEqual(r.blanks, [2]);
   assert.ok(r.tiles.includes(6));
   assert.ok(r.tiles.includes(5) || r.tiles.includes(7), 'has an n±1 distractor');
+});
+
+test('genMixedLine: numeric or skip lines, both directions, roughly even mix', () => {
+  const rng = lcg(21);
+  const count = { num: 0, skip: 0, asc: 0, desc: 0 };
+  for (let i = 0; i < 1000; i++) {
+    const r = genMixedLine(rng);
+    assert.ok(['num', 'skip'].includes(r.kind));
+    count[r.kind]++; count[r.dir]++;
+    if (r.kind === 'num') { checkLineRound(r, 7); assert.equal(Math.abs(r.slots[1] - r.slots[0]), 1); }
+    else { checkLineRound(r, 6); assert.equal(Math.abs(r.slots[1] - r.slots[0]), 2); assert.ok(['odd', 'even'].includes(r.parity)); }
+  }
+  assert.ok(count.num > 420 && count.num < 580, 'num share ' + count.num);
+  assert.ok(count.asc > 420 && count.asc < 580, 'asc share ' + count.asc);
 });

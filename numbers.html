@@ -25,7 +25,7 @@
             <button id="btn-num1" onclick="startGame('num1')" class="level-btn bubbly-btn bg-green-100 text-green-700 font-bold py-3 rounded-2xl border-4 border-green-300 w-full"><span class="text-xl md:text-2xl">Lv1 比較 Compare</span><span class="level-sub text-xs md:text-sm font-normal"></span></button>
             <button id="btn-num2" onclick="startGame('num2')" class="level-btn bubbly-btn bg-yellow-100 text-yellow-700 font-bold py-3 rounded-2xl border-4 border-yellow-300 w-full"><span class="text-xl md:text-2xl">Lv2 奇數偶數 Odd/Even</span><span class="level-sub text-xs md:text-sm font-normal"></span></button>
             <button id="btn-num3" onclick="startGame('num3')" class="level-btn bubbly-btn bg-orange-100 text-orange-700 font-bold py-3 rounded-2xl border-4 border-orange-300 w-full"><span class="text-xl md:text-2xl">Lv3 數線 Number line</span><span class="level-sub text-xs md:text-sm font-normal"></span></button>
-            <button id="btn-num4" onclick="startGame('num4')" class="level-btn bubbly-btn bg-red-100 text-red-700 font-bold py-3 rounded-2xl border-4 border-red-300 w-full"><span class="text-xl md:text-2xl">Lv4 奇偶數線 Odd/Even line</span><span class="level-sub text-xs md:text-sm font-normal"></span></button>
+            <button id="btn-num4" onclick="startGame('num4')" class="level-btn bubbly-btn bg-red-100 text-red-700 font-bold py-3 rounded-2xl border-4 border-red-300 w-full"><span class="text-xl md:text-2xl">Lv4 混合數線 Mixed line</span><span class="level-sub text-xs md:text-sm font-normal"></span></button>
             <button onclick="showLeaderboardFromMenu()" class="bubbly-btn bg-purple-100 text-purple-700 font-bold text-xl md:text-2xl py-3 rounded-2xl border-4 border-purple-300 w-full mt-1 shadow-md">🏆 Leaderboard</button>
         </div>
     </div>
@@ -59,7 +59,7 @@
             <button id="tab-num1" onclick="changeLeaderboardTab('num1')" class="flex-1 py-3 font-bold bg-white text-purple-600">Lv1 比較</button>
             <button id="tab-num2" onclick="changeLeaderboardTab('num2')" class="flex-1 py-3 font-bold bg-purple-300 text-purple-700">Lv2 奇偶</button>
             <button id="tab-num3" onclick="changeLeaderboardTab('num3')" class="flex-1 py-3 font-bold bg-purple-300 text-purple-700">Lv3 數線</button>
-            <button id="tab-num4" onclick="changeLeaderboardTab('num4')" class="flex-1 py-3 font-bold bg-purple-300 text-purple-700">Lv4 奇偶線</button>
+            <button id="tab-num4" onclick="changeLeaderboardTab('num4')" class="flex-1 py-3 font-bold bg-purple-300 text-purple-700">Lv4 混合</button>
         </div>
         <div class="bg-white rounded-b-3xl w-full max-w-md p-4 md:p-6 shadow-xl border-x-4 border-b-4 border-purple-300 mb-6">
             <table class="w-full text-left text-sm md:text-base"><thead><tr class="text-gray-400 border-b-2"><th>Rank</th><th>Name</th><th>Score</th></tr></thead><tbody id="leaderboardBody"></tbody></table>
@@ -71,7 +71,7 @@
         import { signIn, onUser, settings, initAudio, playSound, spawnParticle, replay,
                  engine, resetEngine, registerHit, triggerWiggle, endFever, startTimer, stopTimer,
                  saveScore, renderLeaderboard, refreshLevelButton, isUnlocked, showRankPopup, mountTeacherModal } from './shared.js';
-        import { genCompare, compareAnswer, genOddEven, genLine, genSkipLine } from './numbers-logic.js';
+        import { genCompare, compareAnswer, genOddEven, genLine, genMixedLine } from './numbers-logic.js';
         import { squish, bounce, popScore, flashRed, burst, flyTo, react } from './juice.js';
 
         const $ = id => document.getElementById(id);
@@ -189,76 +189,55 @@
 
         // ---- Lv2 Odd / Even ----
         const lv2 = {
-            round: null, emoji: '🍛', loose: [], pairs: [], selected: null,
+            round: null, emoji: '🍛', hinted: false,
             newRound() {
                 this.round = genOddEven();
                 this.emoji = pick(['🍛', '🍜', '🍰', '🥟', '🍩']);
-                this.loose = Array.from({ length: this.round.n }, (_, i) => i);
-                this.pairs = []; this.selected = null;
-                setBubble(`${this.round.n} 碟是奇數還是偶數？`, `${this.round.n} plates: odd or even? Seat them two by two!`);
+                this.hinted = false;
+                setBubble(`${this.round.n} 碟是奇數還是偶數？`, `${this.round.n} plates: odd or even?`);
                 $('stage').innerHTML = `
                   <div class="flex items-center gap-3"><span class="text-4xl md:text-6xl" data-face>🐻</span><div class="num-card text-3xl md:text-5xl">${this.round.n}</div></div>
-                  <div id="looseGrid" class="grid grid-cols-5 gap-2 md:gap-3"></div>
+                  <div id="looseGrid" class="grid grid-cols-5 gap-2 md:gap-3">${Array.from({ length: this.round.n }, () => `<div class="plate">${this.emoji}</div>`).join('')}</div>
                   <div id="pairShelf" class="flex flex-col gap-2 items-center w-full"></div>`;
                 $('controls').innerHTML = `
-                  <button id="undoPair" class="bubbly-btn bg-gray-300 text-gray-700 font-bold text-sm md:text-lg py-2 px-3 rounded-xl border-4 border-gray-400">↩️ Undo</button>
-                  <button class="bubbly-btn bg-pink-300 text-pink-900 font-black text-xl md:text-2xl py-3 px-5 rounded-2xl border-4 border-pink-500 disabled:opacity-40" data-ans="odd">奇數<br><span class="text-sm font-normal">Odd</span></button>
-                  <button class="bubbly-btn bg-teal-300 text-teal-900 font-black text-xl md:text-2xl py-3 px-5 rounded-2xl border-4 border-teal-500 disabled:opacity-40" data-ans="even">偶數<br><span class="text-sm font-normal">Even</span></button>`;
-                $('undoPair').addEventListener('pointerdown', () => this.undo());
-                $('controls').querySelectorAll('[data-ans]').forEach(b => b.addEventListener('pointerdown', e => { if (!b.disabled) answer(b.dataset.ans === this.round.answer, e); }));
-                this.render();
+                  <button class="bubbly-btn bg-pink-300 text-pink-900 font-black text-xl md:text-2xl py-3 px-5 rounded-2xl border-4 border-pink-500" data-ans="odd">奇數<br><span class="text-sm font-normal">Odd</span></button>
+                  <button id="hintBtn" class="bubbly-btn bg-yellow-300 text-yellow-900 font-bold text-base md:text-xl py-3 px-4 rounded-2xl border-4 border-yellow-500">💡 提示<br><span class="text-sm font-normal">Hint</span></button>
+                  <button class="bubbly-btn bg-teal-300 text-teal-900 font-black text-xl md:text-2xl py-3 px-5 rounded-2xl border-4 border-teal-500" data-ans="even">偶數<br><span class="text-sm font-normal">Even</span></button>`;
+                $('hintBtn').addEventListener('pointerdown', () => this.hint());
+                $('controls').querySelectorAll('[data-ans]').forEach(b => b.addEventListener('pointerdown', e => answer(b.dataset.ans === this.round.answer, e)));
             },
-            /** Tables 5 per row (= one ten-frame). Pair k sits at table k; a lone leftover plate sits at table pairs.length. */
+            /** Two-seat tables, 5 per row (= one ten-frame). Every pair seated; a lone plate sits alone at the last table. */
             tablesHtml() {
-                const tables = Math.ceil(this.round.n / 2);
-                const rows = Math.ceil(tables / 5);
+                const n = this.round.n, tables = Math.ceil(n / 2), rows = Math.ceil(tables / 5);
                 let html = '';
                 for (let r = 0; r < rows; r++) {
                     html += '<div class="tables">';
                     for (let c = 0; c < 5; c++) {
                         const k = r * 5 + c;
                         if (k >= tables) { html += '<div></div>'; continue; }
-                        const seated = k < this.pairs.length;
-                        const lone = !seated && k === this.pairs.length && this.loose.length === 1;
+                        const full = k * 2 + 1 < n;
                         html += `<div class="table" data-table="${k}">
-                          <div class="seat ${seated ? '' : lone ? 'odd-one' : 'empty'}">${seated || lone ? this.emoji : ''}</div>
-                          <div class="seat ${seated ? '' : 'empty'}">${seated ? this.emoji : ''}</div></div>`;
+                          <div class="seat ${full ? '' : 'odd-one'}">${this.emoji}</div>
+                          <div class="seat ${full ? '' : 'empty'}">${full ? this.emoji : ''}</div></div>`;
                     }
                     html += '</div>';
                 }
                 return html;
             },
-            render() {
-                const grid = $('looseGrid');
-                grid.innerHTML = this.loose.map(id => `<button class="plate ${id === this.selected ? 'selected' : ''}" data-id="${id}">${this.emoji}</button>`).join('');
-                grid.querySelectorAll('[data-id]').forEach(b => b.addEventListener('pointerdown', () => this.tap(parseInt(b.dataset.id), b)));
+            /** Hint: plates fly two by two into tables; the leftover plate lands alone. Answer buttons stay usable throughout. */
+            hint() {
+                if (this.hinted) return;
+                this.hinted = true;
+                playSound('click'); triggerWiggle();
+                $('hintBtn').disabled = true; $('hintBtn').classList.add('opacity-40');
+                const plates = [...$('looseGrid').querySelectorAll('.plate')];
+                const from = plates.map(p => p.getBoundingClientRect());
+                $('looseGrid').innerHTML = '';
                 $('pairShelf').innerHTML = this.tablesHtml();
-                const ready = this.loose.length <= 1;
-                $('controls').querySelectorAll('[data-ans]').forEach(b => b.disabled = !ready);
-            },
-            tap(id, btn) {
-                playSound('click'); triggerWiggle(); squish(btn);
-                if (this.selected === null) { this.selected = id; this.render(); return; }
-                if (this.selected === id) { this.selected = null; this.render(); return; }
-                const fromA = $('looseGrid').querySelector(`[data-id="${this.selected}"]`).getBoundingClientRect();
-                const fromB = btn.getBoundingClientRect();
-                const k = this.pairs.length;
-                this.pairs.push([this.selected, id]);
-                this.loose = this.loose.filter(x => x !== id && x !== this.selected);
-                this.selected = null;
-                this.render();
-                const table = $('pairShelf').querySelector(`[data-table="${k}"]`);
-                if (table) {
-                    const seats = table.querySelectorAll('.seat');
-                    const html = `<span class="text-2xl">${this.emoji}</span>`;
-                    flyTo(fromA, seats[0], html); flyTo(fromB, seats[1], html);
-                }
-            },
-            undo() {
-                if (!this.pairs.length) return;
-                const [a, b] = this.pairs.pop();
-                this.loose.push(a, b); this.loose.sort((x, y) => x - y); this.selected = null;
-                triggerWiggle(); this.render();
+                const seats = [...$('pairShelf').querySelectorAll('.seat')].filter(s => !s.classList.contains('empty'));
+                const html = `<span class="text-2xl">${this.emoji}</span>`;
+                seats.forEach(seat => { seat.style.visibility = 'hidden'; });
+                from.forEach((rect, i) => setTimeout(() => flyTo(rect, seats[i], html, () => { seats[i].style.visibility = ''; }), i * 60));
             }
         };
 
@@ -266,17 +245,20 @@
         function makeLineLevel(gen, bubbleFor, colorOf) {
             return {
                 round: null, filled: null,
+                color: null,
                 newRound() {
                     const r = this.round = gen();
                     this.filled = new Set();
+                    this.color = colorOf(r);
                     const [zh, en] = bubbleFor(r);
                     setBubble(zh, en);
                     $('stage').innerHTML = `
                       <div class="flex flex-col items-center gap-1">
+                        <div class="text-xl md:text-2xl font-bold text-amber-800">${r.dir === 'asc' ? '小 ➡️ 大' : '大 ➡️ 小'}</div>
                         <div id="shelf" class="shelf"></div>
                         <div id="bearRow" class="bear-row"></div>
                       </div>`;
-                    $('controls').innerHTML = r.tiles.map(v => `<button class="tile-book ${colorOf(v)}" data-v="${v}">${v}</button>`).join('');
+                    $('controls').innerHTML = r.tiles.map(v => `<button class="tile-book ${this.color(v)}" data-v="${v}">${v}</button>`).join('');
                     $('controls').querySelectorAll('[data-v]').forEach(b => b.addEventListener('pointerdown', e => this.tapTile(b, e)));
                     this.render();
                 },
@@ -286,8 +268,8 @@
                     const active = next === undefined ? justFilled : next; // bear stays under the last book when done
                     $('shelf').innerHTML = this.round.slots.map((v, i) => {
                         const isBlank = this.round.blanks.includes(i);
-                        if (!isBlank) return `<div class="book-slot ${colorOf(v)}">${v}</div>`;
-                        if (this.filled.has(i)) return `<div class="book-slot ${colorOf(v)} ${i === justFilled ? 'filled' : ''}">${v}</div>`;
+                        if (!isBlank) return `<div class="book-slot ${this.color(v)}">${v}</div>`;
+                        if (this.filled.has(i)) return `<div class="book-slot ${this.color(v)} ${i === justFilled ? 'filled' : ''}">${v}</div>`;
                         return `<div class="book-slot gap">?</div>`;
                     }).join('');
                     $('bearRow').innerHTML = this.round.slots.map((_, i) => `<div class="${i === active ? 'here' : ''}" ${i === active ? 'data-face' : ''}>${i === active ? '🐻' : ''}</div>`).join('');
@@ -302,7 +284,7 @@
                         btn.disabled = true;
                         playSound('click'); triggerWiggle();
                         const slotEl = $('shelf').children[target];
-                        flyTo(btn, slotEl, `<div class="book-slot ${colorOf(v)}">${v}</div>`);
+                        flyTo(btn, slotEl, `<div class="book-slot ${this.color(v)}">${v}</div>`);
                         this.filled.add(target);
                         this.render(target);
                         if (this.nextBlank() === undefined) answer(true, e);
@@ -313,8 +295,18 @@
                 }
             };
         }
-        const lv3 = makeLineLevel(genLine, () => ['書架缺了哪些數字？', 'Which books are missing?'], v => `c${v % 6}`);
-        const lv4 = makeLineLevel(genSkipLine, r => r.parity === 'odd' ? ['奇數書排排站，缺了誰？', 'Odd books: which are missing?'] : ['偶數書排排站，缺了誰？', 'Even books: which are missing?'], v => v % 2 ? 'odd' : 'even');
+        const dirZh = r => r.dir === 'asc' ? '由小到大' : '由大到小';
+        const dirEn = r => r.dir === 'asc' ? 'small → big' : 'big → small';
+        const lineBubble = r => {
+            if (r.kind === 'skip' || r.parity) {
+                const p = r.parity === 'odd' ? ['奇數書', 'Odd books'] : ['偶數書', 'Even books'];
+                return [`${p[0]}${dirZh(r)}，缺了誰？`, `${p[1]}, ${dirEn(r)}: which are missing?`];
+            }
+            return [`書架${dirZh(r)}，缺了哪些數字？`, `Books ${dirEn(r)}: which are missing?`];
+        };
+        const lineColor = r => (r.kind === 'skip' ? (v => v % 2 ? 'odd' : 'even') : (v => `c${v % 6}`));
+        const lv3 = makeLineLevel(genLine, lineBubble, lineColor);
+        const lv4 = makeLineLevel(genMixedLine, lineBubble, lineColor);
 
         const LEVELS = { num1: lv1, num2: lv2, num3: lv3, num4: lv4 };
     </script>

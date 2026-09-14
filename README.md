@@ -3,7 +3,7 @@
 Two browser games for Primary 1, hosted on GitHub Pages, Google login via Firebase.
 
 - `index.html` — hub + 🍎 Math Market (counting with ten-frames)
-- `numbers.html` — 🔢 Number Shop 數字小店 (compare 比較, odd/even 奇偶, number line 數線, odd/even line)
+- `numbers.html` — 🔢 Number Shop 數字小店 (compare 比較, odd/even 奇偶, number line 數線, mixed line 混合數線)
 - `shared.js` / `shared.css` — login, fever/combo, leaderboard, teacher panel, theme
 - `juice.js` — tap/answer animations
 - `numbers-logic.js`, `trophy.js` — pure logic, unit tested

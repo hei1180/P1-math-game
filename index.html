@@ -53,7 +53,7 @@
                 I need <span id="targetAmount" class="text-red-500 text-3xl md:text-5xl">5</span> <span id="targetItem">🍎</span>!
                 <div class="absolute -bottom-3 md:-bottom-4 left-1/2 transform -translate-x-1/2 w-4 h-4 bg-white border-b-4 border-r-4 border-gray-800 rotate-45"></div>
             </div>
-            <div class="text-6xl md:text-8xl drop-shadow-md">🐻</div>
+            <div id="customerFace" class="text-6xl md:text-8xl drop-shadow-md">🐻</div>
         </div>
 
         <div class="flex-none bg-orange-100 border-t-8 border-orange-300 p-2 md:p-4 flex flex-col items-center justify-center gap-2 min-h-[80px] game-layer">
@@ -103,6 +103,7 @@
         import { signIn, onUser, settings, initAudio, playSound, spawnParticle, replay,
                  engine, resetEngine, registerHit, triggerWiggle, endFever, startTimer, stopTimer,
                  saveScore, renderLeaderboard, refreshLevelButton, isUnlocked, showRankPopup, mountTeacherModal } from './shared.js';
+        import { squish, bounce, popScore, flashRed, burst, flyTo, react } from './juice.js';
 
         const $ = id => document.getElementById(id);
         const TABS = [{ key: 'easy', label: 'Easy' }, { key: 'medium', label: 'Medium' }, { key: 'hard', label: 'Hard' }];
@@ -166,6 +167,10 @@
             if (round.current + amount > 40) return;
             round.current += amount; round.history.push(amount);
             renderTenFrames(); playSound('click');
+            squish($('itemBtn'));
+            const cells = $('tenFrameContainer').querySelectorAll('.frame-cell');
+            const target = cells[round.current - 1];
+            if (target) flyTo($('itemBtn'), target, `<span class="text-3xl">${round.item}</span>`);
             if (e && e.clientX) spawnParticle(e.clientX, e.clientY, `+${amount}`);
             triggerWiggle();
         }
@@ -185,11 +190,18 @@
             $('tenFrameContainer').innerHTML = html;
         }
 
-        $('giveBtn').addEventListener('pointerdown', () => {
+        $('giveBtn').addEventListener('pointerdown', (e) => {
             triggerWiggle();
             const pts = registerHit(round.current === round.target, POINTS[round.mode]);
-            if (pts > 0) nextCustomer();
-            else replay($('customerBubble'), 'animate-shake');
+            if (pts > 0) {
+                burst(e.clientX, e.clientY);
+                bounce($('customerFace')); react($('customerFace'), '🥳');
+                popScore($('scoreDisplay'));
+                nextCustomer();
+            } else {
+                react($('customerFace'), '😵'); flashRed($('gameScreen'));
+                replay($('customerBubble'), 'animate-shake');
+            }
         });
 
         async function endGame() {

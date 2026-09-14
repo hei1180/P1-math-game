@@ -84,7 +84,7 @@
     <div id="leaderboardScreen" class="hidden absolute inset-0 flex flex-col items-center bg-purple-500 z-40 p-4 md:p-8 overflow-y-auto">
         <h1 class="text-4xl md:text-5xl font-bold text-white mb-4 md:mb-6 drop-shadow-md mt-4 text-center">🏆 Leaderboard</h1>
         
-        <div class="flex w-full max-w-md rounded-t-2xl overflow-hidden shadow-md">
+        <div class="flex flex-none w-full max-w-md rounded-t-2xl overflow-hidden shadow-md">
             <button id="tab-easy" onclick="changeLeaderboardTab('easy')" class="flex-1 py-3 font-bold bg-white text-purple-600 transition-colors">Easy</button>
             <button id="tab-medium" onclick="changeLeaderboardTab('medium')" class="flex-1 py-3 font-bold bg-purple-300 text-purple-700 transition-colors">Medium</button>
             <button id="tab-hard" onclick="changeLeaderboardTab('hard')" class="flex-1 py-3 font-bold bg-purple-300 text-purple-700 transition-colors">Hard</button>
@@ -100,7 +100,7 @@
     </div>
 
     <script type="module">
-        import { signIn, onUser, player, settings, initAudio, playSound, spawnParticle, replay,
+        import { signIn, onUser, settings, initAudio, playSound, spawnParticle, replay,
                  engine, resetEngine, registerHit, triggerWiggle, endFever, startTimer, stopTimer,
                  saveScore, renderLeaderboard, refreshLevelButton, isUnlocked, showRankPopup, mountTeacherModal } from './shared.js';
 
@@ -108,7 +108,7 @@
         const TABS = [{ key: 'easy', label: 'Easy' }, { key: 'medium', label: 'Medium' }, { key: 'hard', label: 'Hard' }];
         const POINTS = { easy: 10, medium: 20, hard: 30 };
         const items = ['🍎', '🍭', '🧸', '🖍️', '🍪'];
-        let round = { mode: 'easy', target: 0, current: 0, item: '🍎', history: [] };
+        const round = { mode: 'easy', target: 0, current: 0, item: '🍎', history: [] };
 
         // ---- screens ----
         function show(id) {

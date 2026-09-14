@@ -1584,15 +1584,6 @@ export function react(el, emoji, ms = 600) {
 .c0 { background: #f87171; } .c1 { background: #fbbf24; } .c2 { background: #34d399; } .c3 { background: #60a5fa; } .c4 { background: #a78bfa; } .c5 { background: #f472b6; }
 .odd { background: #ef4444; } .even { background: #3b82f6; }
 
-/* Lv1 book stacks */
-.stack-btn { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; background: none; border: 0; padding: 0; }
-.stack-num { background: white; border: 3px solid #1f2937; border-radius: 12px; font-weight: 900; font-size: 1.75rem; padding: 0 14px; box-shadow: 0 4px 0 rgba(0,0,0,0.2); }
-.stack { display: flex; flex-direction: column-reverse; gap: 2px; align-items: center; min-height: 12px; }
-.book { height: 8px; width: 60px; border-radius: 3px; box-shadow: inset 0 -2px 0 rgba(0,0,0,0.25); }
-.peek { position: absolute; left: 50%; top: 0; transform: translateX(-50%); display: flex; flex-direction: column; gap: 4px; align-items: center; background: rgba(255,255,255,0.95); border-radius: 12px; padding: 4px; z-index: 5; }
-.peek:empty { display: none; }
-@media (min-width: 768px) { .book { height: 12px; width: 90px; } .stack-num { font-size: 2.5rem; } }
-
 /* Lv2 plates + tables */
 .plate { width: 48px; height: 48px; border-radius: 50%; border: 3px solid #cbd5e1; background: radial-gradient(circle, #fff 55%, #e2e8f0 56%, #fff 70%); font-size: 26px; display: flex; align-items: center; justify-content: center; transition: transform 0.1s; }
 .plate.selected { border-color: #f59e0b; transform: scale(1.15); box-shadow: 0 0 0 4px rgba(245,158,11,0.4); }
@@ -1689,24 +1680,9 @@ Replace `answer`:
         }
 ```
 
-- [ ] **Step 5: `numbers.html` — Lv1 book stacks**
+- [ ] **Step 5: `numbers.html` — Lv1 persistent peek (no stacks)**
 
-Replace the `$('stage').innerHTML` template inside `lv1.newRound()` with:
-
-```js
-                const stackHtml = n => `<div class="stack">${Array.from({ length: n }, (_, i) => `<div class="book c${i % 6}"></div>`).join('')}</div>`;
-                $('stage').innerHTML = `
-                  <div class="flex gap-6 md:gap-16 items-start justify-center w-full">
-                    ${['left', 'right'].map((side, i) => `
-                      <div class="relative flex flex-col items-center gap-2 w-[45%] max-w-[220px]">
-                        <button class="cust-btn text-5xl md:text-7xl drop-shadow-md" data-side="${side}" data-face>${i === 0 ? '🐻' : '🐰'}</button>
-                        <button class="stack-btn" data-peek="${side}"><div class="stack-num">${i === 0 ? r.a : r.b}</div>${stackHtml(i === 0 ? r.a : r.b)}</button>
-                        <div class="peek" data-peekbox="${side}"></div>
-                      </div>`).join('')}
-                  </div>`;
-```
-
-Also change `lv1.peek()` so the frames persist until the next round (no timer): remove the `peekTimer` field and replace the method with
+Keep the Lv1 markup from Task 7 (animal button, `num-card` peek button, `.peek` box under the card) but add `data-face` to the animal button and make the peek persist until the next round: remove the `peekTimer` field and replace the method with
 
 ```js
             peek(side, emoji) {
@@ -1716,7 +1692,7 @@ Also change `lv1.peek()` so the frames persist until the next round (no timer): 
             }
 ```
 
-(The `.peek` box overlays the stack and stays until `newRound()` replaces the stage.)
+Do not add the `.stack*` / `.book` CSS listed in Step 2 (the owner dropped the book stacks); keep `.peek { min-height: 40px; }` as in Task 4.
 
 - [ ] **Step 6: `numbers.html` — Lv2 plates and tables**
 
@@ -1862,7 +1838,7 @@ Replace `makeLineLevel` and the `lv3`/`lv4` lines with:
 - [ ] **Step 8: Verify in browser** (serve, hide `#loginScreen`, `(await import('./shared.js')).settings.trophy.bronze = 0`, mobile preset 375×812 and 360×640)
 
 - Market: `window.startGame('easy')`; item tap squishes and a clone flies into the next cell; GIVE correct → burst, 🐻→🥳, score pops; wrong → 😵 + red flash.
-- Lv1: two book stacks with numeral badges, taller stack = bigger number; tap stack → ten-frames overlay it and stay until the next round; both stacks of 20 fit above the controls on 360×640.
+- Lv1: number cards; tap card → ten-frames appear under it and stay until the next round; both sides revealed with 18+ fit above the controls on 360×640; both stacks of 20 fit above the controls on 360×640.
 - Lv2: plates in grid; tap two → both fly to the next table's seats; leftover plate sits alone with red dashed seat; 20 plates + 10 tables fit on 360×640 (measure `#pairShelf` bottom vs `#controls` top).
 - Lv3/4: shelf of coloured spines with gaps; bear bounces under the leftmost gap; correct book flies into the gap then bear moves to the next gap; wrong book shakes; Lv4 spines alternate red/blue by parity.
 - Console: zero errors. Reset viewport, kill server.

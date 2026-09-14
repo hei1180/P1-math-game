@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Number Shop 數字小店</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="shared.css">
+</head>
+<body class="h-[100dvh] w-full flex flex-col relative">
+
+    <div id="loginScreen" class="absolute inset-0 flex flex-col items-center justify-center bg-indigo-400 z-50 p-4">
+        <h1 class="text-4xl md:text-6xl font-bold text-white mb-8 text-center drop-shadow-lg leading-tight">🔢 Number Shop</h1>
+        <button id="loginBtn" class="bubbly-btn bg-white text-indigo-500 font-bold text-xl md:text-2xl py-4 px-8 rounded-full border-4 border-indigo-200 w-[90%] max-w-sm">Login with Google</button>
+        <a href="index.html" class="text-white mt-6 underline font-bold">⬅ Back to games</a>
+    </div>
+
+    <div id="menuScreen" class="hidden absolute inset-0 flex flex-col items-center justify-center bg-indigo-400 z-40 p-4">
+        <a href="index.html" class="absolute top-4 left-4 bg-white/80 text-indigo-800 p-2 md:p-3 rounded-lg bubbly-btn font-bold">⬅ Games</a>
+        <button id="adminBtn" class="absolute top-4 right-4 bg-gray-800 text-white p-2 md:p-3 rounded-lg bubbly-btn font-bold">⚙️ Teacher</button>
+        <h1 class="text-3xl md:text-5xl font-bold text-white mb-1 drop-shadow-md text-center leading-tight">🔢 數字小店</h1>
+        <p id="playerNameDisplay" class="text-base md:text-xl text-indigo-100 mb-4 font-bold text-center w-full px-4 truncate"></p>
+        <div class="flex flex-col gap-3 w-[90%] max-w-sm">
+            <button id="btn-num1" onclick="startGame('num1')" class="level-btn bubbly-btn bg-green-100 text-green-700 font-bold py-3 rounded-2xl border-4 border-green-300 w-full"><span class="text-xl md:text-2xl">Lv1 比較 Compare</span><span class="level-sub text-xs md:text-sm font-normal"></span></button>
+            <button id="btn-num2" onclick="startGame('num2')" class="level-btn bubbly-btn bg-yellow-100 text-yellow-700 font-bold py-3 rounded-2xl border-4 border-yellow-300 w-full"><span class="text-xl md:text-2xl">Lv2 奇數偶數 Odd/Even</span><span class="level-sub text-xs md:text-sm font-normal"></span></button>
+            <button id="btn-num3" onclick="startGame('num3')" class="level-btn bubbly-btn bg-orange-100 text-orange-700 font-bold py-3 rounded-2xl border-4 border-orange-300 w-full"><span class="text-xl md:text-2xl">Lv3 數線 Number line</span><span class="level-sub text-xs md:text-sm font-normal"></span></button>
+            <button id="btn-num4" onclick="startGame('num4')" class="level-btn bubbly-btn bg-red-100 text-red-700 font-bold py-3 rounded-2xl border-4 border-red-300 w-full"><span class="text-xl md:text-2xl">Lv4 奇偶數線 Odd/Even line</span><span class="level-sub text-xs md:text-sm font-normal"></span></button>
+            <button onclick="showLeaderboardFromMenu()" class="bubbly-btn bg-purple-100 text-purple-700 font-bold text-xl md:text-2xl py-3 rounded-2xl border-4 border-purple-300 w-full mt-1 shadow-md">🏆 Leaderboard</button>
+        </div>
+    </div>
+
+    <div id="gameScreen" class="hidden h-full w-full flex flex-col bg-white overflow-hidden relative">
+        <div id="feverOverlayText">🔥 FEVER x2! 🔥</div>
+        <div class="flex-none flex justify-between items-center p-2 md:p-4 bg-gray-100 border-b-4 border-gray-200 game-layer">
+            <div class="text-lg md:text-2xl font-bold text-gray-700">Time: <span id="timerDisplay" class="text-red-500">30</span>s</div>
+            <div class="text-lg md:text-2xl font-bold text-gray-700">Score: <span id="scoreDisplay" class="text-yellow-500">0</span></div>
+            <div class="text-sm md:text-xl font-bold text-purple-600 bg-purple-100 px-2 md:px-3 py-1 rounded-full">Combo: <span id="comboDisplay">0</span></div>
+        </div>
+        <div class="flex-none flex justify-center p-2 bg-blue-50/80 game-layer">
+            <div id="bubble" class="bg-white border-4 border-gray-800 px-4 py-2 md:px-6 md:py-3 rounded-3xl font-bold text-center shadow-lg animate-pop">
+                <div id="bubbleZh" class="text-2xl md:text-4xl text-red-500"></div>
+                <div id="bubbleEn" class="text-sm md:text-lg text-gray-500"></div>
+            </div>
+        </div>
+        <div id="stage" class="flex-1 flex flex-col items-center justify-center bg-blue-50/80 relative p-2 gap-2 game-layer overflow-hidden"></div>
+        <div id="controls" class="flex-none p-3 md:p-4 bg-orange-200 border-t-8 border-orange-300 flex justify-center gap-2 md:gap-4 items-center flex-wrap game-layer min-h-[90px]"></div>
+    </div>
+
+    <div id="rankPopup">
+        <h2 class="text-3xl md:text-5xl mb-4 text-center font-bold px-4">完成！Finished!</h2>
+        <div id="rankScore" class="text-4xl md:text-6xl font-bold mb-4"></div>
+        <div id="rankTrophy" class="rank-anim px-4"></div>
+    </div>
+
+    <div id="leaderboardScreen" class="hidden absolute inset-0 flex flex-col items-center bg-purple-500 z-40 p-4 md:p-8 overflow-y-auto">
+        <h1 class="text-4xl md:text-5xl font-bold text-white mb-4 drop-shadow-md mt-4 text-center">🏆 Leaderboard</h1>
+        <div class="flex w-full max-w-md rounded-t-2xl overflow-hidden shadow-md text-sm md:text-base">
+            <button id="tab-num1" onclick="changeLeaderboardTab('num1')" class="flex-1 py-3 font-bold bg-white text-purple-600">Lv1 比較</button>
+            <button id="tab-num2" onclick="changeLeaderboardTab('num2')" class="flex-1 py-3 font-bold bg-purple-300 text-purple-700">Lv2 奇偶</button>
+            <button id="tab-num3" onclick="changeLeaderboardTab('num3')" class="flex-1 py-3 font-bold bg-purple-300 text-purple-700">Lv3 數線</button>
+            <button id="tab-num4" onclick="changeLeaderboardTab('num4')" class="flex-1 py-3 font-bold bg-purple-300 text-purple-700">Lv4 奇偶線</button>
+        </div>
+        <div class="bg-white rounded-b-3xl w-full max-w-md p-4 md:p-6 shadow-xl border-x-4 border-b-4 border-purple-300 mb-6">
+            <table class="w-full text-left text-sm md:text-base"><thead><tr class="text-gray-400 border-b-2"><th>Rank</th><th>Name</th><th>Score</th></tr></thead><tbody id="leaderboardBody"></tbody></table>
+        </div>
+        <button onclick="showMenu()" class="bubbly-btn bg-yellow-400 text-yellow-900 font-bold text-xl md:text-2xl py-3 px-8 rounded-full border-4 border-yellow-500 mb-8">Back to Menu</button>
+    </div>
+
+    <script type="module">
+        import { signIn, onUser, player, settings, initAudio, playSound, spawnParticle, replay,
+                 engine, resetEngine, registerHit, triggerWiggle, endFever, startTimer, stopTimer,
+                 saveScore, renderLeaderboard, refreshLevelButton, isUnlocked, showRankPopup, mountTeacherModal } from './shared.js';
+        import { genCompare, compareAnswer, genOddEven, genLine, genSkipLine } from './numbers-logic.js';
+
+        const $ = id => document.getElementById(id);
+        const TABS = [{ key: 'num1', label: 'Lv1' }, { key: 'num2', label: 'Lv2' }, { key: 'num3', label: 'Lv3' }, { key: 'num4', label: 'Lv4' }];
+        const POINTS = { num1: 10, num2: 15, num3: 15, num4: 20 };
+        const PREV = { num1: null, num2: 'num1', num3: 'num2', num4: 'num3' };
+        const ITEMS = ['🍎', '🍭', '🧸', '🍪', '🍓'];
+        const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+        let mode = 'num1';
+
+        // ---- screens ----
+        function show(id) {
+            for (const s of ['menuScreen', 'gameScreen', 'leaderboardScreen']) $(s).classList.add('hidden');
+            $(id).classList.remove('hidden');
+        }
+        function refreshMenu() {
+            refreshLevelButton($('btn-num1'), 'num1', null, '');
+            refreshLevelButton($('btn-num2'), 'num2', 'num1', 'Lv1');
+            refreshLevelButton($('btn-num3'), 'num3', 'num2', 'Lv2');
+            refreshLevelButton($('btn-num4'), 'num4', 'num3', 'Lv3');
+        }
+        window.showMenu = () => { refreshMenu(); show('menuScreen'); };
+
+        $('loginBtn').addEventListener('click', signIn);
+        onUser(p => {
+            $('playerNameDisplay').innerText = `Welcome, ${p.name}!`;
+            $('loginScreen').classList.add('hidden');
+            showMenu();
+        });
+        mountTeacherModal(refreshMenu);
+
+        // ---- common game helpers ----
+        function setBubble(zh, en) { $('bubbleZh').innerText = zh; $('bubbleEn').innerText = en; replay($('bubble'), 'animate-pop'); }
+        function tenFramesHtml(n, emoji) {
+            let html = '';
+            for (let f = 0; f < Math.ceil(n / 10); f++) {
+                html += '<div class="ten-frame">';
+                for (let i = 0; i < 10; i++) html += `<div class="frame-cell">${(f * 10 + i) < n ? emoji : ''}</div>`;
+                html += '</div>';
+            }
+            return html;
+        }
+        /** Common answer handling: correct → next round, wrong → shake bubble. */
+        function answer(correct, e) {
+            triggerWiggle();
+            const pts = registerHit(correct, POINTS[mode]);
+            if (pts > 0) { if (e && e.clientX) spawnParticle(e.clientX, e.clientY, `+${pts}`); LEVELS[mode].newRound(); }
+            else replay($('bubble'), 'animate-shake');
+        }
+
+        window.startGame = function(m) {
+            if (!isUnlocked(PREV[m])) return;
+            initAudio();
+            mode = m;
+            resetEngine(settings.numTimeLimit);
+            show('gameScreen');
+            LEVELS[mode].newRound();
+            startTimer(settings.numTimeLimit, endGame);
+        };
+
+        async function endGame() {
+            stopTimer(); endFever();
+            $('stage').innerHTML = ''; $('controls').innerHTML = '';
+            await saveScore(mode);
+            showRankPopup(engine.score, () => changeLeaderboardTab(mode));
+        }
+
+        window.changeLeaderboardTab = key => { show('leaderboardScreen'); renderLeaderboard(TABS, key); };
+        window.showLeaderboardFromMenu = () => changeLeaderboardTab('num1');
+
+        // ---- Lv1 Compare ----
+        const lv1 = {
+            round: null, peekTimer: null,
+            newRound() {
+                const r = this.round = genCompare();
+                const emoji = pick(ITEMS);
+                setBubble(r.ask === 'more' ? '誰比較多？' : '誰比較少？', r.ask === 'more' ? 'Who has MORE?' : 'Who has LESS?');
+                $('stage').innerHTML = `
+                  <div class="flex gap-6 md:gap-16 items-start justify-center w-full">
+                    ${['left', 'right'].map((side, i) => `
+                      <div class="flex flex-col items-center gap-2 w-[45%] max-w-[220px]">
+                        <button class="cust-btn text-6xl md:text-8xl drop-shadow-md" data-side="${side}">${i === 0 ? '🐻' : '🐰'}</button>
+                        <button class="num-card text-4xl md:text-6xl" data-peek="${side}">${i === 0 ? r.a : r.b}</button>
+                        <div class="peek flex flex-col gap-1 items-center" data-peekbox="${side}"></div>
+                      </div>`).join('')}
+                  </div>`;
+                $('controls').innerHTML = `
+                  <button class="bubbly-btn bg-white text-3xl md:text-4xl py-2 px-5 rounded-2xl border-4 border-gray-300" data-side="left">🐻</button>
+                  <button class="bubbly-btn bg-blue-400 text-white font-black text-xl md:text-2xl py-3 px-5 rounded-2xl border-4 border-blue-600" data-side="same">一樣多<br><span class="text-sm font-normal">Same</span></button>
+                  <button class="bubbly-btn bg-white text-3xl md:text-4xl py-2 px-5 rounded-2xl border-4 border-gray-300" data-side="right">🐰</button>`;
+                $('stage').querySelectorAll('[data-peek]').forEach(b => b.addEventListener('pointerdown', () => this.peek(b.dataset.peek, emoji)));
+                document.querySelectorAll('#stage [data-side], #controls [data-side]').forEach(b => b.addEventListener('pointerdown', e => answer(b.dataset.side === compareAnswer(this.round), e)));
+            },
+            peek(side, emoji) {
+                const n = side === 'left' ? this.round.a : this.round.b;
+                const box = $('stage').querySelector(`[data-peekbox="${side}"]`);
+                box.innerHTML = tenFramesHtml(n, emoji);
+                playSound('click');
+                clearTimeout(this.peekTimer);
+                this.peekTimer = setTimeout(() => { box.innerHTML = ''; }, 1500);
+            }
+        };
+
+        const LEVELS = { num1: lv1 };
+    </script>
+</body>
+</html>

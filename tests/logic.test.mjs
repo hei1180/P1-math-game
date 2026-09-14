@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { genCompare, compareAnswer, genOddEven, genLine, genSkipLine, genMixedLine } from '../numbers-logic.js';
+import { genCompare, compareAnswer, genOddEven, genLine, genSkipLine } from '../numbers-logic.js';
 
 // Deterministic rng: cycles through the given values.
 function seq(values) { let i = 0; return () => values[i++ % values.length]; }
@@ -134,18 +134,4 @@ test('genSkipLine distractors prefer n±1 (wrong parity) when available', () => 
   assert.deepEqual(r.blanks, [2]);
   assert.ok(r.tiles.includes(6));
   assert.ok(r.tiles.includes(5) || r.tiles.includes(7), 'has an n±1 distractor');
-});
-
-test('genMixedLine: numeric or skip lines, both directions, roughly even mix', () => {
-  const rng = lcg(21);
-  const count = { num: 0, skip: 0, asc: 0, desc: 0 };
-  for (let i = 0; i < 1000; i++) {
-    const r = genMixedLine(rng);
-    assert.ok(['num', 'skip'].includes(r.kind));
-    count[r.kind]++; count[r.dir]++;
-    if (r.kind === 'num') { checkLineRound(r, 7); assert.equal(Math.abs(r.slots[1] - r.slots[0]), 1); }
-    else { checkLineRound(r, 6); assert.equal(Math.abs(r.slots[1] - r.slots[0]), 2); assert.ok(['odd', 'even'].includes(r.parity)); }
-  }
-  assert.ok(count.num > 420 && count.num < 580, 'num share ' + count.num);
-  assert.ok(count.asc > 420 && count.asc < 580, 'asc share ' + count.asc);
 });

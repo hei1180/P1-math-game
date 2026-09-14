@@ -11,7 +11,8 @@
 
     <div id="loginScreen" class="absolute inset-0 flex flex-col items-center justify-center bg-indigo-400 z-50 p-4">
         <h1 class="text-4xl md:text-6xl font-bold text-white mb-8 text-center drop-shadow-lg leading-tight">🔢 Number Shop</h1>
-        <button id="loginBtn" class="bubbly-btn bg-white text-indigo-500 font-bold text-xl md:text-2xl py-4 px-8 rounded-full border-4 border-indigo-200 w-[90%] max-w-sm">Login with Google</button>
+        <div id="loginSpinner" class="spinner"></div>
+        <button id="loginBtn" class="hidden bubbly-btn bg-white text-indigo-500 font-bold text-xl md:text-2xl py-4 px-8 rounded-full border-4 border-indigo-200 w-[90%] max-w-sm">Login with Google</button>
         <a href="index.html" class="text-white mt-6 underline font-bold">⬅ Back to games</a>
     </div>
 
@@ -96,11 +97,12 @@
         window.showMenu = () => { refreshMenu(); show('menuScreen'); };
 
         $('loginBtn').addEventListener('click', signIn);
+        const showLoginButton = () => { $('loginSpinner').classList.add('hidden'); $('loginBtn').classList.remove('hidden'); };
         onUser(p => {
             $('playerNameDisplay').innerText = `Welcome, ${p.name}!`;
             $('loginScreen').classList.add('hidden');
             showMenu();
-        });
+        }, showLoginButton);
         mountTeacherModal(refreshMenu);
 
         // ---- common game helpers ----

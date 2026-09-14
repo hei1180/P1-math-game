@@ -120,7 +120,7 @@ Unlock next level = Bronze cutoff on the previous level (default 300). Applies t
 | Number Lv3 | Lv2 high ≥ Bronze |
 | Number Lv4 | Lv3 high ≥ Bronze |
 
-Teacher unlock toggles do not apply to Number Shop. Locked buttons show 🔒 and 50% opacity, same as Market.
+Teacher unlock toggles do not apply to Number Shop. Locked buttons show 🔒 and 50% opacity, same as Market. Every level button (both games) shows its unlock requirement as a small line under the title, e.g. `🔒 需要 Lv1 🥉 300 分 / Need Lv1 Bronze (300)`; once unlocked the line shows the player's best trophy for that level instead.
 
 ## Teacher panel
 

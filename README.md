@@ -10,7 +10,7 @@ Two browser games for Primary 1, hosted on GitHub Pages, Google login via Fireba
 
 ## Teacher
 
-⚙️ Teacher button → PIN → set timers (Market / Number Shop), Market unlock toggles, trophy cutoffs (🥉 Bronze / 🥈 Silver / 🥇 Gold, default 300 / 700 / 1200). Unlocking the next level needs Bronze on the previous one. Scores live in Firestore `scores/{uid}_{mode}`; settings in `settings/global`.
+⚙️ Teacher button → PIN → set timers (Market / Number Shop), Market unlock toggles, trophy cutoffs (🥉 Bronze / 🥈 Silver / 🥇 Gold, default 300 / 700 / 1200). Number Shop levels are locked until you tick them here; unlocking the next level also needs Bronze on the previous one. **Test mode** (same panel) opens every level on your device without saving scores. Scores live in Firestore `scores/{uid}_{mode}`; settings in `settings/global`.
 
 ## Develop
 

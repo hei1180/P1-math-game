@@ -23,10 +23,23 @@ export const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
 
 export const TEACHER_PIN = '1128';
-export const DEFAULT_SETTINGS = { timeLimit: 30, unlockMedium: false, unlockHard: false, numTimeLimit: 30, trophy: { ...DEFAULT_TROPHY } };
+export const NUM_KEYS = ['num1', 'num2', 'num3', 'num4'];
+const defaultNumUnlock = () => Object.fromEntries(NUM_KEYS.map(k => [k, false]));
+export const DEFAULT_SETTINGS = { timeLimit: 30, unlockMedium: false, unlockHard: false, numTimeLimit: 30, numUnlock: defaultNumUnlock(), trophy: { ...DEFAULT_TROPHY } };
 
 export const player = { name: 'Guest', uid: null, highScores: {} };
-export const settings = { ...DEFAULT_SETTINGS, trophy: { ...DEFAULT_TROPHY } };
+export const settings = { ...DEFAULT_SETTINGS, numUnlock: defaultNumUnlock(), trophy: { ...DEFAULT_TROPHY } };
+
+/** Teacher test mode: this browser tab only, all levels open, nothing saved. Cleared when the tab closes. */
+const TEST_KEY = 'p1maths.testMode';
+const readTestMode = () => { try { return sessionStorage.getItem(TEST_KEY) === '1'; } catch (e) { return false; } };
+export const session = { testMode: readTestMode() };
+export function enterTestMode() {
+  session.testMode = true;
+  try { sessionStorage.setItem(TEST_KEY, '1'); } catch (e) { /* private mode: in-memory only */ }
+  showTestBadge();
+}
+function showTestBadge() { document.querySelectorAll('.test-badge').forEach(b => b.classList.remove('hidden')); }
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -155,6 +168,7 @@ export async function loadSettings() {
       const d = snap.data();
       Object.assign(settings, DEFAULT_SETTINGS, d);
       settings.trophy = validateCutoffs(d.trophy) ? { ...d.trophy } : { ...DEFAULT_TROPHY };
+      settings.numUnlock = { ...defaultNumUnlock(), ...(d.numUnlock || {}) };
     }
   } catch (e) { console.warn('settings offline', e); }
 }
@@ -176,6 +190,7 @@ export async function loadMyHighScores() {
 /** Accuracy % from engine; saves only if higher than stored. Returns accuracy. */
 export async function saveScore(modeKey) {
   const accuracy = engine.totalAttempts ? Math.round(engine.correctAttempts / engine.totalAttempts * 100) : 0;
+  if (session.testMode) return accuracy; // teacher testing: never touch scores
   if (engine.score > (player.highScores[modeKey] || 0)) player.highScores[modeKey] = engine.score;
   try {
     const ref = doc(db, 'scores', `${player.uid}_${modeKey}`);
@@ -199,8 +214,10 @@ export async function getTop10(modeKey) {
 export function trophyOf(score) { return trophyFor(score, settings.trophy); }
 
 export function isUnlocked(prevKey, teacherOk = true) {
+  if (session.testMode) return true;
+  if (!teacherOk) return false;
   if (!prevKey) return true;
-  return teacherOk && (player.highScores[prevKey] || 0) >= settings.trophy.bronze;
+  return (player.highScores[prevKey] || 0) >= settings.trophy.bronze;
 }
 
 /**
@@ -210,11 +227,13 @@ export function isUnlocked(prevKey, teacherOk = true) {
 export function refreshLevelButton(btn, key, prevKey, prevLabel, teacherOk = true) {
   const sub = btn.querySelector('.level-sub');
   const scoreOk = isUnlocked(prevKey);
-  const open = scoreOk && teacherOk;
+  const open = scoreOk && (teacherOk || session.testMode);
   btn.classList.toggle('opacity-50', !open);
   btn.classList.toggle('cursor-not-allowed', !open);
   btn.dataset.locked = open ? '' : '1';
-  if (open) {
+  if (session.testMode) {
+    sub.textContent = '🧪 測試模式 Test mode';
+  } else if (open) {
     const best = player.highScores[key] || 0;
     const t = trophyOf(best);
     sub.textContent = t ? `${TROPHY_ICON[t]} ${TROPHY_LABEL[t]} · 最高 Best ${best}` : '尚未遊玩 Not played yet';
@@ -283,6 +302,15 @@ const TEACHER_MODAL_HTML = `
         <label class="flex items-center gap-3 text-lg font-bold text-gray-700 mb-2 cursor-pointer"><input type="checkbox" id="settingMed" class="w-6 h-6 accent-yellow-500 rounded"> Unlock Medium (Market)</label>
         <label class="flex items-center gap-3 text-lg font-bold text-gray-700 cursor-pointer"><input type="checkbox" id="settingHard" class="w-6 h-6 accent-red-500 rounded"> Unlock Hard (Market)</label>
       </div>
+      <div class="bg-indigo-50 p-4 rounded-xl mb-4 border-2 border-indigo-200">
+        <div class="font-bold text-gray-700 mb-2">Number Shop 數字小店</div>
+        <div class="grid grid-cols-2 gap-2">
+          <label class="flex items-center gap-2 font-bold text-gray-700 cursor-pointer"><input type="checkbox" id="settingNum1" class="w-6 h-6 accent-indigo-500 rounded"> Lv1 比較</label>
+          <label class="flex items-center gap-2 font-bold text-gray-700 cursor-pointer"><input type="checkbox" id="settingNum2" class="w-6 h-6 accent-indigo-500 rounded"> Lv2 奇偶</label>
+          <label class="flex items-center gap-2 font-bold text-gray-700 cursor-pointer"><input type="checkbox" id="settingNum3" class="w-6 h-6 accent-indigo-500 rounded"> Lv3 數線</label>
+          <label class="flex items-center gap-2 font-bold text-gray-700 cursor-pointer"><input type="checkbox" id="settingNum4" class="w-6 h-6 accent-indigo-500 rounded"> Lv4 奇偶線</label>
+        </div>
+      </div>
       <div class="grid grid-cols-2 gap-3 mb-4">
         <label class="text-sm font-bold text-gray-700 text-center">Market time (s)<input type="number" id="settingTime" min="10" max="300" class="border-4 border-gray-300 p-2 rounded-xl w-full text-center text-xl font-bold outline-none"></label>
         <label class="text-sm font-bold text-gray-700 text-center">Number Shop time (s)<input type="number" id="settingNumTime" min="10" max="300" class="border-4 border-gray-300 p-2 rounded-xl w-full text-center text-xl font-bold outline-none"></label>
@@ -297,6 +325,7 @@ const TEACHER_MODAL_HTML = `
         <div class="text-xs text-gray-500 text-center mt-1">Unlock next level = 🥉 cutoff</div>
       </div>
       <button id="settingsSave" class="bubbly-btn bg-green-500 text-white py-3 px-4 rounded-xl w-full font-bold text-xl">Save Global Settings</button>
+      <button id="testModeBtn" class="bubbly-btn bg-purple-500 text-white py-2 px-4 rounded-xl w-full font-bold mt-3">🧪 Test mode (this device, all levels, no saving)</button>
     </div>
   </div>
 </div>`;
@@ -314,6 +343,7 @@ export function mountTeacherModal(onSaved) {
     if ($('pinInput').value !== TEACHER_PIN) { alert('Incorrect PIN'); return; }
     $('pinView').classList.add('hidden'); $('settingsView').classList.remove('hidden');
     $('settingMed').checked = settings.unlockMedium; $('settingHard').checked = settings.unlockHard;
+    NUM_KEYS.forEach((k, i) => { $('settingNum' + (i + 1)).checked = !!settings.numUnlock[k]; });
     $('settingTime').value = settings.timeLimit; $('settingNumTime').value = settings.numTimeLimit;
     $('settingBronze').value = settings.trophy.bronze; $('settingSilver').value = settings.trophy.silver; $('settingGold').value = settings.trophy.gold;
   });
@@ -323,10 +353,13 @@ export function mountTeacherModal(onSaved) {
     const patch = {
       unlockMedium: $('settingMed').checked, unlockHard: $('settingHard').checked,
       timeLimit: parseInt($('settingTime').value) || 30, numTimeLimit: parseInt($('settingNumTime').value) || 30,
+      numUnlock: Object.fromEntries(NUM_KEYS.map((k, i) => [k, $('settingNum' + (i + 1)).checked])),
       trophy
     };
     const ok = await saveSettings(patch);
     alert(ok ? 'Settings saved globally.' : 'Saved locally only (offline).');
     close(); onSaved();
   });
+  $('testModeBtn').addEventListener('click', () => { enterTestMode(); close(); onSaved(); });
+  if (session.testMode) showTestBadge();
 }

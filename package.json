@@ -1,0 +1,8 @@
+{
+  "name": "p1-math-game",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/"
+  }
+}

@@ -50,10 +50,13 @@ export function signIn() {
   return signInWithPopup(auth, provider).catch(err => { console.error(err); alert('Login failed. Check console.'); });
 }
 
-/** cb(player) fires after settings + high scores are loaded. */
-export function onUser(cb) {
+/**
+ * cb(player) fires after settings + high scores are loaded.
+ * onSignedOut() fires when Firebase reports no session (show the login button then, not before).
+ */
+export function onUser(cb, onSignedOut = () => {}) {
   onAuthStateChanged(auth, async (user) => {
-    if (!user) return;
+    if (!user) { onSignedOut(); return; }
     player.name = user.displayName || user.email.split('@')[0];
     player.uid = user.uid;
     await Promise.all([loadSettings(), loadMyHighScores()]);

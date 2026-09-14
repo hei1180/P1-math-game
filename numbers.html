@@ -217,7 +217,53 @@
             }
         };
 
-        const LEVELS = { num1: lv1, num2: lv2 };
+        // ---- Lv3 / Lv4 shelf line ----
+        function makeLineLevel(gen, bubbleFor) {
+            return {
+                round: null, filled: null,
+                newRound() {
+                    const r = this.round = gen();
+                    this.filled = new Set();
+                    const [zh, en] = bubbleFor(r);
+                    setBubble(zh, en);
+                    $('stage').innerHTML = `
+                      <div class="text-5xl md:text-7xl">🐻</div>
+                      <div id="shelf" class="flex gap-1 md:gap-2 justify-center w-full px-1"></div>
+                      <div class="w-full max-w-lg h-3 bg-amber-700 rounded-full"></div>`;
+                    $('controls').innerHTML = r.tiles.map(v => `<button class="tile bubbly-btn" data-v="${v}">${v}</button>`).join('');
+                    $('controls').querySelectorAll('[data-v]').forEach(b => b.addEventListener('pointerdown', e => this.tapTile(b, e)));
+                    this.render();
+                },
+                nextBlank() { return this.round.blanks.find(i => !this.filled.has(i)); },
+                render() {
+                    const active = this.nextBlank();
+                    $('shelf').innerHTML = this.round.slots.map((v, i) => {
+                        const isBlank = this.round.blanks.includes(i);
+                        if (!isBlank) return `<div class="slot">${v}</div>`;
+                        if (this.filled.has(i)) return `<div class="slot filled">${v}</div>`;
+                        return `<div class="slot blank ${i === active ? 'active' : ''}">?</div>`;
+                    }).join('');
+                },
+                tapTile(btn, e) {
+                    if (btn.disabled) return;
+                    const target = this.nextBlank();
+                    if (target === undefined) return;
+                    const v = parseInt(btn.dataset.v);
+                    if (v === this.round.slots[target]) {
+                        this.filled.add(target); btn.disabled = true;
+                        playSound('click'); triggerWiggle(); this.render();
+                        if (this.nextBlank() === undefined) answer(true, e);
+                    } else {
+                        replay(btn, 'animate-shake');
+                        answer(false, e);
+                    }
+                }
+            };
+        }
+        const lv3 = makeLineLevel(genLine, () => ['缺了哪些數字？', 'Which numbers are missing?']);
+        const lv4 = makeLineLevel(genSkipLine, r => r.parity === 'odd' ? ['奇數排排站，缺了誰？', 'Odd numbers: which are missing?'] : ['偶數排排站，缺了誰？', 'Even numbers: which are missing?']);
+
+        const LEVELS = { num1: lv1, num2: lv2, num3: lv3, num4: lv4 };
     </script>
 </body>
 </html>

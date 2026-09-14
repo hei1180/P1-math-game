@@ -68,24 +68,37 @@ function makeTiles(answers, candidatesFor, rng) {
   return shuffle(tiles, rng);
 }
 
-/** Lv3: 7 consecutive numbers, start 1-14, 1-2 blanks, tiles with ±1 ±2 ±10 distractors. */
+/** rng() < 0.5 → ascending, else descending (slots reversed). */
+const pickDir = rng => (rng() < 0.5 ? 'asc' : 'desc');
+
+/** Lv3: 7 consecutive numbers (lowest 1-14), ascending or descending, 1-2 blanks, tiles with ±1 ±2 ±10 distractors. */
 export function genLine(rng = Math.random) {
   const start = int(rng, 1, 14);
+  const dir = pickDir(rng);
   const slots = Array.from({ length: 7 }, (_, i) => start + i);
+  if (dir === 'desc') slots.reverse();
   const blanks = pickBlanks(7, rng);
   const answers = blanks.map(i => slots[i]);
   const tiles = makeTiles(answers, n => [n - 1, n + 1, n - 2, n + 2, n - 10, n + 10], rng);
-  return { slots, blanks, tiles };
+  return { slots, blanks, tiles, dir };
 }
 
-/** Lv4: 6 numbers stepping by 2, all odd (1..19) or all even (2..20), 1-2 blanks, ±1 ±4 distractors. */
+/** Lv4: 6 numbers stepping by 2, all odd (1..19) or all even (2..20), ascending or descending, 1-2 blanks, ±1 ±4 distractors. */
 export function genSkipLine(rng = Math.random) {
   const parity = rng() < 0.5 ? 'odd' : 'even';
   const first = parity === 'odd' ? 1 : 2;
   const start = first + 2 * int(rng, 0, 4); // odd: 1,3,5,7,9  even: 2,4,6,8,10
+  const dir = pickDir(rng);
   const slots = Array.from({ length: 6 }, (_, i) => start + 2 * i);
+  if (dir === 'desc') slots.reverse();
   const blanks = pickBlanks(6, rng);
   const answers = blanks.map(i => slots[i]);
   const tiles = makeTiles(answers, n => [n - 1, n + 1, n - 4, n + 4], rng);
-  return { slots, blanks, tiles, parity };
+  return { slots, blanks, tiles, parity, dir };
+}
+
+/** Lv4: 50/50 a numeric line or an odd/even skip line, each ascending or descending. */
+export function genMixedLine(rng = Math.random) {
+  if (rng() < 0.5) return { ...genLine(rng), kind: 'num' };
+  return { ...genSkipLine(rng), kind: 'skip' };
 }

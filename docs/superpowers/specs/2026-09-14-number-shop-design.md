@@ -69,23 +69,23 @@ Behaviour must stay identical (regression checklist below). Mode keys
 
 ### Lv2 奇數偶數 Odd / Even — key `num2`, 15 pts/round
 
-- Number card N (1-20; 60% drawn from 1-10, 40% from 11-20) plus N loose emoji items in a grid (max 5×4).
-- Tap plate A (glows), tap plate B → both fly to the next two-seat table (see Theme). Tables sit 5 per row = a ten-frame. Undo = clear the last table.
-- When exactly one plate is left it sits alone at the next table, its seat highlighted (dashed red) — the visual "odd one out".
-- Buttons 奇數 Odd / 偶數 Even disabled until ≤1 loose item remains.
+- Number card N (1-20; 60% drawn from 1-10, 40% from 11-20) plus N plates of food laid out in a 5-column grid.
+- 奇數 Odd / 偶數 Even buttons are always enabled: a child who knows the answer taps straight away.
+- 💡 提示 Hint (once per round): the plates fly two by two into two-seat tables, 5 tables per row (a row = one ten-frame); a leftover plate sits alone at the last table on a red dashed seat — the odd one out. No manual pairing, no undo. Hint costs nothing.
 - Correct answer = N mod 2.
 
 ### Lv3 數線 Number line — key `num3`, 15 pts/round
 
-- Shelf shows 7 consecutive slots from 1-20 (start 1..14). 1 or 2 slots blank (50/50).
-- 4 tiles below: correct value(s) plus distractors from {n±1, n±2, n±10} clipped to 1-20, all unique, one tile per blank correct.
-- Leftmost blank pulses. Tap tile → checked immediately for that blank. Correct fills it; wrong shakes tile and counts as wrong.
+- Bookshelf shows 7 consecutive numbers from 1-20 (lowest 1..14), **ascending or descending (50/50)**. 1 or 2 slots blank (50/50).
+- Direction cue: arrow line above the shelf (小 ➡️ 大 / 大 ➡️ 小) and the bubble says 由小到大 / 由大到小.
+- 4 books below: correct value(s) plus distractors from {n±1, n±2, n±10} clipped to 1-20, all unique.
+- The 🐻 stands under the leftmost blank. Tap a book → checked for that blank. Correct fills it; wrong shakes and counts as wrong.
 - Round complete when all blanks filled → points awarded once.
 
-### Lv4 奇偶數線 Odd/even line — key `num4`, 20 pts/round
+### Lv4 混合數線 Mixed line — key `num4`, 20 pts/round
 
-- Same shelf UI, 6 slots, step 2. Sequence is all odds (1..19) or all evens (2..20), random start so all 6 fit in range.
-- 1 or 2 blanks. Distractors: n±1 (the classic error) and n±4, clipped and unique.
+- Each round is 50/50 a numeric line (as Lv3, 7 slots, step 1) or an odd/even skip line (6 slots, step 2, all odd 1..19 or all even 2..20, odd books red / even books blue). Each is ascending or descending 50/50.
+- Same shelf UI, cue and rules as Lv3. Skip-line distractors: n±1 (the classic error) and n±4.
 
 ## Theme: 書店 + 茶餐廳 (Number Shop visuals)
 
@@ -94,9 +94,9 @@ Abstract cards/tiles are replaced by shop objects, all CSS + emoji, no image fil
 | Level | Visual |
 |---|---|
 | Lv1 比較 | Each customer holds a plain **number card**. Tap the card → ten-frames appear under it and stay until the next question. Answer with 多 / 少 / 一樣多 buttons. |
-| Lv2 奇偶 | N **plates** of food on the counter. Tap two plates → they fly to a **two-seat table**. Tables are laid out 5 per row (a row = one ten-frame). With one plate left it sits alone at the next table with a red dashed seat: the odd one out. Tables needed = ceil(N/2). |
-| Lv3 數線 | A **bookshelf** with numbered spines; missing books are dark gaps. The 🐻 stands under the leftmost gap, bouncing, waiting. Loose books (4) lie in the controls bar; tap one → it flies up into the gap if it is the right number, else it shakes. Left-to-right rule stays (bear marks the active gap). |
-| Lv4 奇偶數線 | Same shelf. Odd-numbered books red, even-numbered blue, so the skip pattern is visible. |
+| Lv2 奇偶 | N **plates** of food on the counter. Answer straight away, or tap 💡 Hint: plates fly two by two to **two-seat tables**, 5 per row (a row = one ten-frame); a leftover plate sits alone with a red dashed seat: the odd one out. Tables = ceil(N/2). |
+| Lv3 數線 | A **bookshelf** with numbered spines, ascending or descending (arrow cue above); missing books are dark gaps. The 🐻 stands under the leftmost gap, bouncing, waiting. Loose books (4) lie in the controls bar; tap one → it flies up into the gap if it is the right number, else it shakes. Left-to-right rule stays (bear marks the active gap). |
+| Lv4 混合數線 | Same shelf; rounds mix numeric lines and odd/even skip lines (odd books red, even blue), ascending or descending. |
 
 ## Juice (both games)
 

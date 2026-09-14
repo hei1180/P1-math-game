@@ -254,7 +254,6 @@
                     setBubble(zh, en);
                     $('stage').innerHTML = `
                       <div class="flex flex-col items-center gap-1">
-                        <div class="text-xl md:text-2xl font-bold text-amber-800">${r.dir === 'asc' ? '小 ➡️ 大' : '大 ➡️ 小'}</div>
                         <div id="shelf" class="shelf"></div>
                         <div id="bearRow" class="bear-row"></div>
                       </div>`;
@@ -295,14 +294,12 @@
                 }
             };
         }
-        const dirZh = r => r.dir === 'asc' ? '由小到大' : '由大到小';
-        const dirEn = r => r.dir === 'asc' ? 'small → big' : 'big → small';
         const lineBubble = r => {
             if (r.kind === 'skip' || r.parity) {
                 const p = r.parity === 'odd' ? ['奇數書', 'Odd books'] : ['偶數書', 'Even books'];
-                return [`${p[0]}${dirZh(r)}，缺了誰？`, `${p[1]}, ${dirEn(r)}: which are missing?`];
+                return [`${p[0]}排排站，缺了誰？`, `${p[1]}: which are missing?`];
             }
-            return [`書架${dirZh(r)}，缺了哪些數字？`, `Books ${dirEn(r)}: which are missing?`];
+            return ['書架缺了哪些數字？', 'Which books are missing?'];
         };
         const lineColor = r => (r.kind === 'skip' ? (v => v % 2 ? 'odd' : 'even') : (v => `c${v % 6}`));
         const lv3 = makeLineLevel(genLine, lineBubble, lineColor);

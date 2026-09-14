@@ -70,8 +70,8 @@ Behaviour must stay identical (regression checklist below). Mode keys
 ### Lv2 奇數偶數 Odd / Even — key `num2`, 15 pts/round
 
 - Number card N (1-20; 60% drawn from 1-10, 40% from 11-20) plus N loose emoji items in a grid (max 5×4).
-- Tap item A (glows), tap item B → both move into a ten-frame (十格框) on the shelf: each pair fills one column (top + bottom cell). Frames: ceil(N/10), so up to 2 frames for 20. Undo = unpair the last pair (its column empties).
-- When exactly one loose item is left it moves into the next column's top cell alone, highlighted (dashed red border) — the visual "odd one out". For even N the frame columns are all full.
+- Tap plate A (glows), tap plate B → both fly to the next two-seat table (see Theme). Tables sit 5 per row = a ten-frame. Undo = clear the last table.
+- When exactly one plate is left it sits alone at the next table, its seat highlighted (dashed red) — the visual "odd one out".
 - Buttons 奇數 Odd / 偶數 Even disabled until ≤1 loose item remains.
 - Correct answer = N mod 2.
 
@@ -86,6 +86,26 @@ Behaviour must stay identical (regression checklist below). Mode keys
 
 - Same shelf UI, 6 slots, step 2. Sequence is all odds (1..19) or all evens (2..20), random start so all 6 fit in range.
 - 1 or 2 blanks. Distractors: n±1 (the classic error) and n±4, clipped and unique.
+
+## Theme: 書店 + 茶餐廳 (Number Shop visuals)
+
+Abstract cards/tiles are replaced by shop objects, all CSS + emoji, no image files.
+
+| Level | Visual |
+|---|---|
+| Lv1 比較 | Each customer holds a **stack of books**: N coloured spines stacked (height grows with N), numeral badge on top. Tap the stack → ten-frames overlay the stack for 1.5 s. Tap the animal → answer. |
+| Lv2 奇偶 | N **plates** of food on the counter. Tap two plates → they fly to a **two-seat table**. Tables are laid out 5 per row (a row = one ten-frame). With one plate left it sits alone at the next table with a red dashed seat: the odd one out. Tables needed = ceil(N/2). |
+| Lv3 數線 | A **bookshelf** with numbered spines; missing books are dark gaps. The 🐻 stands under the leftmost gap, bouncing, waiting. Loose books (4) lie in the controls bar; tap one → it flies up into the gap if it is the right number, else it shakes. Left-to-right rule stays (bear marks the active gap). |
+| Lv4 奇偶數線 | Same shelf. Odd-numbered books red, even-numbered blue, so the skip pattern is visible. |
+
+## Juice (both games)
+
+`juice.js` (pure DOM helpers, no Firebase): `squish(el)`, `bounce(el)`, `popScore(el)`, `flashRed(el)`, `burst(x, y, emojis, n)`, `flyTo(fromElOrRect, toEl, html, onArrive)`, `react(el, emoji, ms)`.
+
+- Item tap (Market item button, Lv2 plate, Lv3/4 book): squish, and a clone flies to its destination cell / seat / gap.
+- Correct answer: ⭐✨🌟 burst at the tap point, customer bounces and shows 🥳 for 0.6 s, score number pops.
+- Wrong answer: customer shows 😵 for 0.6 s, red inset flash on the game screen, bubble shake (existing).
+- Fever / combo / timer / end-of-game effects unchanged in this iteration.
 
 ## Trophies (both games, every level)
 

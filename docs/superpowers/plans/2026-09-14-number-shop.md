@@ -481,7 +481,7 @@ git commit -m "feat: number line and skip line round generators"
 .item-btn { width: 44px; height: 44px; font-size: 28px; border-radius: 10px; border: 3px solid #cbd5e1; background: white; display: flex; align-items: center; justify-content: center; transition: transform 0.1s; }
 .item-btn.selected { border-color: #f59e0b; background: #fef3c7; transform: scale(1.15); box-shadow: 0 0 0 4px rgba(245,158,11,0.4); }
 @media (min-width: 768px) { .item-btn { width: 56px; height: 56px; font-size: 34px; } }
-.pair-box { display: flex; gap: 2px; background: #dcfce7; border: 3px solid #4ade80; border-radius: 10px; padding: 3px; font-size: 22px; animation: pop 0.25s ease-out; }
+.odd-one { display: inline-flex; align-items: center; justify-content: center; width: 100%; height: 100%; border: 3px dashed #ef4444; border-radius: 6px; background: #fee2e2; animation: pop 0.25s ease-out; }
 
 .slot { width: 40px; height: 48px; border-radius: 10px; border: 3px solid #94a3b8; background: white; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 22px; }
 .slot.blank { border-style: dashed; background: #f1f5f9; color: #cbd5e1; }
@@ -1299,7 +1299,7 @@ git commit -m "feat: Number Shop shell with Lv1 compare"
                 $('stage').innerHTML = `
                   <div class="num-card text-4xl md:text-6xl">${this.round.n}</div>
                   <div id="looseGrid" class="grid grid-cols-5 gap-2 md:gap-3"></div>
-                  <div id="pairShelf" class="flex flex-wrap justify-center gap-2 min-h-[44px] w-full max-w-md bg-orange-100 border-4 border-orange-300 rounded-2xl p-2"></div>`;
+                  <div id="pairShelf" class="flex flex-wrap justify-center gap-2 md:gap-4 w-full"></div>`;
                 $('controls').innerHTML = `
                   <button id="undoPair" class="bubbly-btn bg-gray-300 text-gray-700 font-bold text-sm md:text-lg py-2 px-3 rounded-xl border-4 border-gray-400">↩️ Undo</button>
                   <button class="bubbly-btn bg-pink-300 text-pink-900 font-black text-xl md:text-2xl py-3 px-5 rounded-2xl border-4 border-pink-500 disabled:opacity-40" data-ans="odd">奇數<br><span class="text-sm font-normal">Odd</span></button>
@@ -1312,9 +1312,24 @@ git commit -m "feat: Number Shop shell with Lv1 compare"
                 const grid = $('looseGrid');
                 grid.innerHTML = this.loose.map(id => `<button class="item-btn ${id === this.selected ? 'selected' : ''}" data-id="${id}">${this.emoji}</button>`).join('');
                 grid.querySelectorAll('[data-id]').forEach(b => b.addEventListener('pointerdown', () => this.tap(parseInt(b.dataset.id))));
-                $('pairShelf').innerHTML = this.pairs.map(() => `<div class="pair-box"><span>${this.emoji}</span><span>${this.emoji}</span></div>`).join('');
+                $('pairShelf').innerHTML = this.pairFramesHtml();
                 const ready = this.loose.length <= 1;
                 $('controls').querySelectorAll('[data-ans]').forEach(b => b.disabled = !ready);
+            },
+            /** Pairs fill ten-frame columns (top+bottom). A single leftover item sits alone in the next column, highlighted. */
+            pairFramesHtml() {
+                const frames = Math.max(1, Math.ceil(this.round.n / 10));
+                const cells = Array(frames * 10).fill('');
+                const put = (k, top, bottom) => { const f = Math.floor(k / 5), c = k % 5; cells[f * 10 + c] = top; cells[f * 10 + 5 + c] = bottom; };
+                this.pairs.forEach((_, k) => put(k, this.emoji, this.emoji));
+                if (this.loose.length === 1) put(this.pairs.length, `<span class="odd-one">${this.emoji}</span>`, '');
+                let html = '';
+                for (let f = 0; f < frames; f++) {
+                    html += '<div class="ten-frame">';
+                    for (let i = 0; i < 10; i++) html += `<div class="frame-cell">${cells[f * 10 + i]}</div>`;
+                    html += '</div>';
+                }
+                return html;
             },
             tap(id) {
                 playSound('click'); triggerWiggle();
@@ -1340,7 +1355,7 @@ Change the registry line to:
 
 - [ ] **Step 2: Manual test Lv2**
 
-To test without earning Bronze, temporarily set `trophy.bronze` to 1 via the teacher panel (then restore 300). Check: card N and N items; tap A (glows), tap A again (deselect), tap B → pair box on shelf; 奇數/偶數 disabled until ≤1 loose item; Undo returns pair to grid; correct → +15 and new round; wrong → shake. 20 items fit on iPad and phone (5×4 grid, no scroll).
+To test without earning Bronze, temporarily set `trophy.bronze` to 1 via the teacher panel (then restore 300). Check: card N and N items; tap A (glows), tap A again (deselect), tap B → pair fills one ten-frame column (top+bottom); with one item left it appears alone in the next column with a red dashed border; 奇數/偶數 disabled until ≤1 loose item; Undo returns pair to grid; correct → +15 and new round; wrong → shake. 20 items fit on iPad and phone (5×4 grid, no scroll).
 
 - [ ] **Step 3: Commit**
 

@@ -20,7 +20,8 @@ Repo root served by GitHub Pages.
 | `shared.js` | ES module used by both pages. Firebase init, auth, audio, particles, combo/fever engine, timer, score save/load, teacher settings + PIN, leaderboard rendering. |
 | `shared.css` | bubbly-btn, ten-frame, fever, particle, rank popup keyframes. |
 | `numbers-logic.js` | Pure round generators + answer checks for Number Shop. No Firebase import so it runs under `node --test`. |
-| `tests/logic.test.mjs` | Unit tests for `numbers-logic.js`. |
+| `trophy.js` | Pure `trophyFor(score, cutoffs)` + icons. |
+| `tests/logic.test.mjs` | Unit tests for `numbers-logic.js` and `trophy.js`. |
 
 `shared.js` exports:
 
@@ -44,7 +45,7 @@ Behaviour must stay identical (regression checklist below). Mode keys
 ## Firestore
 
 - `scores/{uid}_{modeKey}`: `playerName, uid, score, maxCombo, accuracy, mode, timestamp`. New keys `num1`, `num2`, `num3`, `num4`.
-- `settings/global`: existing `timeLimit, unlockMedium, unlockHard` plus `numTimeLimit` (default 30). Missing field → 30.
+- `settings/global`: existing `timeLimit, unlockMedium, unlockHard` plus `numTimeLimit` (default 30) and `trophy: {bronze, silver, gold}` (default 300 / 700 / 1200). Missing fields → defaults.
 
 ## Common gameplay rules (Number Shop)
 
@@ -61,10 +62,10 @@ Behaviour must stay identical (regression checklist below). Mode keys
 ### Lv1 比較 Compare (1-20) — key `num1`, 10 pts/round
 
 - Two customers side by side (🐻 left, 🐰 right), each holds a number card 1-20.
-- Bubble: 誰比較多？Who has MORE? or 誰比較少？Who has LESS? (random).
+- Bubble: 🐻比🐰（多/少）player chooses the button 多 or 少.
 - About 15% of rounds the numbers are equal. Third button 一樣多 Same.
 - Tap a number card = peek: ten-frames (same 十格框 style) appear under that customer for 1.5 s then hide. Unlimited peeks.
-- Answer = tap a customer card or the Same button.
+- Answer = tap the 多or少 button.
 
 ### Lv2 奇數偶數 Odd / Even — key `num2`, 15 pts/round
 
@@ -85,20 +86,45 @@ Behaviour must stay identical (regression checklist below). Mode keys
 - Same shelf UI, 6 slots, step 2. Sequence is all odds (1..19) or all evens (2..20), random start so all 6 fit in range.
 - 1 or 2 blanks. Distractors: n±1 (the classic error) and n±4, clipped and unique.
 
+## Trophies (both games, every level)
+
+Derived from score at game end, never stored. Cutoffs come from `settings/global.trophy`, same for all levels because points per round already scale with difficulty (Market 10/20/30, Number Shop 10/15/15/20).
+
+| Tier | Default cutoff |
+|---|---|
+| 🎖 Finisher | score > 0 |
+| 🥉 Bronze | ≥ 300 |
+| 🥈 Silver | ≥ 700 |
+| 🥇 Gold | ≥ 1200 |
+
+Basis: in the first class run (27 students, Market, 3 levels) the top 10 scored 1000-1800. Gold ≈ top quarter. Teacher tunes the three numbers in the PIN panel after seeing the Firestore distribution.
+
+Shown in three places:
+- Rank popup: "🥈 Silver!" line under the score.
+- Level buttons on both menus: best trophy icon for that level (from `getMyHighScores()`).
+- Leaderboard: trophy icon beside each name.
+
+`shared.js` exports `trophyFor(score)` → `'gold'|'silver'|'bronze'|'finisher'|null` and `TROPHY_ICON`.
+
 ## Unlock (score gate only)
+
+Unlock next level = Bronze cutoff on the previous level (default 300). Applies to Market too, replacing the old 150 / 250 gates.
 
 | Level | Requirement |
 |---|---|
-| Lv1 | always open |
-| Lv2 | Lv1 high score ≥ 100 |
-| Lv3 | Lv2 high score ≥ 100 |
-| Lv4 | Lv3 high score ≥ 120 |
+| Market Easy | always open |
+| Market Medium | Easy high ≥ Bronze **and** teacher Unlock Medium |
+| Market Hard | Medium high ≥ Bronze **and** teacher Unlock Hard |
+| Number Lv1 | always open |
+| Number Lv2 | Lv1 high ≥ Bronze |
+| Number Lv3 | Lv2 high ≥ Bronze |
+| Number Lv4 | Lv3 high ≥ Bronze |
 
 Teacher unlock toggles do not apply to Number Shop. Locked buttons show 🔒 and 50% opacity, same as Market.
 
 ## Teacher panel
 
-Same ⚙️ Teacher button and PIN on both pages. Fields: Unlock Medium, Unlock Hard, Market time (s), **Number Shop time (s)**. Save writes the whole `settings/global` doc.
+Same ⚙️ Teacher button and PIN on both pages. Fields: Unlock Medium, Unlock Hard, Market time (s), **Number Shop time (s)**, **Trophy cutoffs: Bronze / Silver / Gold**. Save writes the whole `settings/global` doc. Validation: bronze < silver < gold, all > 0, else alert and no save.
 
 ## Leaderboard
 
@@ -110,6 +136,6 @@ Firestore failures are caught and logged; game stays playable, score shown as "O
 
 ## Testing
 
-- `node --test tests/` covers `numbers-logic.js`: values within 1-20, blank counts, distractor uniqueness, skip sequences stay odd/even, equal-case rate ≈ 15% over 2000 draws, answer checks.
+- `node --test tests/` covers `numbers-logic.js`: values within 1-20, blank counts, distractor uniqueness, skip sequences stay odd/even, equal-case rate ≈ 15% over 2000 draws, answer checks. `trophyFor` lives in a pure `trophy.js` (imported by `shared.js`) so it is tested too: boundaries at exactly 300/700/1200, score 0 → null.
 - Manual on iPad Safari and phone Chrome: fits screen, no double-tap zoom, peek shows/hides, pair + undo, buttons disabled until paired, fever visuals, timer end → rank → leaderboard.
 - Market regression after refactor: login, easy round, GIVE correct/wrong, fever, leaderboard tabs, teacher save.

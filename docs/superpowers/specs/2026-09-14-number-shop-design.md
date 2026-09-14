@@ -62,10 +62,10 @@ Behaviour must stay identical (regression checklist below). Mode keys
 ### Lv1 比較 Compare (1-20) — key `num1`, 10 pts/round
 
 - Two customers side by side (🐻 left, 🐰 right), each holds a number card 1-20.
-- Bubble reads as a comparison sentence: 🐻 比 🐰 多還是少？ / Is 🐻 more or less than 🐰? The left customer is always the subject.
+- Bubble reads as a comparison sentence with a random subject: 🐻 比 🐰 多還是少？ or 🐰 比 🐻 多還是少？ (50/50) / Is 🐻 more or less than 🐰?
 - About 15% of rounds the numbers are equal.
 - Tap a number card = peek: ten-frames (same 十格框 style) appear under that customer and stay until the next question. Both sides can be revealed.
-- Answer = three buttons: 多 More (a > b), 少 Less (a < b), 一樣多 Same (a = b). Animals are faces only, not answer targets.
+- Answer = three buttons: 多 More (subject > other), 少 Less (subject < other), 一樣多 Same (equal). Animals are faces only, not answer targets.
 
 ### Lv2 奇數偶數 Odd / Even — key `num2`, 15 pts/round
 

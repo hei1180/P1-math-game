@@ -1706,7 +1706,17 @@ Replace the `$('stage').innerHTML` template inside `lv1.newRound()` with:
                   </div>`;
 ```
 
-(The `.peek` box now overlays the stack; the rest of `lv1` is unchanged.)
+Also change `lv1.peek()` so the frames persist until the next round (no timer): remove the `peekTimer` field and replace the method with
+
+```js
+            peek(side, emoji) {
+                const n = side === 'left' ? this.round.a : this.round.b;
+                $('stage').querySelector(`[data-peekbox="${side}"]`).innerHTML = tenFramesHtml(n, emoji);
+                playSound('click');
+            }
+```
+
+(The `.peek` box overlays the stack and stays until `newRound()` replaces the stage.)
 
 - [ ] **Step 6: `numbers.html` — Lv2 plates and tables**
 
@@ -1852,7 +1862,7 @@ Replace `makeLineLevel` and the `lv3`/`lv4` lines with:
 - [ ] **Step 8: Verify in browser** (serve, hide `#loginScreen`, `(await import('./shared.js')).settings.trophy.bronze = 0`, mobile preset 375×812 and 360×640)
 
 - Market: `window.startGame('easy')`; item tap squishes and a clone flies into the next cell; GIVE correct → burst, 🐻→🥳, score pops; wrong → 😵 + red flash.
-- Lv1: two book stacks with numeral badges, taller stack = bigger number; tap stack → ten-frames overlay it for 1.5 s; both stacks of 20 fit above the controls on 360×640.
+- Lv1: two book stacks with numeral badges, taller stack = bigger number; tap stack → ten-frames overlay it and stay until the next round; both stacks of 20 fit above the controls on 360×640.
 - Lv2: plates in grid; tap two → both fly to the next table's seats; leftover plate sits alone with red dashed seat; 20 plates + 10 tables fit on 360×640 (measure `#pairShelf` bottom vs `#controls` top).
 - Lv3/4: shelf of coloured spines with gaps; bear bounces under the leftmost gap; correct book flies into the gap then bear moves to the next gap; wrong book shakes; Lv4 spines alternate red/blue by parity.
 - Console: zero errors. Reset viewport, kill server.

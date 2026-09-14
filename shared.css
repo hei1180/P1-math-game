@@ -93,3 +93,42 @@ body {
 .tile { width: 60px; height: 60px; border-radius: 14px; font-weight: 900; font-size: 26px; background: #fde68a; border: 4px solid #f59e0b; color: #78350f; }
 .tile:disabled { opacity: 0.35; }
 @media (min-width: 768px) { .tile { width: 76px; height: 76px; font-size: 34px; } }
+
+/* ---------- Juice ---------- */
+@keyframes squish { 0% { transform: scale(1); } 40% { transform: scale(0.85, 0.8); } 70% { transform: scale(1.1, 1.15); } 100% { transform: scale(1); } }
+.squish { animation: squish 0.25s ease-out; }
+@keyframes burstOut { 0% { transform: translate(0, 0) scale(0.6); opacity: 1; } 100% { transform: translate(var(--dx), var(--dy)) scale(1.4); opacity: 0; } }
+.burst-piece { position: fixed; pointer-events: none; z-index: 120; font-size: 1.6rem; animation: burstOut 0.6s ease-out forwards; }
+.fly { position: fixed; left: 0; top: 0; pointer-events: none; z-index: 110; transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1); will-change: transform; }
+@keyframes scorePop { 0% { transform: scale(1); } 50% { transform: scale(1.5); color: #f97316; } 100% { transform: scale(1); } }
+.pop-score { display: inline-block; animation: scorePop 0.35s ease-out; }
+@keyframes bounceUp { 0%, 100% { transform: translateY(0); } 40% { transform: translateY(-18px); } }
+.bounce { animation: bounceUp 0.4s ease-out; }
+@keyframes redFlash { 0% { box-shadow: inset 0 0 0 0 rgba(239,68,68,0); } 30% { box-shadow: inset 0 0 60px 10px rgba(239,68,68,0.5); } 100% { box-shadow: inset 0 0 0 0 rgba(239,68,68,0); } }
+.flash-red { animation: redFlash 0.4s ease-out; }
+
+/* ---------- Bookshop theme ---------- */
+.c0 { background: #f87171; } .c1 { background: #fbbf24; } .c2 { background: #34d399; } .c3 { background: #60a5fa; } .c4 { background: #a78bfa; } .c5 { background: #f472b6; }
+.odd { background: #ef4444; } .even { background: #3b82f6; }
+
+/* Lv2 plates + tables */
+.plate { width: 48px; height: 48px; border-radius: 50%; border: 3px solid #cbd5e1; background: radial-gradient(circle, #fff 55%, #e2e8f0 56%, #fff 70%); font-size: 26px; display: flex; align-items: center; justify-content: center; transition: transform 0.1s; }
+.plate.selected { border-color: #f59e0b; transform: scale(1.15); box-shadow: 0 0 0 4px rgba(245,158,11,0.4); }
+.tables { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; background: #fde68a; padding: 6px; border-radius: 12px; border: 3px solid #f59e0b; }
+.table { display: flex; flex-direction: column; gap: 2px; background: #92400e; border-radius: 8px; padding: 3px; }
+.seat { width: 34px; height: 30px; border-radius: 6px; background: #fef3c7; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+.seat.empty { background: rgba(255,255,255,0.35); }
+.seat.odd-one { border: 3px dashed #ef4444; background: #fee2e2; animation: pop 0.25s ease-out; }
+@media (min-width: 768px) { .plate { width: 60px; height: 60px; font-size: 32px; } .seat { width: 44px; height: 38px; font-size: 26px; } }
+
+/* Lv3/4 bookshelf */
+.shelf { display: flex; gap: 4px; align-items: flex-end; background: #78350f; padding: 6px 6px 0; border-radius: 8px 8px 0 0; border-bottom: 8px solid #451a03; }
+.book-slot { width: 40px; height: 56px; border-radius: 4px 4px 0 0; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 20px; color: white; text-shadow: 0 1px 0 rgba(0,0,0,0.4); box-shadow: inset -3px 0 0 rgba(0,0,0,0.2); }
+.book-slot.gap { background: rgba(0,0,0,0.35); border: 2px dashed #fcd34d; color: #fcd34d; box-shadow: none; }
+.book-slot.filled { animation: pop 0.3s ease-out; }
+.bear-row { display: flex; gap: 4px; }
+.bear-row div { width: 40px; text-align: center; font-size: 26px; line-height: 1; }
+.bear-row .here { animation: bounceUp 0.8s infinite; }
+.tile-book { width: 48px; height: 64px; border-radius: 4px 4px 0 0; color: white; font-weight: 900; font-size: 24px; text-shadow: 0 1px 0 rgba(0,0,0,0.4); border: 0; box-shadow: inset -3px 0 0 rgba(0,0,0,0.2), 0 4px 0 rgba(0,0,0,0.3); }
+.tile-book:disabled { opacity: 0.3; }
+@media (min-width: 768px) { .book-slot { width: 56px; height: 76px; font-size: 28px; } .bear-row div { width: 56px; font-size: 34px; } .tile-book { width: 64px; height: 84px; font-size: 32px; } }

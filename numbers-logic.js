@@ -5,9 +5,9 @@ export const MAX = 20;
 
 const int = (rng, lo, hi) => lo + Math.floor(rng() * (hi - lo + 1)); // inclusive
 
-/** Lv1: two numbers 1-20, ask 'more' or 'less'. 15% of rounds a === b. */
+/** Lv1: two numbers 1-20 and which side is the subject of "A 比 B". 15% of rounds a === b. */
 export function genCompare(rng = Math.random) {
-  const ask = rng() < 0.5 ? 'more' : 'less';
+  const subject = rng() < 0.5 ? 'left' : 'right';
   const a = int(rng, 1, MAX);
   let b;
   if (rng() < 0.15) {
@@ -15,15 +15,15 @@ export function genCompare(rng = Math.random) {
   } else {
     do { b = int(rng, 1, MAX); } while (b === a);
   }
-  return { a, b, ask };
+  return { a, b, subject };
 }
 
-/** @returns {'left'|'right'|'same'} */
-export function compareAnswer({ a, b, ask }) {
+/** @returns {'more'|'less'|'same'} how the subject compares to the other side */
+export function compareAnswer({ a, b, subject }) {
   if (a === b) return 'same';
-  const leftBigger = a > b;
-  if (ask === 'more') return leftBigger ? 'left' : 'right';
-  return leftBigger ? 'right' : 'left';
+  const s = subject === 'left' ? a : b;
+  const o = subject === 'left' ? b : a;
+  return s > o ? 'more' : 'less';
 }
 
 /** Lv2: n in 1-20, 60% from 1-10, 40% from 11-20. */

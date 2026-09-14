@@ -26,9 +26,10 @@ export const TEACHER_PIN = '1128';
 export const DEFAULT_SETTINGS = { timeLimit: 30, unlockMedium: false, unlockHard: false, numTimeLimit: 30, trophy: { ...DEFAULT_TROPHY } };
 
 export const player = { name: 'Guest', uid: null, highScores: {} };
-export const settings = structuredClone(DEFAULT_SETTINGS);
+export const settings = { ...DEFAULT_SETTINGS, trophy: { ...DEFAULT_TROPHY } };
 
 const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 // ---------- Auth ----------
 export function signIn() {
@@ -165,6 +166,7 @@ export async function saveSettings(patch) {
 }
 
 export async function loadMyHighScores() {
+  player.highScores = {};
   try {
     const snap = await getDocs(collection(db, 'scores'));
     snap.forEach(d => { const s = d.data(); if (s.uid === player.uid && s.score > (player.highScores[s.mode] || 0)) player.highScores[s.mode] = s.score; });
@@ -207,7 +209,7 @@ export function isUnlocked(prevKey, teacherOk = true) {
  */
 export function refreshLevelButton(btn, key, prevKey, prevLabel, teacherOk = true) {
   const sub = btn.querySelector('.level-sub');
-  const scoreOk = !prevKey || (player.highScores[prevKey] || 0) >= settings.trophy.bronze;
+  const scoreOk = isUnlocked(prevKey);
   const open = scoreOk && teacherOk;
   btn.classList.toggle('opacity-50', !open);
   btn.classList.toggle('cursor-not-allowed', !open);
@@ -237,12 +239,11 @@ export async function renderLeaderboard(tabs, activeKey) {
   tbody.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-gray-500">Loading...</td></tr>';
   try {
     const rows = await getTop10(activeKey);
-    tbody.innerHTML = '';
-    rows.forEach((r, i) => {
+    tbody.innerHTML = rows.map((r, i) => {
       const me = r.uid === player.uid ? 'bg-yellow-100 font-bold text-gray-900' : 'text-gray-700';
       const t = trophyOf(r.score);
-      tbody.innerHTML += `<tr class="${me} border-b border-purple-200"><td class="py-3 px-2">${i + 1}</td><td class="px-2">${t ? TROPHY_ICON[t] + ' ' : ''}${r.playerName}</td><td class="px-2">${r.score}</td></tr>`;
-    });
+      return `<tr class="${me} border-b border-purple-200"><td class="py-3 px-2">${i + 1}</td><td class="px-2">${t ? TROPHY_ICON[t] + ' ' : ''}${esc(r.playerName)}</td><td class="px-2">${esc(r.score)}</td></tr>`;
+    }).join('');
     if (!rows.length) tbody.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-gray-500">No scores yet in this mode!</td></tr>';
   } catch (e) {
     tbody.innerHTML = `<tr><td colspan="3" class="text-center py-4 text-red-500">Offline Score: ${engine.score}</td></tr>`;
@@ -302,6 +303,8 @@ const TEACHER_MODAL_HTML = `
 
 /** Injects the modal into document.body and wires #adminBtn. onSaved() runs after a successful save. */
 export function mountTeacherModal(onSaved) {
+  if ($('adminModal')) throw new Error('teacher modal already mounted');
+  if (!$('adminBtn')) throw new Error('DOM contract: missing #adminBtn');
   document.body.insertAdjacentHTML('beforeend', TEACHER_MODAL_HTML);
   const open = () => { $('adminModal').classList.remove('hidden'); $('pinView').classList.remove('hidden'); $('settingsView').classList.add('hidden'); $('pinInput').value = ''; };
   const close = () => { $('adminModal').classList.add('hidden'); $('pinInput').value = ''; };

@@ -1495,3 +1495,371 @@ git push origin main
 ```
 
 - [ ] **Step 5: Verify live** — open the GitHub Pages URL, log in, play one round of each game, confirm Firestore `scores` has `num1` records.
+
+---
+
+### Task 11: Bookshop theme + juice pack (both games)
+
+Runs after Task 9 and before Task 10's push. Supersedes the pair-box shelf in Task 8 and the grey slot/tile UI in Task 9.
+
+**Files:**
+- Create: `juice.js`
+- Modify: `shared.css` (append)
+- Modify: `index.html` (customer face id, item tap, GIVE handler)
+- Modify: `numbers.html` (Lv1 stacks, Lv2 plates + tables, Lv3/4 bookshelf, `answer()` reactions)
+
+- [ ] **Step 1: Create `juice.js`**
+
+```js
+// Pure DOM animation helpers. No Firebase, no game state.
+
+function re(el, cls) { if (!el) return; el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); }
+
+export function squish(el) { re(el, 'squish'); }
+export function bounce(el) { re(el, 'bounce'); }
+export function popScore(el) { re(el, 'pop-score'); }
+export function flashRed(el) { re(el, 'flash-red'); }
+
+/** Radial emoji burst at viewport point (x, y). */
+export function burst(x, y, emojis = ['⭐', '✨', '🌟'], n = 8) {
+  for (let i = 0; i < n; i++) {
+    const el = document.createElement('span');
+    el.className = 'burst-piece';
+    el.textContent = emojis[i % emojis.length];
+    const ang = (i / n) * Math.PI * 2 + Math.random() * 0.5;
+    const dist = 50 + Math.random() * 50;
+    el.style.left = `${x}px`; el.style.top = `${y}px`;
+    el.style.setProperty('--dx', `${Math.cos(ang) * dist}px`);
+    el.style.setProperty('--dy', `${Math.sin(ang) * dist - 30}px`);
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 650);
+  }
+}
+
+/**
+ * Fly `html` from the centre of `from` (element or DOMRect) to the centre of `toEl`, then call onArrive.
+ * Duration 350 ms. The clone is removed afterwards.
+ */
+export function flyTo(from, toEl, html, onArrive) {
+  const a = from.getBoundingClientRect ? from.getBoundingClientRect() : from;
+  const b = toEl.getBoundingClientRect();
+  const el = document.createElement('div');
+  el.className = 'fly'; el.innerHTML = html;
+  el.style.transform = `translate(${a.left + a.width / 2}px, ${a.top + a.height / 2}px) translate(-50%, -50%)`;
+  document.body.appendChild(el);
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    el.style.transform = `translate(${b.left + b.width / 2}px, ${b.top + b.height / 2}px) translate(-50%, -50%) scale(0.9)`;
+  }));
+  setTimeout(() => { el.remove(); if (onArrive) onArrive(); }, 360);
+}
+
+/** Temporarily replace an element's text (a face emoji); restores after ms. */
+export function react(el, emoji, ms = 600) {
+  if (!el) return;
+  if (el._face === undefined) el._face = el.textContent;
+  el.textContent = emoji;
+  clearTimeout(el._faceTimer);
+  el._faceTimer = setTimeout(() => { el.textContent = el._face; }, ms);
+}
+```
+
+- [ ] **Step 2: Append to `shared.css`**
+
+```css
+
+/* ---------- Juice ---------- */
+@keyframes squish { 0% { transform: scale(1); } 40% { transform: scale(0.85, 0.8); } 70% { transform: scale(1.1, 1.15); } 100% { transform: scale(1); } }
+.squish { animation: squish 0.25s ease-out; }
+@keyframes burstOut { 0% { transform: translate(0, 0) scale(0.6); opacity: 1; } 100% { transform: translate(var(--dx), var(--dy)) scale(1.4); opacity: 0; } }
+.burst-piece { position: fixed; pointer-events: none; z-index: 120; font-size: 1.6rem; animation: burstOut 0.6s ease-out forwards; }
+.fly { position: fixed; left: 0; top: 0; pointer-events: none; z-index: 110; transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1); will-change: transform; }
+@keyframes scorePop { 0% { transform: scale(1); } 50% { transform: scale(1.5); color: #f97316; } 100% { transform: scale(1); } }
+.pop-score { display: inline-block; animation: scorePop 0.35s ease-out; }
+@keyframes bounceUp { 0%, 100% { transform: translateY(0); } 40% { transform: translateY(-18px); } }
+.bounce { animation: bounceUp 0.4s ease-out; }
+@keyframes redFlash { 0% { box-shadow: inset 0 0 0 0 rgba(239,68,68,0); } 30% { box-shadow: inset 0 0 60px 10px rgba(239,68,68,0.5); } 100% { box-shadow: inset 0 0 0 0 rgba(239,68,68,0); } }
+.flash-red { animation: redFlash 0.4s ease-out; }
+
+/* ---------- Bookshop theme ---------- */
+.c0 { background: #f87171; } .c1 { background: #fbbf24; } .c2 { background: #34d399; } .c3 { background: #60a5fa; } .c4 { background: #a78bfa; } .c5 { background: #f472b6; }
+.odd { background: #ef4444; } .even { background: #3b82f6; }
+
+/* Lv1 book stacks */
+.stack-btn { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; background: none; border: 0; padding: 0; }
+.stack-num { background: white; border: 3px solid #1f2937; border-radius: 12px; font-weight: 900; font-size: 1.75rem; padding: 0 14px; box-shadow: 0 4px 0 rgba(0,0,0,0.2); }
+.stack { display: flex; flex-direction: column-reverse; gap: 2px; align-items: center; min-height: 12px; }
+.book { height: 8px; width: 60px; border-radius: 3px; box-shadow: inset 0 -2px 0 rgba(0,0,0,0.25); }
+.peek { position: absolute; left: 50%; top: 0; transform: translateX(-50%); display: flex; flex-direction: column; gap: 4px; align-items: center; background: rgba(255,255,255,0.95); border-radius: 12px; padding: 4px; z-index: 5; }
+.peek:empty { display: none; }
+@media (min-width: 768px) { .book { height: 12px; width: 90px; } .stack-num { font-size: 2.5rem; } }
+
+/* Lv2 plates + tables */
+.plate { width: 48px; height: 48px; border-radius: 50%; border: 3px solid #cbd5e1; background: radial-gradient(circle, #fff 55%, #e2e8f0 56%, #fff 70%); font-size: 26px; display: flex; align-items: center; justify-content: center; transition: transform 0.1s; }
+.plate.selected { border-color: #f59e0b; transform: scale(1.15); box-shadow: 0 0 0 4px rgba(245,158,11,0.4); }
+.tables { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; background: #fde68a; padding: 6px; border-radius: 12px; border: 3px solid #f59e0b; }
+.table { display: flex; flex-direction: column; gap: 2px; background: #92400e; border-radius: 8px; padding: 3px; }
+.seat { width: 34px; height: 30px; border-radius: 6px; background: #fef3c7; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+.seat.empty { background: rgba(255,255,255,0.35); }
+.seat.odd-one { border: 3px dashed #ef4444; background: #fee2e2; animation: pop 0.25s ease-out; }
+@media (min-width: 768px) { .plate { width: 60px; height: 60px; font-size: 32px; } .seat { width: 44px; height: 38px; font-size: 26px; } }
+
+/* Lv3/4 bookshelf */
+.shelf { display: flex; gap: 4px; align-items: flex-end; background: #78350f; padding: 6px 6px 0; border-radius: 8px 8px 0 0; border-bottom: 8px solid #451a03; }
+.book-slot { width: 40px; height: 56px; border-radius: 4px 4px 0 0; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 20px; color: white; text-shadow: 0 1px 0 rgba(0,0,0,0.4); box-shadow: inset -3px 0 0 rgba(0,0,0,0.2); }
+.book-slot.gap { background: rgba(0,0,0,0.35); border: 2px dashed #fcd34d; color: #fcd34d; box-shadow: none; }
+.book-slot.filled { animation: pop 0.3s ease-out; }
+.bear-row { display: flex; gap: 4px; }
+.bear-row div { width: 40px; text-align: center; font-size: 26px; line-height: 1; }
+.bear-row .here { animation: bounceUp 0.8s infinite; }
+.tile-book { width: 48px; height: 64px; border-radius: 4px 4px 0 0; color: white; font-weight: 900; font-size: 24px; text-shadow: 0 1px 0 rgba(0,0,0,0.4); border: 0; box-shadow: inset -3px 0 0 rgba(0,0,0,0.2), 0 4px 0 rgba(0,0,0,0.3); }
+.tile-book:disabled { opacity: 0.3; }
+@media (min-width: 768px) { .book-slot { width: 56px; height: 76px; font-size: 28px; } .bear-row div { width: 56px; font-size: 34px; } .tile-book { width: 64px; height: 84px; font-size: 32px; } }
+```
+
+- [ ] **Step 3: `index.html` — Market juice**
+
+Add `id="customerFace"` to the bear: change `<div class="text-6xl md:text-8xl drop-shadow-md">🐻</div>` to `<div id="customerFace" class="text-6xl md:text-8xl drop-shadow-md">🐻</div>`.
+
+Add the import after the `shared.js` import line:
+
+```js
+        import { squish, bounce, popScore, flashRed, burst, flyTo, react } from './juice.js';
+```
+
+Replace `addItem`:
+
+```js
+        function addItem(amount, e) {
+            if (round.current + amount > 40) return;
+            round.current += amount; round.history.push(amount);
+            renderTenFrames(); playSound('click');
+            squish($('itemBtn'));
+            const cells = $('tenFrameContainer').querySelectorAll('.frame-cell');
+            const target = cells[round.current - 1];
+            if (target) flyTo($('itemBtn'), target, `<span class="text-3xl">${round.item}</span>`);
+            if (e && e.clientX) spawnParticle(e.clientX, e.clientY, `+${amount}`);
+            triggerWiggle();
+        }
+```
+
+Replace the GIVE handler:
+
+```js
+        $('giveBtn').addEventListener('pointerdown', (e) => {
+            triggerWiggle();
+            const pts = registerHit(round.current === round.target, POINTS[round.mode]);
+            if (pts > 0) {
+                burst(e.clientX, e.clientY);
+                bounce($('customerFace')); react($('customerFace'), '🥳');
+                popScore($('scoreDisplay'));
+                nextCustomer();
+            } else {
+                react($('customerFace'), '😵'); flashRed($('gameScreen'));
+                replay($('customerBubble'), 'animate-shake');
+            }
+        });
+```
+
+- [ ] **Step 4: `numbers.html` — imports and `answer()`**
+
+Add after the `numbers-logic.js` import:
+
+```js
+        import { squish, bounce, popScore, flashRed, burst, flyTo, react } from './juice.js';
+```
+
+Replace `answer`:
+
+```js
+        /** Common answer handling: correct → next round, wrong → shake bubble. */
+        function answer(correct, e) {
+            triggerWiggle();
+            const pts = registerHit(correct, POINTS[mode]);
+            const faces = $('stage').querySelectorAll('[data-face]');
+            if (pts > 0) {
+                if (e && e.clientX) { burst(e.clientX, e.clientY); spawnParticle(e.clientX, e.clientY, `+${pts}`); }
+                faces.forEach(f => { bounce(f); react(f, '🥳'); });
+                popScore($('scoreDisplay'));
+                LEVELS[mode].newRound();
+            } else {
+                faces.forEach(f => react(f, '😵'));
+                flashRed($('gameScreen'));
+                replay($('bubble'), 'animate-shake');
+            }
+        }
+```
+
+- [ ] **Step 5: `numbers.html` — Lv1 book stacks**
+
+Replace the `$('stage').innerHTML` template inside `lv1.newRound()` with:
+
+```js
+                const stackHtml = n => `<div class="stack">${Array.from({ length: n }, (_, i) => `<div class="book c${i % 6}"></div>`).join('')}</div>`;
+                $('stage').innerHTML = `
+                  <div class="flex gap-6 md:gap-16 items-start justify-center w-full">
+                    ${['left', 'right'].map((side, i) => `
+                      <div class="relative flex flex-col items-center gap-2 w-[45%] max-w-[220px]">
+                        <button class="cust-btn text-5xl md:text-7xl drop-shadow-md" data-side="${side}" data-face>${i === 0 ? '🐻' : '🐰'}</button>
+                        <button class="stack-btn" data-peek="${side}"><div class="stack-num">${i === 0 ? r.a : r.b}</div>${stackHtml(i === 0 ? r.a : r.b)}</button>
+                        <div class="peek" data-peekbox="${side}"></div>
+                      </div>`).join('')}
+                  </div>`;
+```
+
+(The `.peek` box now overlays the stack; the rest of `lv1` is unchanged.)
+
+- [ ] **Step 6: `numbers.html` — Lv2 plates and tables**
+
+Replace the whole `const lv2 = { … };` with:
+
+```js
+        // ---- Lv2 Odd / Even ----
+        const lv2 = {
+            round: null, emoji: '🍛', loose: [], pairs: [], selected: null,
+            newRound() {
+                this.round = genOddEven();
+                this.emoji = pick(['🍛', '🍜', '🍰', '🥟', '🍩']);
+                this.loose = Array.from({ length: this.round.n }, (_, i) => i);
+                this.pairs = []; this.selected = null;
+                setBubble(`${this.round.n} 碟是奇數還是偶數？`, `${this.round.n} plates: odd or even? Seat them two by two!`);
+                $('stage').innerHTML = `
+                  <div class="flex items-center gap-3"><span class="text-4xl md:text-6xl" data-face>🐻</span><div class="num-card text-3xl md:text-5xl">${this.round.n}</div></div>
+                  <div id="looseGrid" class="grid grid-cols-5 gap-2 md:gap-3"></div>
+                  <div id="pairShelf" class="flex flex-col gap-2 items-center w-full"></div>`;
+                $('controls').innerHTML = `
+                  <button id="undoPair" class="bubbly-btn bg-gray-300 text-gray-700 font-bold text-sm md:text-lg py-2 px-3 rounded-xl border-4 border-gray-400">↩️ Undo</button>
+                  <button class="bubbly-btn bg-pink-300 text-pink-900 font-black text-xl md:text-2xl py-3 px-5 rounded-2xl border-4 border-pink-500 disabled:opacity-40" data-ans="odd">奇數<br><span class="text-sm font-normal">Odd</span></button>
+                  <button class="bubbly-btn bg-teal-300 text-teal-900 font-black text-xl md:text-2xl py-3 px-5 rounded-2xl border-4 border-teal-500 disabled:opacity-40" data-ans="even">偶數<br><span class="text-sm font-normal">Even</span></button>`;
+                $('undoPair').addEventListener('pointerdown', () => this.undo());
+                $('controls').querySelectorAll('[data-ans]').forEach(b => b.addEventListener('pointerdown', e => { if (!b.disabled) answer(b.dataset.ans === this.round.answer, e); }));
+                this.render();
+            },
+            /** Tables 5 per row (= one ten-frame). Pair k sits at table k; a lone leftover plate sits at table pairs.length. */
+            tablesHtml() {
+                const tables = Math.ceil(this.round.n / 2);
+                const rows = Math.ceil(tables / 5);
+                let html = '';
+                for (let r = 0; r < rows; r++) {
+                    html += '<div class="tables">';
+                    for (let c = 0; c < 5; c++) {
+                        const k = r * 5 + c;
+                        if (k >= tables) { html += '<div></div>'; continue; }
+                        const seated = k < this.pairs.length;
+                        const lone = !seated && k === this.pairs.length && this.loose.length === 1;
+                        html += `<div class="table" data-table="${k}">
+                          <div class="seat ${seated ? '' : lone ? 'odd-one' : 'empty'}">${seated || lone ? this.emoji : ''}</div>
+                          <div class="seat ${seated ? '' : 'empty'}">${seated ? this.emoji : ''}</div></div>`;
+                    }
+                    html += '</div>';
+                }
+                return html;
+            },
+            render() {
+                const grid = $('looseGrid');
+                grid.innerHTML = this.loose.map(id => `<button class="plate ${id === this.selected ? 'selected' : ''}" data-id="${id}">${this.emoji}</button>`).join('');
+                grid.querySelectorAll('[data-id]').forEach(b => b.addEventListener('pointerdown', () => this.tap(parseInt(b.dataset.id), b)));
+                $('pairShelf').innerHTML = this.tablesHtml();
+                const ready = this.loose.length <= 1;
+                $('controls').querySelectorAll('[data-ans]').forEach(b => b.disabled = !ready);
+            },
+            tap(id, btn) {
+                playSound('click'); triggerWiggle(); squish(btn);
+                if (this.selected === null) { this.selected = id; this.render(); return; }
+                if (this.selected === id) { this.selected = null; this.render(); return; }
+                const fromA = $('looseGrid').querySelector(`[data-id="${this.selected}"]`).getBoundingClientRect();
+                const fromB = btn.getBoundingClientRect();
+                const k = this.pairs.length;
+                this.pairs.push([this.selected, id]);
+                this.loose = this.loose.filter(x => x !== id && x !== this.selected);
+                this.selected = null;
+                this.render();
+                const table = $('pairShelf').querySelector(`[data-table="${k}"]`);
+                if (table) {
+                    const seats = table.querySelectorAll('.seat');
+                    const html = `<span class="text-2xl">${this.emoji}</span>`;
+                    flyTo(fromA, seats[0], html); flyTo(fromB, seats[1], html);
+                }
+            },
+            undo() {
+                if (!this.pairs.length) return;
+                const [a, b] = this.pairs.pop();
+                this.loose.push(a, b); this.loose.sort((x, y) => x - y); this.selected = null;
+                triggerWiggle(); this.render();
+            }
+        };
+```
+
+- [ ] **Step 7: `numbers.html` — Lv3/4 bookshelf**
+
+Replace `makeLineLevel` and the `lv3`/`lv4` lines with:
+
+```js
+        // ---- Lv3 / Lv4 bookshelf ----
+        function makeLineLevel(gen, bubbleFor, colorOf) {
+            return {
+                round: null, filled: null,
+                newRound() {
+                    const r = this.round = gen();
+                    this.filled = new Set();
+                    const [zh, en] = bubbleFor(r);
+                    setBubble(zh, en);
+                    $('stage').innerHTML = `
+                      <div class="flex flex-col items-center gap-1">
+                        <div id="shelf" class="shelf"></div>
+                        <div id="bearRow" class="bear-row"></div>
+                      </div>`;
+                    $('controls').innerHTML = r.tiles.map(v => `<button class="tile-book ${colorOf(v)}" data-v="${v}">${v}</button>`).join('');
+                    $('controls').querySelectorAll('[data-v]').forEach(b => b.addEventListener('pointerdown', e => this.tapTile(b, e)));
+                    this.render();
+                },
+                nextBlank() { return this.round.blanks.find(i => !this.filled.has(i)); },
+                render(justFilled) {
+                    const active = this.nextBlank();
+                    $('shelf').innerHTML = this.round.slots.map((v, i) => {
+                        const isBlank = this.round.blanks.includes(i);
+                        if (!isBlank) return `<div class="book-slot ${colorOf(v)}">${v}</div>`;
+                        if (this.filled.has(i)) return `<div class="book-slot ${colorOf(v)} ${i === justFilled ? 'filled' : ''}">${v}</div>`;
+                        return `<div class="book-slot gap">?</div>`;
+                    }).join('');
+                    $('bearRow').innerHTML = this.round.slots.map((_, i) => `<div class="${i === active ? 'here' : ''}" ${i === active ? 'data-face' : ''}>${i === active ? '🐻' : ''}</div>`).join('');
+                },
+                tapTile(btn, e) {
+                    if (btn.disabled) return;
+                    const target = this.nextBlank();
+                    if (target === undefined) return;
+                    const v = parseInt(btn.dataset.v);
+                    squish(btn);
+                    if (v === this.round.slots[target]) {
+                        btn.disabled = true;
+                        playSound('click'); triggerWiggle();
+                        const slotEl = $('shelf').children[target];
+                        flyTo(btn, slotEl, `<div class="book-slot ${colorOf(v)}">${v}</div>`, () => {
+                            this.filled.add(target);
+                            this.render(target);
+                            if (this.nextBlank() === undefined) answer(true, e);
+                        });
+                    } else {
+                        replay(btn, 'animate-shake');
+                        answer(false, e);
+                    }
+                }
+            };
+        }
+        const lv3 = makeLineLevel(genLine, () => ['書架缺了哪些數字？', 'Which books are missing?'], v => `c${v % 6}`);
+        const lv4 = makeLineLevel(genSkipLine, r => r.parity === 'odd' ? ['奇數書排排站，缺了誰？', 'Odd books: which are missing?'] : ['偶數書排排站，缺了誰？', 'Even books: which are missing?'], v => v % 2 ? 'odd' : 'even');
+```
+
+- [ ] **Step 8: Verify in browser** (serve, hide `#loginScreen`, `(await import('./shared.js')).settings.trophy.bronze = 0`, mobile preset 375×812 and 360×640)
+
+- Market: `window.startGame('easy')`; item tap squishes and a clone flies into the next cell; GIVE correct → burst, 🐻→🥳, score pops; wrong → 😵 + red flash.
+- Lv1: two book stacks with numeral badges, taller stack = bigger number; tap stack → ten-frames overlay it for 1.5 s; both stacks of 20 fit above the controls on 360×640.
+- Lv2: plates in grid; tap two → both fly to the next table's seats; leftover plate sits alone with red dashed seat; 20 plates + 10 tables fit on 360×640 (measure `#pairShelf` bottom vs `#controls` top).
+- Lv3/4: shelf of coloured spines with gaps; bear bounces under the leftmost gap; correct book flies into the gap then bear moves to the next gap; wrong book shakes; Lv4 spines alternate red/blue by parity.
+- Console: zero errors. Reset viewport, kill server.
+
+- [ ] **Step 9: Commit**
+
+```bash
+git add juice.js shared.css index.html numbers.html
+git commit -m "feat: bookshop theme and tap/answer juice for both games"
+```

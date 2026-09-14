@@ -111,15 +111,6 @@ body {
 .c0 { background: #f87171; } .c1 { background: #fbbf24; } .c2 { background: #34d399; } .c3 { background: #60a5fa; } .c4 { background: #a78bfa; } .c5 { background: #f472b6; }
 .odd { background: #ef4444; } .even { background: #3b82f6; }
 
-/* Lv1 book stacks */
-.stack-btn { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; background: none; border: 0; padding: 0; }
-.stack-num { background: white; border: 3px solid #1f2937; border-radius: 12px; font-weight: 900; font-size: 1.75rem; padding: 0 14px; box-shadow: 0 4px 0 rgba(0,0,0,0.2); }
-.stack { display: flex; flex-direction: column-reverse; gap: 2px; align-items: center; min-height: 12px; }
-.book { height: 8px; width: 60px; border-radius: 3px; box-shadow: inset 0 -2px 0 rgba(0,0,0,0.25); }
-.peek { position: absolute; left: 50%; top: 0; transform: translateX(-50%); display: flex; flex-direction: column; gap: 4px; align-items: center; background: rgba(255,255,255,0.95); border-radius: 12px; padding: 4px; z-index: 5; }
-.peek:empty { display: none; }
-@media (min-width: 768px) { .book { height: 12px; width: 90px; } .stack-num { font-size: 2.5rem; } }
-
 /* Lv2 plates + tables */
 .plate { width: 48px; height: 48px; border-radius: 50%; border: 3px solid #cbd5e1; background: radial-gradient(circle, #fff 55%, #e2e8f0 56%, #fff 70%); font-size: 26px; display: flex; align-items: center; justify-content: center; transition: transform 0.1s; }
 .plate.selected { border-color: #f59e0b; transform: scale(1.15); box-shadow: 0 0 0 4px rgba(245,158,11,0.4); }

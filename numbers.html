@@ -157,14 +157,13 @@
                 const r = this.round = genCompare();
                 const emoji = pick(ITEMS);
                 setBubble(r.ask === 'more' ? '誰比較多？' : '誰比較少？', r.ask === 'more' ? 'Who has MORE?' : 'Who has LESS?');
-                const stackHtml = n => `<div class="stack">${Array.from({ length: n }, (_, i) => `<div class="book c${i % 6}"></div>`).join('')}</div>`;
                 $('stage').innerHTML = `
                   <div class="flex gap-6 md:gap-16 items-start justify-center w-full">
                     ${['left', 'right'].map((side, i) => `
-                      <div class="relative flex flex-col items-center gap-2 w-[45%] max-w-[220px]">
-                        <button class="cust-btn text-5xl md:text-7xl drop-shadow-md" data-side="${side}" data-face>${i === 0 ? '🐻' : '🐰'}</button>
-                        <button class="stack-btn" data-peek="${side}"><div class="stack-num">${i === 0 ? r.a : r.b}</div>${stackHtml(i === 0 ? r.a : r.b)}</button>
-                        <div class="peek" data-peekbox="${side}"></div>
+                      <div class="flex flex-col items-center gap-2 w-[45%] max-w-[220px]">
+                        <button class="cust-btn text-6xl md:text-8xl drop-shadow-md" data-side="${side}" data-face>${i === 0 ? '🐻' : '🐰'}</button>
+                        <button class="num-card text-4xl md:text-6xl" data-peek="${side}">${i === 0 ? r.a : r.b}</button>
+                        <div class="peek flex flex-col gap-1 items-center" data-peekbox="${side}"></div>
                       </div>`).join('')}
                   </div>`;
                 $('controls').innerHTML = `

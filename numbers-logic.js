@@ -96,9 +96,3 @@ export function genSkipLine(rng = Math.random) {
   const tiles = makeTiles(answers, n => [n - 1, n + 1, n - 4, n + 4], rng);
   return { slots, blanks, tiles, parity, dir };
 }
-
-/** Lv4: 50/50 a numeric line or an odd/even skip line, each ascending or descending. */
-export function genMixedLine(rng = Math.random) {
-  if (rng() < 0.5) return { ...genLine(rng), kind: 'num' };
-  return { ...genSkipLine(rng), kind: 'skip' };
-}

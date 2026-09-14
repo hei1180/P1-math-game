@@ -82,10 +82,10 @@ Behaviour must stay identical (regression checklist below). Mode keys
 - The 🐻 stands under the leftmost blank. Tap a book → checked for that blank. Correct fills it; wrong shakes and counts as wrong.
 - Round complete when all blanks filled → points awarded once.
 
-### Lv4 混合數線 Mixed line — key `num4`, 20 pts/round
+### Lv4 奇偶數線 Odd/even line — key `num4`, 20 pts/round
 
-- Each round is 50/50 a numeric line (as Lv3, 7 slots, step 1) or an odd/even skip line (6 slots, step 2, all odd 1..19 or all even 2..20, odd books red / even books blue). Each is ascending or descending 50/50.
-- Same shelf UI and rules as Lv3. Skip-line distractors: n±1 (the classic error) and n±4.
+- Same shelf UI and rules as Lv3, 6 slots, step 2: all odd (1..19) or all even (2..20), odd books red / even books blue, ascending or descending 50/50.
+- 1-2 blanks. Distractors: n±1 (the classic error), n±4.
 
 ## Theme: 書店 + 茶餐廳 (Number Shop visuals)
 
@@ -96,7 +96,7 @@ Abstract cards/tiles are replaced by shop objects, all CSS + emoji, no image fil
 | Lv1 比較 | Each customer holds a plain **number card**. Tap the card → ten-frames appear under it and stay until the next question. Answer with 多 / 少 / 一樣多 buttons. |
 | Lv2 奇偶 | N **plates** of food on the counter. Answer straight away, or tap 💡 Hint: plates fly two by two to **two-seat tables**, 5 per row (a row = one ten-frame); a leftover plate sits alone with a red dashed seat: the odd one out. Tables = ceil(N/2). |
 | Lv3 數線 | A **bookshelf** with numbered spines, ascending or descending (no cue); missing books are dark gaps. The 🐻 stands under the leftmost gap, bouncing, waiting. Loose books (4) lie in the controls bar; tap one → it flies up into the gap if it is the right number, else it shakes. Left-to-right rule stays (bear marks the active gap). |
-| Lv4 混合數線 | Same shelf; rounds mix numeric lines and odd/even skip lines (odd books red, even blue), ascending or descending. |
+| Lv4 奇偶數線 | Same shelf; odd/even skip lines only (odd books red, even blue), ascending or descending. |
 
 ## Juice (both games)
 

@@ -173,7 +173,97 @@
             }
         };
 
-        const LEVELS = { num1: lv1 };
+        // ---- Lv2 Odd / Even ----
+        const lv2 = {
+            round: null, emoji: '🍎', loose: [], pairs: [], selected: null,
+            newRound() {
+                this.round = genOddEven();
+                this.emoji = pick(ITEMS);
+                this.loose = Array.from({ length: this.round.n }, (_, i) => i);
+                this.pairs = []; this.selected = null;
+                setBubble(`${this.round.n} 是奇數還是偶數？`, `Is ${this.round.n} odd or even? Pair them up!`);
+                $('stage').innerHTML = `
+                  <div class="num-card text-4xl md:text-6xl">${this.round.n}</div>
+                  <div id="looseGrid" class="grid grid-cols-5 gap-2 md:gap-3"></div>
+                  <div id="pairShelf" class="flex flex-wrap justify-center gap-2 min-h-[44px] w-full max-w-md bg-orange-100 border-4 border-orange-300 rounded-2xl p-2"></div>`;
+                $('controls').innerHTML = `
+                  <button id="undoPair" class="bubbly-btn bg-gray-300 text-gray-700 font-bold text-sm md:text-lg py-2 px-3 rounded-xl border-4 border-gray-400">↩️ Undo</button>
+                  <button class="bubbly-btn bg-pink-300 text-pink-900 font-black text-xl md:text-2xl py-3 px-5 rounded-2xl border-4 border-pink-500 disabled:opacity-40" data-ans="odd">奇數<br><span class="text-sm font-normal">Odd</span></button>
+                  <button class="bubbly-btn bg-teal-300 text-teal-900 font-black text-xl md:text-2xl py-3 px-5 rounded-2xl border-4 border-teal-500 disabled:opacity-40" data-ans="even">偶數<br><span class="text-sm font-normal">Even</span></button>`;
+                $('undoPair').addEventListener('pointerdown', () => this.undo());
+                $('controls').querySelectorAll('[data-ans]').forEach(b => b.addEventListener('pointerdown', e => { if (!b.disabled) answer(b.dataset.ans === this.round.answer, e); }));
+                this.render();
+            },
+            render() {
+                const grid = $('looseGrid');
+                grid.innerHTML = this.loose.map(id => `<button class="item-btn ${id === this.selected ? 'selected' : ''}" data-id="${id}">${this.emoji}</button>`).join('');
+                grid.querySelectorAll('[data-id]').forEach(b => b.addEventListener('pointerdown', () => this.tap(parseInt(b.dataset.id))));
+                $('pairShelf').innerHTML = this.pairs.map(() => `<div class="pair-box"><span>${this.emoji}</span><span>${this.emoji}</span></div>`).join('');
+                const ready = this.loose.length <= 1;
+                $('controls').querySelectorAll('[data-ans]').forEach(b => b.disabled = !ready);
+            },
+            tap(id) {
+                playSound('click'); triggerWiggle();
+                if (this.selected === null) { this.selected = id; }
+                else if (this.selected === id) { this.selected = null; }
+                else { this.pairs.push([this.selected, id]); this.loose = this.loose.filter(x => x !== id && x !== this.selected); this.selected = null; }
+                this.render();
+            },
+            undo() {
+                if (!this.pairs.length) return;
+                const [a, b] = this.pairs.pop();
+                this.loose.push(a, b); this.loose.sort((x, y) => x - y); this.selected = null;
+                triggerWiggle(); this.render();
+            }
+        };
+
+        // ---- Lv3 / Lv4 shelf line ----
+        function makeLineLevel(gen, bubbleFor) {
+            return {
+                round: null, filled: null,
+                newRound() {
+                    const r = this.round = gen();
+                    this.filled = new Set();
+                    const [zh, en] = bubbleFor(r);
+                    setBubble(zh, en);
+                    $('stage').innerHTML = `
+                      <div class="text-5xl md:text-7xl">🐻</div>
+                      <div id="shelf" class="flex gap-1 md:gap-2 justify-center w-full px-1"></div>
+                      <div class="w-full max-w-lg h-3 bg-amber-700 rounded-full"></div>`;
+                    $('controls').innerHTML = r.tiles.map(v => `<button class="tile bubbly-btn" data-v="${v}">${v}</button>`).join('');
+                    $('controls').querySelectorAll('[data-v]').forEach(b => b.addEventListener('pointerdown', e => this.tapTile(b, e)));
+                    this.render();
+                },
+                nextBlank() { return this.round.blanks.find(i => !this.filled.has(i)); },
+                render() {
+                    const active = this.nextBlank();
+                    $('shelf').innerHTML = this.round.slots.map((v, i) => {
+                        const isBlank = this.round.blanks.includes(i);
+                        if (!isBlank) return `<div class="slot">${v}</div>`;
+                        if (this.filled.has(i)) return `<div class="slot filled">${v}</div>`;
+                        return `<div class="slot blank ${i === active ? 'active' : ''}">?</div>`;
+                    }).join('');
+                },
+                tapTile(btn, e) {
+                    if (btn.disabled) return;
+                    const target = this.nextBlank();
+                    if (target === undefined) return;
+                    const v = parseInt(btn.dataset.v);
+                    if (v === this.round.slots[target]) {
+                        this.filled.add(target); btn.disabled = true;
+                        playSound('click'); triggerWiggle(); this.render();
+                        if (this.nextBlank() === undefined) answer(true, e);
+                    } else {
+                        replay(btn, 'animate-shake');
+                        answer(false, e);
+                    }
+                }
+            };
+        }
+        const lv3 = makeLineLevel(genLine, () => ['缺了哪些數字？', 'Which numbers are missing?']);
+        const lv4 = makeLineLevel(genSkipLine, r => r.parity === 'odd' ? ['奇數排排站，缺了誰？', 'Odd numbers: which are missing?'] : ['偶數排排站，缺了誰？', 'Even numbers: which are missing?']);
+
+        const LEVELS = { num1: lv1, num2: lv2, num3: lv3, num4: lv4 };
     </script>
 </body>
 </html>

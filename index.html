@@ -10,23 +10,31 @@
 <body class="h-[100dvh] w-full flex flex-col relative">
 
     <div id="loginScreen" class="absolute inset-0 flex flex-col items-center justify-center bg-blue-400 z-50 p-4">
-        <h1 class="text-4xl md:text-6xl font-bold text-white mb-8 text-center drop-shadow-lg leading-tight">🍎 Math Market 🐻</h1>
+        <h1 class="text-4xl md:text-6xl font-bold text-white mb-8 text-center drop-shadow-lg leading-tight">🍎 P1 Maths 🔢</h1>
         <button id="loginBtn" class="bubbly-btn bg-white text-blue-500 font-bold text-xl md:text-2xl py-4 px-6 md:px-8 rounded-full border-4 border-blue-200 flex items-center justify-center gap-3 w-[90%] max-w-sm">
             <svg class="w-8 h-8 flex-shrink-0" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
             <span class="whitespace-nowrap">Login with Google</span>
         </button>
-        <p class="text-white mt-4 font-bold">Welcome, Store Owner!</p>
+        <p class="text-white mt-4 font-bold">Welcome! 歡迎光臨</p>
+    </div>
+
+    <div id="pickerScreen" class="hidden absolute inset-0 flex flex-col items-center justify-center bg-sky-400 z-40 p-4">
+        <button id="adminBtn" class="absolute top-4 right-4 bg-gray-800 text-white p-2 md:p-3 rounded-lg bubbly-btn font-bold">⚙️ Teacher</button>
+        <h1 class="text-3xl md:text-5xl font-bold text-white mb-2 drop-shadow-md text-center leading-tight">選擇遊戲 Pick a game</h1>
+        <p id="playerNameDisplay" class="text-lg md:text-xl text-sky-100 mb-6 md:mb-8 font-bold text-center w-full px-4 truncate"></p>
+        <div class="flex flex-col gap-4 w-[90%] max-w-sm">
+            <button onclick="showMarketMenu()" class="bubbly-btn bg-white text-orange-600 font-bold text-2xl md:text-3xl py-5 rounded-2xl border-4 border-orange-300 w-full">🍎 Math Market<br><span class="text-sm font-normal text-gray-500">數一數 Counting</span></button>
+            <a href="numbers.html" class="bubbly-btn bg-white text-indigo-600 font-bold text-2xl md:text-3xl py-5 rounded-2xl border-4 border-indigo-300 w-full text-center block">🔢 Number Shop<br><span class="text-sm font-normal text-gray-500">比較 · 奇偶 · 數線</span></a>
+        </div>
     </div>
 
     <div id="menuScreen" class="hidden absolute inset-0 flex flex-col items-center justify-center bg-green-400 z-40 p-4">
-        <button id="adminBtn" class="absolute top-4 right-4 bg-gray-800 text-white p-2 md:p-3 rounded-lg bubbly-btn font-bold">⚙️ Teacher</button>
-        <h1 class="text-3xl md:text-5xl font-bold text-white mb-2 drop-shadow-md text-center leading-tight">Select Difficulty</h1>
-        <p id="playerNameDisplay" class="text-lg md:text-xl text-green-100 mb-6 md:mb-8 font-bold text-center w-full px-4 truncate"></p>
-        
+        <button onclick="showPicker()" class="absolute top-4 left-4 bg-white/80 text-green-800 p-2 md:p-3 rounded-lg bubbly-btn font-bold">⬅ Games</button>
+        <h1 class="text-3xl md:text-5xl font-bold text-white mb-6 drop-shadow-md text-center leading-tight">🍎 Math Market</h1>
         <div class="flex flex-col gap-4 w-[90%] max-w-sm">
-            <button onclick="startGame('easy')" class="bubbly-btn bg-green-100 text-green-700 font-bold text-xl md:text-2xl py-3 md:py-4 rounded-2xl border-4 border-green-300 w-full">Easy (1-10)</button>
-            <button id="medBtn" onclick="startGame('medium')" class="bubbly-btn bg-yellow-100 text-yellow-700 font-bold text-xl md:text-2xl py-3 md:py-4 rounded-2xl border-4 border-yellow-300 opacity-50 cursor-not-allowed w-full">Medium (1-20) 🔒</button>
-            <button id="hardBtn" onclick="startGame('hard')" class="bubbly-btn bg-red-100 text-red-700 font-bold text-xl md:text-2xl py-3 md:py-4 rounded-2xl border-4 border-red-300 opacity-50 cursor-not-allowed w-full">Hard (Mix) 🔒</button>
+            <button id="btn-easy" onclick="startGame('easy')" class="level-btn bubbly-btn bg-green-100 text-green-700 font-bold py-3 md:py-4 rounded-2xl border-4 border-green-300 w-full"><span class="text-xl md:text-2xl">Easy (1-10)</span><span class="level-sub text-xs md:text-sm font-normal"></span></button>
+            <button id="btn-medium" onclick="startGame('medium')" class="level-btn bubbly-btn bg-yellow-100 text-yellow-700 font-bold py-3 md:py-4 rounded-2xl border-4 border-yellow-300 w-full"><span class="text-xl md:text-2xl">Medium (1-20)</span><span class="level-sub text-xs md:text-sm font-normal"></span></button>
+            <button id="btn-hard" onclick="startGame('hard')" class="level-btn bubbly-btn bg-red-100 text-red-700 font-bold py-3 md:py-4 rounded-2xl border-4 border-red-300 w-full"><span class="text-xl md:text-2xl">Hard (Mix)</span><span class="level-sub text-xs md:text-sm font-normal"></span></button>
             <button onclick="showLeaderboardFromMenu()" class="bubbly-btn bg-purple-100 text-purple-700 font-bold text-xl md:text-2xl py-3 md:py-4 rounded-2xl border-4 border-purple-300 w-full mt-2 shadow-md">🏆 Leaderboard</button>
         </div>
     </div>
@@ -69,7 +77,8 @@
 
     <div id="rankPopup">
         <h2 class="text-3xl md:text-5xl mb-4 text-center font-bold px-4">You finished the game!</h2>
-        <div id="rankText" class="rank-anim px-4">Top 10!</div>
+        <div id="rankScore" class="text-4xl md:text-6xl font-bold mb-4"></div>
+        <div id="rankTrophy" class="rank-anim px-4"></div>
     </div>
 
     <div id="leaderboardScreen" class="hidden absolute inset-0 flex flex-col items-center bg-purple-500 z-40 p-4 md:p-8 overflow-y-auto">
@@ -90,407 +99,108 @@
         <button onclick="showMenu()" class="bubbly-btn bg-yellow-400 text-yellow-900 font-bold text-xl md:text-2xl py-3 px-8 rounded-full border-4 border-yellow-500 mb-8">Back to Menu</button>
     </div>
 
-    <div id="adminModal" class="hidden absolute inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-        <div class="bg-white p-6 md:p-8 rounded-3xl w-full max-w-sm shadow-2xl">
-            <div id="pinView">
-                <h2 class="text-2xl font-bold mb-4 text-center">Teacher Access</h2>
-                <input type="password" id="pinInput" placeholder="Enter PIN" class="border-4 border-gray-300 p-2 rounded-xl w-full mb-4 text-center text-xl focus:border-blue-500 outline-none">
-                <div class="flex gap-2">
-                    <button onclick="closeAdminModal()" class="bubbly-btn bg-gray-300 text-gray-700 p-3 rounded-xl flex-1 font-bold">Cancel</button>
-                    <button onclick="checkPin()" class="bubbly-btn bg-blue-500 text-white p-3 rounded-xl flex-1 font-bold">Unlock</button>
-                </div>
-            </div>
-            
-            <div id="settingsView" class="hidden">
-                <h2 class="text-2xl font-bold mb-4 text-center text-purple-600">Classroom Settings</h2>
-                <div class="bg-gray-100 p-4 rounded-xl mb-4 border-2 border-gray-200">
-                    <label class="flex items-center gap-3 text-lg font-bold text-gray-700 mb-2 cursor-pointer"><input type="checkbox" id="settingMed" class="w-6 h-6 accent-yellow-500 rounded"> Unlock Medium</label>
-                    <label class="flex items-center gap-3 text-lg font-bold text-gray-700 cursor-pointer"><input type="checkbox" id="settingHard" class="w-6 h-6 accent-red-500 rounded"> Unlock Hard</label>
-                </div>
-                <div class="mb-6">
-                    <label class="block text-lg font-bold mb-2 text-gray-700 text-center">Game Time (Seconds)</label>
-                    <input type="number" id="settingTime" class="border-4 border-gray-300 p-2 rounded-xl w-full text-center text-2xl font-bold focus:border-purple-500 outline-none" min="10" max="120">
-                </div>
-                <button onclick="saveAdminSettings()" class="bubbly-btn bg-green-500 text-white py-3 px-4 rounded-xl w-full font-bold text-xl">Save Global Settings</button>
-            </div>
-        </div>
-    </div>
-
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
-        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
-        import { getFirestore, collection, doc, getDoc, setDoc, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
+        import { signIn, onUser, player, settings, initAudio, playSound, spawnParticle, replay,
+                 engine, resetEngine, registerHit, triggerWiggle, endFever, startTimer, stopTimer,
+                 saveScore, renderLeaderboard, refreshLevelButton, isUnlocked, showRankPopup, mountTeacherModal } from './shared.js';
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyAdCj3BAfeU737QdpBQMPkfp1wWrNcBWc0",
-            authDomain: "p1-maths.firebaseapp.com",
-            projectId: "p1-maths",
-            storageBucket: "p1-maths.firebasestorage.app",
-            messagingSenderId: "593709237589",
-            appId: "1:593709237589:web:d71dd6020234b554865bdc",
-            measurementId: "G-ZWXELF5EK5"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        const provider = new GoogleAuthProvider();
-
-        let playerInfo = { name: "Guest", uid: null, localHighScores: { easy: 0, medium: 0, hard: 0 } };
-        let gameState = { mode: 'easy', score: 0, combo: 0, maxCombo: 0, totalAttempts: 0, correctAttempts: 0, timeLeft: 30, timerId: null, isFever: false, feverTimeout: null, currentAmount: 0, currentItem: '🍎', targetAmount: 0, clickHistory: [] };
-        let teacherSettings = { timeLimit: 30, unlockMedium: false, unlockHard: false };
-
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        let audioCtx;
-        function initAudio() { if (!audioCtx) audioCtx = new AudioContext(); if (audioCtx.state === 'suspended') audioCtx.resume(); }
-
-        function playSound(type) {
-            if (!audioCtx) return;
-            const osc = audioCtx.createOscillator();
-            const gainNode = audioCtx.createGain();
-            osc.connect(gainNode); gainNode.connect(audioCtx.destination);
-            const now = audioCtx.currentTime;
-            
-            if (type === 'click') {
-                const baseFreq = 400 + (gameState.combo * 40); 
-                osc.type = 'sine'; osc.frequency.setValueAtTime(baseFreq, now); osc.frequency.exponentialRampToValueAtTime(baseFreq + 200, now + 0.1);
-                gainNode.gain.setValueAtTime(0.3, now); gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
-                osc.start(now); osc.stop(now + 0.1);
-            } else if (type === 'success') {
-                osc.type = 'triangle'; osc.frequency.setValueAtTime(440, now); osc.frequency.setValueAtTime(554, now + 0.1); osc.frequency.setValueAtTime(659, now + 0.2);
-                gainNode.gain.setValueAtTime(0.3, now); gainNode.gain.linearRampToValueAtTime(0, now + 0.4);
-                osc.start(now); osc.stop(now + 0.4);
-            } else if (type === 'error') {
-                osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, now); osc.frequency.linearRampToValueAtTime(100, now + 0.3);
-                gainNode.gain.setValueAtTime(0.3, now); gainNode.gain.linearRampToValueAtTime(0, now + 0.3);
-                osc.start(now); osc.stop(now + 0.3);
-            }
-        }
-
-        function spawnParticle(x, y, amount) {
-            const el = document.createElement('div');
-            el.className = 'particle'; el.innerText = `+${amount}`;
-            el.style.left = `${x - 20}px`; el.style.top = `${y - 20}px`;
-            document.body.appendChild(el);
-            setTimeout(() => el.remove(), 600);
-        }
-        
-        function triggerWiggle() {
-            if (!gameState.isFever) return;
-            const screen = document.getElementById('gameScreen');
-            screen.classList.remove('fever-wiggle');
-            void screen.offsetWidth; 
-            screen.classList.add('fever-wiggle');
-        }
-
-        function endFever() {
-            clearTimeout(gameState.feverTimeout);
-            gameState.isFever = false;
-            document.getElementById('gameScreen').classList.remove('fever-mode', 'fever-wiggle');
-            document.getElementById('feverOverlayText').style.display = 'none';
-            updateUI();
-        }
-
-        document.getElementById('loginBtn').addEventListener('click', () => {
-            initAudio(); 
-            signInWithPopup(auth, provider).catch(error => { console.error(error); alert("Login failed. Check console."); });
-        });
-
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                playerInfo.name = user.displayName || user.email.split('@')[0];
-                playerInfo.uid = user.uid;
-                loadGlobalSettings();
-                loadPlayerScores(); // Fetch past high scores on login
-                document.getElementById('playerNameDisplay').innerText = `Welcome, ${playerInfo.name}!`;
-                document.getElementById('loginScreen').classList.add('hidden');
-                document.getElementById('menuScreen').classList.remove('hidden');
-            }
-        });
-        
-        async function loadPlayerScores() {
-            try {
-                const qSnap = await getDocs(collection(db, "scores"));
-                qSnap.forEach(doc => {
-                    const d = doc.data();
-                    if (d.uid === playerInfo.uid) {
-                        if (d.mode === 'easy' && d.score > playerInfo.localHighScores.easy) playerInfo.localHighScores.easy = d.score;
-                        if (d.mode === 'medium' && d.score > playerInfo.localHighScores.medium) playerInfo.localHighScores.medium = d.score;
-                        if (d.mode === 'hard' && d.score > playerInfo.localHighScores.hard) playerInfo.localHighScores.hard = d.score;
-                    }
-                });
-                updateMenuLocks();
-            } catch(e) {}
-        }
-
-        function updateMenuLocks() {
-            const mBtn = document.getElementById('medBtn');
-            const hBtn = document.getElementById('hardBtn');
-            if (playerInfo.localHighScores.easy >= 150 && teacherSettings.unlockMedium) { mBtn.classList.remove('opacity-50', 'cursor-not-allowed'); mBtn.innerText = "Medium (1-20)"; } 
-            else { mBtn.classList.add('opacity-50', 'cursor-not-allowed'); mBtn.innerText = "Medium (1-20) 🔒"; }
-            if (playerInfo.localHighScores.medium >= 250 && teacherSettings.unlockHard) { hBtn.classList.remove('opacity-50', 'cursor-not-allowed'); hBtn.innerText = "Hard (Mix)"; } 
-            else { hBtn.classList.add('opacity-50', 'cursor-not-allowed'); hBtn.innerText = "Hard (Mix) 🔒"; }
-        }
-
-        window.startGame = function(mode) {
-            if (mode === 'medium' && (playerInfo.localHighScores.easy < 150 || !teacherSettings.unlockMedium)) return;
-            if (mode === 'hard' && (playerInfo.localHighScores.medium < 250 || !teacherSettings.unlockHard)) return;
-
-            initAudio();
-            gameState.mode = mode; gameState.score = 0; gameState.combo = 0; 
-            gameState.maxCombo = 0; gameState.totalAttempts = 0; gameState.correctAttempts = 0;
-            gameState.timeLeft = teacherSettings.timeLimit;
-            
-            endFever(); 
-            
-            document.getElementById('menuScreen').classList.add('hidden');
-            document.getElementById('leaderboardScreen').classList.add('hidden');
-            document.getElementById('gameScreen').classList.remove('hidden');
-            
-            document.getElementById('helperBtns').classList.toggle('hidden', mode === 'easy');
-            document.getElementById('undoBtn').classList.remove('hidden');
-
-            updateUI();
-            nextCustomer();
-            
-            clearInterval(gameState.timerId);
-            gameState.timerId = setInterval(() => {
-                gameState.timeLeft--; document.getElementById('timerDisplay').innerText = gameState.timeLeft;
-                if (gameState.timeLeft <= 0) endGame();
-            }, 1000);
-        };
-
+        const $ = id => document.getElementById(id);
+        const TABS = [{ key: 'easy', label: 'Easy' }, { key: 'medium', label: 'Medium' }, { key: 'hard', label: 'Hard' }];
+        const POINTS = { easy: 10, medium: 20, hard: 30 };
         const items = ['🍎', '🍭', '🧸', '🖍️', '🍪'];
+        let round = { mode: 'easy', target: 0, current: 0, item: '🍎', history: [] };
+
+        // ---- screens ----
+        function show(id) {
+            for (const s of ['pickerScreen', 'menuScreen', 'gameScreen', 'leaderboardScreen']) $(s).classList.add('hidden');
+            $(id).classList.remove('hidden');
+        }
+        window.showPicker = () => show('pickerScreen');
+        window.showMarketMenu = () => { refreshMenu(); show('menuScreen'); };
+        window.showMenu = window.showMarketMenu;
+
+        function refreshMenu() {
+            refreshLevelButton($('btn-easy'), 'easy', null, '');
+            refreshLevelButton($('btn-medium'), 'medium', 'easy', 'Easy', settings.unlockMedium);
+            refreshLevelButton($('btn-hard'), 'hard', 'medium', 'Medium', settings.unlockHard);
+        }
+
+        $('loginBtn').addEventListener('click', signIn);
+        onUser(p => {
+            $('playerNameDisplay').innerText = `Welcome, ${p.name}!`;
+            $('loginScreen').classList.add('hidden');
+            show('pickerScreen');
+        });
+        mountTeacherModal(refreshMenu);
+
+        // ---- game ----
+        window.startGame = function(mode) {
+            if (mode === 'medium' && !isUnlocked('easy', settings.unlockMedium)) return;
+            if (mode === 'hard' && !isUnlocked('medium', settings.unlockHard)) return;
+            initAudio();
+            round.mode = mode;
+            resetEngine(settings.timeLimit);
+            show('gameScreen');
+            $('helperBtns').classList.toggle('hidden', mode === 'easy');
+            $('undoBtn').classList.remove('hidden');
+            nextCustomer();
+            startTimer(settings.timeLimit, endGame);
+        };
 
         function nextCustomer() {
-            gameState.currentAmount = 0; gameState.clickHistory = [];
-            gameState.currentItem = items[Math.floor(Math.random() * items.length)];
-            
-            if (gameState.mode === 'easy') gameState.targetAmount = Math.floor(Math.random() * 10) + 1;
-            else if (gameState.mode === 'medium') gameState.targetAmount = Math.floor(Math.random() * 20) + 1;
-            else gameState.targetAmount = Math.floor(Math.random() * 20) + 10; 
-
-            document.getElementById('targetAmount').innerText = gameState.targetAmount;
-            document.getElementById('targetItem').innerText = gameState.currentItem;
-            document.getElementById('itemBtn').innerText = gameState.currentItem;
-            
-            document.getElementById('customerBubble').classList.remove('animate-pop');
-            void document.getElementById('customerBubble').offsetWidth; 
-            document.getElementById('customerBubble').classList.add('animate-pop');
+            round.current = 0; round.history = [];
+            round.item = items[Math.floor(Math.random() * items.length)];
+            if (round.mode === 'easy') round.target = Math.floor(Math.random() * 10) + 1;
+            else if (round.mode === 'medium') round.target = Math.floor(Math.random() * 20) + 1;
+            else round.target = Math.floor(Math.random() * 20) + 10;
+            $('targetAmount').innerText = round.target;
+            $('targetItem').innerText = round.item;
+            $('itemBtn').innerText = round.item;
+            replay($('customerBubble'), 'animate-pop');
             renderTenFrames();
         }
 
-        window.addMultiple = function(amount, e) { addItem(amount, e); }
-        document.getElementById('itemBtn').addEventListener('pointerdown', (e) => addItem(1, e));
-
-        window.addItem = function(amount, e) {
-            if (gameState.currentAmount + amount <= 40) { 
-                gameState.currentAmount += amount; gameState.clickHistory.push(amount); renderTenFrames(); playSound('click');
-                if (e && e.clientX) spawnParticle(e.clientX, e.clientY, amount);
-                triggerWiggle();
-            }
+        window.addMultiple = (amount, e) => addItem(amount, e);
+        $('itemBtn').addEventListener('pointerdown', e => addItem(1, e));
+        function addItem(amount, e) {
+            if (round.current + amount > 40) return;
+            round.current += amount; round.history.push(amount);
+            renderTenFrames(); playSound('click');
+            if (e && e.clientX) spawnParticle(e.clientX, e.clientY, `+${amount}`);
+            triggerWiggle();
         }
-
-        document.getElementById('undoBtn').addEventListener('click', () => {
-            if (gameState.clickHistory.length > 0) { 
-                gameState.currentAmount -= gameState.clickHistory.pop(); renderTenFrames(); 
-                triggerWiggle();
-            }
+        $('undoBtn').addEventListener('click', () => {
+            if (!round.history.length) return;
+            round.current -= round.history.pop(); renderTenFrames(); triggerWiggle();
         });
 
         function renderTenFrames() {
-            const container = document.getElementById('tenFrameContainer');
-            container.innerHTML = '';
-            const numFrames = Math.max(1, Math.ceil(gameState.targetAmount / 10), Math.ceil(gameState.currentAmount / 10));
-            
+            const numFrames = Math.max(1, Math.ceil(round.target / 10), Math.ceil(round.current / 10));
             let html = '';
             for (let f = 0; f < numFrames; f++) {
-                html += `<div class="ten-frame">`;
-                for (let i = 0; i < 10; i++) {
-                    const itemIndex = (f * 10) + i;
-                    const content = itemIndex < gameState.currentAmount ? gameState.currentItem : '';
-                    html += `<div class="frame-cell">${content}</div>`;
-                }
-                html += `</div>`;
+                html += '<div class="ten-frame">';
+                for (let i = 0; i < 10; i++) html += `<div class="frame-cell">${(f * 10 + i) < round.current ? round.item : ''}</div>`;
+                html += '</div>';
             }
-            container.innerHTML = html;
+            $('tenFrameContainer').innerHTML = html;
         }
 
-        document.getElementById('giveBtn').addEventListener('pointerdown', () => {
+        $('giveBtn').addEventListener('pointerdown', () => {
             triggerWiggle();
-            gameState.totalAttempts++;
-            
-            if (gameState.currentAmount === gameState.targetAmount) {
-                gameState.correctAttempts++;
-                playSound('success'); 
-                gameState.combo++;
-                
-                if (gameState.combo > gameState.maxCombo) {
-                    gameState.maxCombo = gameState.combo;
-                }
-                
-                let points = gameState.mode === 'hard' ? 30 : (gameState.mode === 'medium' ? 20 : 10);
-                
-                if (gameState.combo >= 5) {
-                    if (!gameState.isFever) {
-                        gameState.isFever = true;
-                        document.getElementById('gameScreen').classList.add('fever-mode');
-                        document.getElementById('feverOverlayText').style.display = 'block';
-                    }
-                    points *= 2; 
-                    
-                    clearTimeout(gameState.feverTimeout);
-                    gameState.feverTimeout = setTimeout(() => {
-                        endFever();
-                        gameState.combo = 0; // Reset combo if fever expires
-                        updateUI();
-                    }, 10000);
-                }
-
-                gameState.score += points; updateUI(); nextCustomer();
-            } else {
-                playSound('error'); 
-                endFever(); 
-                gameState.combo = 0;
-                
-                document.getElementById('customerBubble').classList.remove('animate-shake');
-                void document.getElementById('customerBubble').offsetWidth;
-                document.getElementById('customerBubble').classList.add('animate-shake');
-                updateUI();
-            }
+            const pts = registerHit(round.current === round.target, POINTS[round.mode]);
+            if (pts > 0) nextCustomer();
+            else replay($('customerBubble'), 'animate-shake');
         });
 
-        function updateUI() {
-            document.getElementById('scoreDisplay').innerText = gameState.score;
-            document.getElementById('comboDisplay').innerText = gameState.combo;
-            document.getElementById('timerDisplay').innerText = gameState.timeLeft;
-        }
-
         async function endGame() {
-            clearInterval(gameState.timerId);
-            endFever(); 
-            
-            if (gameState.score > playerInfo.localHighScores[gameState.mode]) {
-                playerInfo.localHighScores[gameState.mode] = gameState.score;
-            }
-
-            let accuracyPercent = 0;
-            if (gameState.totalAttempts > 0) {
-                accuracyPercent = Math.round((gameState.correctAttempts / gameState.totalAttempts) * 100);
-            }
-
-            try {
-                // Save specific to the mode played
-                const playerRef = doc(db, "scores", playerInfo.uid + "_" + gameState.mode); 
-                const playerSnap = await getDoc(playerRef);
-                let shouldSave = true;
-                
-                if (playerSnap.exists()) {
-                    if (gameState.score <= playerSnap.data().score) shouldSave = false; 
-                }
-                
-                if (shouldSave) {
-                    await setDoc(playerRef, {
-                        playerName: playerInfo.name, 
-                        uid: playerInfo.uid, 
-                        score: gameState.score,
-                        maxCombo: gameState.maxCombo,
-                        accuracy: accuracyPercent,
-                        mode: gameState.mode, 
-                        timestamp: serverTimestamp()
-                    });
-                }
-            } catch (e) { console.warn("Offline mode save fall-back"); }
-            showRankPopup();
+            stopTimer(); endFever();
+            await saveScore(round.mode);
+            showRankPopup(engine.score, () => changeLeaderboardTab(round.mode));
         }
 
-        async function showRankPopup() {
-            const popup = document.getElementById('rankPopup');
-            const rankText = document.getElementById('rankText');
-            popup.style.display = 'flex'; rankText.innerText = "Saving Score...";
-            
-            setTimeout(() => {
-                rankText.innerText = gameState.score > 100 ? "Top 10! 🏆" : "Great Job! ⭐";
-                setTimeout(() => { popup.style.display = 'none'; changeLeaderboardTab(gameState.mode); }, 3000);
-            }, 1000);
-        }
-
-        let currentLeaderboardMode = 'easy';
-
-        window.changeLeaderboardTab = function(mode) {
-            currentLeaderboardMode = mode;
-            ['easy', 'medium', 'hard'].forEach(m => {
-                const btn = document.getElementById('tab-' + m);
-                if (m === mode) {
-                    btn.classList.replace('bg-purple-300', 'bg-white');
-                    btn.classList.replace('text-purple-700', 'text-purple-600');
-                } else {
-                    btn.classList.replace('bg-white', 'bg-purple-300');
-                    btn.classList.replace('text-purple-600', 'text-purple-700');
-                }
-            });
-            showLeaderboard();
-        }
-
-        async function showLeaderboard() {
-            document.getElementById('gameScreen').classList.add('hidden');
-            document.getElementById('leaderboardScreen').classList.remove('hidden');
-            const tbody = document.getElementById('leaderboardBody');
-            tbody.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-gray-500">Loading...</td></tr>';
-
-            try {
-                // Safely get all scores and sort them locally to prevent complex index errors
-                const querySnapshot = await getDocs(collection(db, "scores"));
-                let allScores = [];
-                querySnapshot.forEach(doc => allScores.push(doc.data()));
-                
-                let filteredScores = allScores.filter(s => s.mode === currentLeaderboardMode);
-                filteredScores.sort((a, b) => b.score - a.score);
-                let top10 = filteredScores.slice(0, 10);
-                
-                tbody.innerHTML = '';
-                let rank = 1;
-                top10.forEach((data) => {
-                    let rowClass = data.uid === playerInfo.uid ? 'bg-yellow-100 font-bold text-gray-900' : 'text-gray-700';
-                    tbody.innerHTML += `<tr class="${rowClass} border-b border-purple-200"><td class="py-3 px-2">${rank}</td><td class="px-2">${data.playerName}</td><td class="px-2">${data.score}</td></tr>`;
-                    rank++;
-                });
-                
-                if(top10.length === 0) tbody.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-gray-500">No scores yet in this mode!</td></tr>';
-            } catch (e) { 
-                tbody.innerHTML = `<tr><td colspan="3" class="text-center py-4 text-red-500">Offline Score: ${gameState.score}</td></tr>`; 
-            }
-        }
-
-        window.showMenu = function() { updateMenuLocks(); document.getElementById('leaderboardScreen').classList.add('hidden'); document.getElementById('menuScreen').classList.remove('hidden'); }
-
-        window.showLeaderboardFromMenu = function() {
-            document.getElementById('menuScreen').classList.add('hidden');
-            changeLeaderboardTab('easy'); // Open leaderboard defaulting to the Easy tab
-        }
-
-        async function loadGlobalSettings() {
-            try {
-                const settingsSnap = await getDoc(doc(db, "settings", "global"));
-                if (settingsSnap.exists()) { teacherSettings = settingsSnap.data(); updateMenuLocks(); }
-            } catch(e) {}
-        }
-
-        window.closeAdminModal = function() { document.getElementById('adminModal').classList.add('hidden'); document.getElementById('pinView').classList.remove('hidden'); document.getElementById('settingsView').classList.add('hidden'); document.getElementById('pinInput').value = ''; }
-        document.getElementById('adminBtn').addEventListener('click', () => { document.getElementById('adminModal').classList.remove('hidden'); document.getElementById('pinView').classList.remove('hidden'); document.getElementById('settingsView').classList.add('hidden'); document.getElementById('pinInput').value = ''; });
-
-        window.checkPin = function() {
-            if (document.getElementById('pinInput').value === '1128') {
-                document.getElementById('pinView').classList.add('hidden'); document.getElementById('settingsView').classList.remove('hidden');
-                document.getElementById('settingMed').checked = teacherSettings.unlockMedium; document.getElementById('settingHard').checked = teacherSettings.unlockHard; document.getElementById('settingTime').value = teacherSettings.timeLimit;
-            } else alert("Incorrect PIN");
-        }
-
-        window.saveAdminSettings = async function() {
-            teacherSettings.unlockMedium = document.getElementById('settingMed').checked; teacherSettings.unlockHard = document.getElementById('settingHard').checked; teacherSettings.timeLimit = parseInt(document.getElementById('settingTime').value) || 30;
-            try { await setDoc(doc(db, "settings", "global"), teacherSettings); alert("Settings saved globally."); } catch(e) { alert("Saved locally."); }
-            updateMenuLocks(); closeAdminModal();
-        }
+        // ---- leaderboard ----
+        window.changeLeaderboardTab = function(mode) { show('leaderboardScreen'); renderLeaderboard(TABS, mode); };
+        window.showLeaderboardFromMenu = () => changeLeaderboardTab('easy');
     </script>
 </body>
 </html>

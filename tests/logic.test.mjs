@@ -7,14 +7,17 @@ function seq(values) { let i = 0; return () => values[i++ % values.length]; }
 // Cheap seeded rng for distribution tests.
 function lcg(seed) { let s = seed >>> 0; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
 
-test('genCompare values in 1-20 and ask is more|less', () => {
+test('genCompare values in 1-20 and subject is left|right', () => {
   const rng = lcg(1);
-  for (let i = 0; i < 500; i++) {
+  let left = 0;
+  for (let i = 0; i < 1000; i++) {
     const r = genCompare(rng);
     assert.ok(r.a >= 1 && r.a <= 20, 'a in range');
     assert.ok(r.b >= 1 && r.b <= 20, 'b in range');
-    assert.ok(['more', 'less'].includes(r.ask));
+    assert.ok(['left', 'right'].includes(r.subject));
+    if (r.subject === 'left') left++;
   }
+  assert.ok(left > 420 && left < 580, 'left share ' + left);
 });
 
 test('genCompare equal case rate ≈ 15%', () => {
@@ -26,13 +29,13 @@ test('genCompare equal case rate ≈ 15%', () => {
   assert.ok(rate > 0.11 && rate < 0.19, 'rate was ' + rate);
 });
 
-test('compareAnswer', () => {
-  assert.equal(compareAnswer({ a: 7, b: 3, ask: 'more' }), 'left');
-  assert.equal(compareAnswer({ a: 7, b: 3, ask: 'less' }), 'right');
-  assert.equal(compareAnswer({ a: 2, b: 9, ask: 'more' }), 'right');
-  assert.equal(compareAnswer({ a: 2, b: 9, ask: 'less' }), 'left');
-  assert.equal(compareAnswer({ a: 5, b: 5, ask: 'more' }), 'same');
-  assert.equal(compareAnswer({ a: 5, b: 5, ask: 'less' }), 'same');
+test('compareAnswer: subject compared to the other side', () => {
+  assert.equal(compareAnswer({ a: 7, b: 3, subject: 'left' }), 'more');
+  assert.equal(compareAnswer({ a: 7, b: 3, subject: 'right' }), 'less');
+  assert.equal(compareAnswer({ a: 2, b: 9, subject: 'left' }), 'less');
+  assert.equal(compareAnswer({ a: 2, b: 9, subject: 'right' }), 'more');
+  assert.equal(compareAnswer({ a: 5, b: 5, subject: 'left' }), 'same');
+  assert.equal(compareAnswer({ a: 5, b: 5, subject: 'right' }), 'same');
 });
 
 test('genOddEven range and answer', () => {

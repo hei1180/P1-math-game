@@ -71,6 +71,7 @@
                  engine, resetEngine, registerHit, triggerWiggle, endFever, startTimer, stopTimer,
                  saveScore, renderLeaderboard, refreshLevelButton, isUnlocked, showRankPopup, mountTeacherModal } from './shared.js';
         import { genCompare, compareAnswer, genOddEven, genLine, genSkipLine } from './numbers-logic.js';
+        import { squish, bounce, popScore, flashRed, burst, flyTo, react } from './juice.js';
 
         const $ = id => document.getElementById(id);
         const TABS = [{ key: 'num1', label: 'Lv1' }, { key: 'num2', label: 'Lv2' }, { key: 'num3', label: 'Lv3' }, { key: 'num4', label: 'Lv4' }];
@@ -112,18 +113,31 @@
             }
             return html;
         }
-        /** Common answer handling: correct → next round, wrong → shake bubble. */
+        /** Common answer handling: correct → celebrate, then next round after a beat; wrong → shake bubble. */
+        const ROUND_DELAY = 500;
+        let roundPending = false;
         function answer(correct, e) {
+            if (roundPending) return;
             triggerWiggle();
             const pts = registerHit(correct, POINTS[mode]);
-            if (pts > 0) { if (e && e.clientX) spawnParticle(e.clientX, e.clientY, `+${pts}`); LEVELS[mode].newRound(); }
-            else replay($('bubble'), 'animate-shake');
+            const faces = $('stage').querySelectorAll('[data-face]');
+            if (pts > 0) {
+                if (e && e.clientX) { burst(e.clientX, e.clientY); spawnParticle(e.clientX, e.clientY, `+${pts}`); }
+                faces.forEach(f => { bounce(f); react(f, '🥳'); });
+                popScore($('scoreDisplay'));
+                roundPending = true;
+                setTimeout(() => { roundPending = false; if (engine.timerId) LEVELS[mode].newRound(); }, ROUND_DELAY);
+            } else {
+                faces.forEach(f => react(f, '😵'));
+                flashRed($('gameScreen'));
+                replay($('bubble'), 'animate-shake');
+            }
         }
 
         window.startGame = function(m) {
             if (!isUnlocked(PREV[m])) return;
             initAudio();
-            mode = m;
+            mode = m; roundPending = false;
             resetEngine(settings.numTimeLimit);
             show('gameScreen');
             LEVELS[mode].newRound();
@@ -142,50 +156,49 @@
 
         // ---- Lv1 Compare ----
         const lv1 = {
-            round: null, peekTimers: {},
+            round: null,
             newRound() {
                 const r = this.round = genCompare();
                 const emoji = pick(ITEMS);
-                setBubble(r.ask === 'more' ? '誰比較多？' : '誰比較少？', r.ask === 'more' ? 'Who has MORE?' : 'Who has LESS?');
+                const [S, O] = r.subject === 'left' ? ['🐻', '🐰'] : ['🐰', '🐻'];
+                setBubble(`${S} 比 ${O} 多還是少？`, `Is ${S} more or less than ${O}?`);
                 $('stage').innerHTML = `
                   <div class="flex gap-6 md:gap-16 items-start justify-center w-full">
                     ${['left', 'right'].map((side, i) => `
                       <div class="flex flex-col items-center gap-2 w-[45%] max-w-[220px]">
-                        <button class="cust-btn text-6xl md:text-8xl drop-shadow-md" data-side="${side}">${i === 0 ? '🐻' : '🐰'}</button>
+                        <div class="text-6xl md:text-8xl drop-shadow-md ${side === r.subject ? 'ring-4 ring-yellow-400 rounded-full bg-yellow-100' : ''}" data-face>${i === 0 ? '🐻' : '🐰'}</div>
                         <button class="num-card text-4xl md:text-6xl" data-peek="${side}">${i === 0 ? r.a : r.b}</button>
                         <div class="peek flex flex-col gap-1 items-center" data-peekbox="${side}"></div>
                       </div>`).join('')}
                   </div>`;
                 $('controls').innerHTML = `
-                  <button class="bubbly-btn bg-white text-3xl md:text-4xl py-2 px-5 rounded-2xl border-4 border-gray-300" data-side="left">🐻</button>
-                  <button class="bubbly-btn bg-blue-400 text-white font-black text-xl md:text-2xl py-3 px-5 rounded-2xl border-4 border-blue-600" data-side="same">一樣多<br><span class="text-sm font-normal">Same</span></button>
-                  <button class="bubbly-btn bg-white text-3xl md:text-4xl py-2 px-5 rounded-2xl border-4 border-gray-300" data-side="right">🐰</button>`;
+                  <button class="bubbly-btn bg-green-300 text-green-900 font-black text-2xl md:text-3xl py-3 px-6 rounded-2xl border-4 border-green-500" data-ans="more">多<br><span class="text-sm font-normal">More</span></button>
+                  <button class="bubbly-btn bg-blue-400 text-white font-black text-xl md:text-2xl py-3 px-5 rounded-2xl border-4 border-blue-600" data-ans="same">一樣多<br><span class="text-sm font-normal">Same</span></button>
+                  <button class="bubbly-btn bg-orange-300 text-orange-900 font-black text-2xl md:text-3xl py-3 px-6 rounded-2xl border-4 border-orange-500" data-ans="less">少<br><span class="text-sm font-normal">Less</span></button>`;
                 $('stage').querySelectorAll('[data-peek]').forEach(b => b.addEventListener('pointerdown', () => this.peek(b.dataset.peek, emoji)));
-                document.querySelectorAll('#stage [data-side], #controls [data-side]').forEach(b => b.addEventListener('pointerdown', e => answer(b.dataset.side === compareAnswer(this.round), e)));
+                $('controls').querySelectorAll('[data-ans]').forEach(b => b.addEventListener('pointerdown', e => answer(b.dataset.ans === compareAnswer(this.round), e)));
             },
             peek(side, emoji) {
                 const n = side === 'left' ? this.round.a : this.round.b;
                 const box = $('stage').querySelector(`[data-peekbox="${side}"]`);
                 box.innerHTML = tenFramesHtml(n, emoji);
                 playSound('click');
-                clearTimeout(this.peekTimers[side]);
-                this.peekTimers[side] = setTimeout(() => { box.innerHTML = ''; }, 1500);
             }
         };
 
         // ---- Lv2 Odd / Even ----
         const lv2 = {
-            round: null, emoji: '🍎', loose: [], pairs: [], selected: null,
+            round: null, emoji: '🍛', loose: [], pairs: [], selected: null,
             newRound() {
                 this.round = genOddEven();
-                this.emoji = pick(ITEMS);
+                this.emoji = pick(['🍛', '🍜', '🍰', '🥟', '🍩']);
                 this.loose = Array.from({ length: this.round.n }, (_, i) => i);
                 this.pairs = []; this.selected = null;
-                setBubble(`${this.round.n} 是奇數還是偶數？`, `Is ${this.round.n} odd or even? Pair them up!`);
+                setBubble(`${this.round.n} 碟是奇數還是偶數？`, `${this.round.n} plates: odd or even? Seat them two by two!`);
                 $('stage').innerHTML = `
-                  <div class="num-card text-4xl md:text-6xl">${this.round.n}</div>
+                  <div class="flex items-center gap-3"><span class="text-4xl md:text-6xl" data-face>🐻</span><div class="num-card text-3xl md:text-5xl">${this.round.n}</div></div>
                   <div id="looseGrid" class="grid grid-cols-5 gap-2 md:gap-3"></div>
-                  <div id="pairShelf" class="flex flex-wrap justify-center gap-2 min-h-[44px] w-full max-w-md bg-orange-100 border-4 border-orange-300 rounded-2xl p-2"></div>`;
+                  <div id="pairShelf" class="flex flex-col gap-2 items-center w-full"></div>`;
                 $('controls').innerHTML = `
                   <button id="undoPair" class="bubbly-btn bg-gray-300 text-gray-700 font-bold text-sm md:text-lg py-2 px-3 rounded-xl border-4 border-gray-400">↩️ Undo</button>
                   <button class="bubbly-btn bg-pink-300 text-pink-900 font-black text-xl md:text-2xl py-3 px-5 rounded-2xl border-4 border-pink-500 disabled:opacity-40" data-ans="odd">奇數<br><span class="text-sm font-normal">Odd</span></button>
@@ -194,20 +207,51 @@
                 $('controls').querySelectorAll('[data-ans]').forEach(b => b.addEventListener('pointerdown', e => { if (!b.disabled) answer(b.dataset.ans === this.round.answer, e); }));
                 this.render();
             },
+            /** Tables 5 per row (= one ten-frame). Pair k sits at table k; a lone leftover plate sits at table pairs.length. */
+            tablesHtml() {
+                const tables = Math.ceil(this.round.n / 2);
+                const rows = Math.ceil(tables / 5);
+                let html = '';
+                for (let r = 0; r < rows; r++) {
+                    html += '<div class="tables">';
+                    for (let c = 0; c < 5; c++) {
+                        const k = r * 5 + c;
+                        if (k >= tables) { html += '<div></div>'; continue; }
+                        const seated = k < this.pairs.length;
+                        const lone = !seated && k === this.pairs.length && this.loose.length === 1;
+                        html += `<div class="table" data-table="${k}">
+                          <div class="seat ${seated ? '' : lone ? 'odd-one' : 'empty'}">${seated || lone ? this.emoji : ''}</div>
+                          <div class="seat ${seated ? '' : 'empty'}">${seated ? this.emoji : ''}</div></div>`;
+                    }
+                    html += '</div>';
+                }
+                return html;
+            },
             render() {
                 const grid = $('looseGrid');
-                grid.innerHTML = this.loose.map(id => `<button class="item-btn ${id === this.selected ? 'selected' : ''}" data-id="${id}">${this.emoji}</button>`).join('');
-                grid.querySelectorAll('[data-id]').forEach(b => b.addEventListener('pointerdown', () => this.tap(parseInt(b.dataset.id))));
-                $('pairShelf').innerHTML = this.pairs.map(() => `<div class="pair-box"><span>${this.emoji}</span><span>${this.emoji}</span></div>`).join('');
+                grid.innerHTML = this.loose.map(id => `<button class="plate ${id === this.selected ? 'selected' : ''}" data-id="${id}">${this.emoji}</button>`).join('');
+                grid.querySelectorAll('[data-id]').forEach(b => b.addEventListener('pointerdown', () => this.tap(parseInt(b.dataset.id), b)));
+                $('pairShelf').innerHTML = this.tablesHtml();
                 const ready = this.loose.length <= 1;
                 $('controls').querySelectorAll('[data-ans]').forEach(b => b.disabled = !ready);
             },
-            tap(id) {
-                playSound('click'); triggerWiggle();
-                if (this.selected === null) { this.selected = id; }
-                else if (this.selected === id) { this.selected = null; }
-                else { this.pairs.push([this.selected, id]); this.loose = this.loose.filter(x => x !== id && x !== this.selected); this.selected = null; }
+            tap(id, btn) {
+                playSound('click'); triggerWiggle(); squish(btn);
+                if (this.selected === null) { this.selected = id; this.render(); return; }
+                if (this.selected === id) { this.selected = null; this.render(); return; }
+                const fromA = $('looseGrid').querySelector(`[data-id="${this.selected}"]`).getBoundingClientRect();
+                const fromB = btn.getBoundingClientRect();
+                const k = this.pairs.length;
+                this.pairs.push([this.selected, id]);
+                this.loose = this.loose.filter(x => x !== id && x !== this.selected);
+                this.selected = null;
                 this.render();
+                const table = $('pairShelf').querySelector(`[data-table="${k}"]`);
+                if (table) {
+                    const seats = table.querySelectorAll('.seat');
+                    const html = `<span class="text-2xl">${this.emoji}</span>`;
+                    flyTo(fromA, seats[0], html); flyTo(fromB, seats[1], html);
+                }
             },
             undo() {
                 if (!this.pairs.length) return;
@@ -217,8 +261,8 @@
             }
         };
 
-        // ---- Lv3 / Lv4 shelf line ----
-        function makeLineLevel(gen, bubbleFor) {
+        // ---- Lv3 / Lv4 bookshelf ----
+        function makeLineLevel(gen, bubbleFor, colorOf) {
             return {
                 round: null, filled: null,
                 newRound() {
@@ -227,31 +271,39 @@
                     const [zh, en] = bubbleFor(r);
                     setBubble(zh, en);
                     $('stage').innerHTML = `
-                      <div class="text-5xl md:text-7xl">🐻</div>
-                      <div id="shelf" class="flex gap-1 md:gap-2 justify-center w-full px-1"></div>
-                      <div class="w-full max-w-lg h-3 bg-amber-700 rounded-full"></div>`;
-                    $('controls').innerHTML = r.tiles.map(v => `<button class="tile bubbly-btn" data-v="${v}">${v}</button>`).join('');
+                      <div class="flex flex-col items-center gap-1">
+                        <div id="shelf" class="shelf"></div>
+                        <div id="bearRow" class="bear-row"></div>
+                      </div>`;
+                    $('controls').innerHTML = r.tiles.map(v => `<button class="tile-book ${colorOf(v)}" data-v="${v}">${v}</button>`).join('');
                     $('controls').querySelectorAll('[data-v]').forEach(b => b.addEventListener('pointerdown', e => this.tapTile(b, e)));
                     this.render();
                 },
                 nextBlank() { return this.round.blanks.find(i => !this.filled.has(i)); },
-                render() {
-                    const active = this.nextBlank();
+                render(justFilled) {
+                    const next = this.nextBlank();
+                    const active = next === undefined ? justFilled : next; // bear stays under the last book when done
                     $('shelf').innerHTML = this.round.slots.map((v, i) => {
                         const isBlank = this.round.blanks.includes(i);
-                        if (!isBlank) return `<div class="slot">${v}</div>`;
-                        if (this.filled.has(i)) return `<div class="slot filled">${v}</div>`;
-                        return `<div class="slot blank ${i === active ? 'active' : ''}">?</div>`;
+                        if (!isBlank) return `<div class="book-slot ${colorOf(v)}">${v}</div>`;
+                        if (this.filled.has(i)) return `<div class="book-slot ${colorOf(v)} ${i === justFilled ? 'filled' : ''}">${v}</div>`;
+                        return `<div class="book-slot gap">?</div>`;
                     }).join('');
+                    $('bearRow').innerHTML = this.round.slots.map((_, i) => `<div class="${i === active ? 'here' : ''}" ${i === active ? 'data-face' : ''}>${i === active ? '🐻' : ''}</div>`).join('');
                 },
                 tapTile(btn, e) {
                     if (btn.disabled) return;
                     const target = this.nextBlank();
                     if (target === undefined) return;
                     const v = parseInt(btn.dataset.v);
+                    squish(btn);
                     if (v === this.round.slots[target]) {
-                        this.filled.add(target); btn.disabled = true;
-                        playSound('click'); triggerWiggle(); this.render();
+                        btn.disabled = true;
+                        playSound('click'); triggerWiggle();
+                        const slotEl = $('shelf').children[target];
+                        flyTo(btn, slotEl, `<div class="book-slot ${colorOf(v)}">${v}</div>`);
+                        this.filled.add(target);
+                        this.render(target);
                         if (this.nextBlank() === undefined) answer(true, e);
                     } else {
                         replay(btn, 'animate-shake');
@@ -260,8 +312,8 @@
                 }
             };
         }
-        const lv3 = makeLineLevel(genLine, () => ['缺了哪些數字？', 'Which numbers are missing?']);
-        const lv4 = makeLineLevel(genSkipLine, r => r.parity === 'odd' ? ['奇數排排站，缺了誰？', 'Odd numbers: which are missing?'] : ['偶數排排站，缺了誰？', 'Even numbers: which are missing?']);
+        const lv3 = makeLineLevel(genLine, () => ['書架缺了哪些數字？', 'Which books are missing?'], v => `c${v % 6}`);
+        const lv4 = makeLineLevel(genSkipLine, r => r.parity === 'odd' ? ['奇數書排排站，缺了誰？', 'Odd books: which are missing?'] : ['偶數書排排站，缺了誰？', 'Even books: which are missing?'], v => v % 2 ? 'odd' : 'even');
 
         const LEVELS = { num1: lv1, num2: lv2, num3: lv3, num4: lv4 };
     </script>

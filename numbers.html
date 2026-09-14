@@ -54,7 +54,7 @@
 
     <div id="leaderboardScreen" class="hidden absolute inset-0 flex flex-col items-center bg-purple-500 z-40 p-4 md:p-8 overflow-y-auto">
         <h1 class="text-4xl md:text-5xl font-bold text-white mb-4 drop-shadow-md mt-4 text-center">🏆 Leaderboard</h1>
-        <div class="flex w-full max-w-md rounded-t-2xl overflow-hidden shadow-md text-sm md:text-base">
+        <div class="flex flex-none w-full max-w-md rounded-t-2xl overflow-hidden shadow-md text-sm md:text-base">
             <button id="tab-num1" onclick="changeLeaderboardTab('num1')" class="flex-1 py-3 font-bold bg-white text-purple-600">Lv1 比較</button>
             <button id="tab-num2" onclick="changeLeaderboardTab('num2')" class="flex-1 py-3 font-bold bg-purple-300 text-purple-700">Lv2 奇偶</button>
             <button id="tab-num3" onclick="changeLeaderboardTab('num3')" class="flex-1 py-3 font-bold bg-purple-300 text-purple-700">Lv3 數線</button>
@@ -67,7 +67,7 @@
     </div>
 
     <script type="module">
-        import { signIn, onUser, player, settings, initAudio, playSound, spawnParticle, replay,
+        import { signIn, onUser, settings, initAudio, playSound, spawnParticle, replay,
                  engine, resetEngine, registerHit, triggerWiggle, endFever, startTimer, stopTimer,
                  saveScore, renderLeaderboard, refreshLevelButton, isUnlocked, showRankPopup, mountTeacherModal } from './shared.js';
         import { genCompare, compareAnswer, genOddEven, genLine, genSkipLine } from './numbers-logic.js';

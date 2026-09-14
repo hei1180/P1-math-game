@@ -62,10 +62,10 @@ Behaviour must stay identical (regression checklist below). Mode keys
 ### Lv1 比較 Compare (1-20) — key `num1`, 10 pts/round
 
 - Two customers side by side (🐻 left, 🐰 right), each holds a number card 1-20.
-- Bubble: 🐻比🐰（多/少）player chooses the button 多 or 少.
-- About 15% of rounds the numbers are equal. Third button 一樣多 Same.
+- Bubble reads as a comparison sentence: 🐻 比 🐰 多還是少？ / Is 🐻 more or less than 🐰? The left customer is always the subject.
+- About 15% of rounds the numbers are equal.
 - Tap a number card = peek: ten-frames (same 十格框 style) appear under that customer and stay until the next question. Both sides can be revealed.
-- Answer = tap the 多or少 button.
+- Answer = three buttons: 多 More (a > b), 少 Less (a < b), 一樣多 Same (a = b). Animals are faces only, not answer targets.
 
 ### Lv2 奇數偶數 Odd / Even — key `num2`, 15 pts/round
 
@@ -93,7 +93,7 @@ Abstract cards/tiles are replaced by shop objects, all CSS + emoji, no image fil
 
 | Level | Visual |
 |---|---|
-| Lv1 比較 | Each customer holds a plain **number card** (no stacks, by owner's choice). Tap the card → ten-frames appear under it and stay until the next question. Tap the animal → answer. |
+| Lv1 比較 | Each customer holds a plain **number card**. Tap the card → ten-frames appear under it and stay until the next question. Answer with 多 / 少 / 一樣多 buttons. |
 | Lv2 奇偶 | N **plates** of food on the counter. Tap two plates → they fly to a **two-seat table**. Tables are laid out 5 per row (a row = one ten-frame). With one plate left it sits alone at the next table with a red dashed seat: the odd one out. Tables needed = ceil(N/2). |
 | Lv3 數線 | A **bookshelf** with numbered spines; missing books are dark gaps. The 🐻 stands under the leftmost gap, bouncing, waiting. Loose books (4) lie in the controls bar; tap one → it flies up into the gap if it is the right number, else it shakes. Left-to-right rule stays (bear marks the active gap). |
 | Lv4 奇偶數線 | Same shelf. Odd-numbered books red, even-numbered blue, so the skip pattern is visible. |

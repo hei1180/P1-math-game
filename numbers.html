@@ -142,7 +142,7 @@
 
         // ---- Lv1 Compare ----
         const lv1 = {
-            round: null, peekTimer: null,
+            round: null, peekTimers: {},
             newRound() {
                 const r = this.round = genCompare();
                 const emoji = pick(ITEMS);
@@ -168,8 +168,8 @@
                 const box = $('stage').querySelector(`[data-peekbox="${side}"]`);
                 box.innerHTML = tenFramesHtml(n, emoji);
                 playSound('click');
-                clearTimeout(this.peekTimer);
-                this.peekTimer = setTimeout(() => { box.innerHTML = ''; }, 1500);
+                clearTimeout(this.peekTimers[side]);
+                this.peekTimers[side] = setTimeout(() => { box.innerHTML = ''; }, 1500);
             }
         };
 

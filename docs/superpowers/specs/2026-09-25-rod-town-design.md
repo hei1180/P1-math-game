@@ -36,7 +36,22 @@ Pedagogy basis:
 | 9 | blue 藍 | #2563eb |
 | 10 | orange 橙 | #f97316 |
 
-Each rod is a "rod buddy": a rounded bar with unit grooves, two eyes and a mouth. Label (its number) is shown in levels 1-3 of each world and in Rush; hidden in levels 4-6 and the boss.
+Each rod is a row of N joined coloured **squares** (one square per unit) in its Cuisenaire colour. Rods never show a number: children learn the colour↔length↔number link from the squares, the ten-frames, the diagram and the equation. (Owner decision 2026-09-25; supersedes the earlier labels-in-levels-1-3 rule. Ruler and equation numbers are unaffected.)
+
+The end square carries a face, and every length is a different character (style and gender), so each rod is recognisable as "someone":
+
+| Len | Colour | Character |
+|---|---|---|
+| 1 | white | baby 👶: round rosy cheeks, one curl of hair |
+| 2 | red | girl with two pigtails and a bow |
+| 3 | light green | boy in a baseball cap |
+| 4 | purple | girl with long lashes and a hair clip |
+| 5 | yellow | boy with round glasses |
+| 6 | dark green | girl with a flower headband |
+| 7 | black | boy with spiky hair |
+| 8 | brown | grandma with a bun and glasses |
+| 9 | blue | boy with a bow tie |
+| 10 | orange | girl with a crown (the "ten queen") |
 
 ### The linked board (every question)
 

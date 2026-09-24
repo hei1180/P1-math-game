@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Rod Town 數棒鎮</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.min.js"></script>
+    <link rel="stylesheet" href="shared.css?v=0">
+    <style>
+        #phaser canvas { display: block; touch-action: none; }
+        #gameScreen.fever-mode { border-width: 6px !important; }
+    </style>
+</head>
+<body class="h-[100dvh] w-full flex flex-col relative">
+    <div id="loginScreen" class="absolute inset-0 flex flex-col items-center justify-center bg-orange-400 z-50 p-4">
+        <h1 class="text-4xl md:text-6xl font-bold text-white mb-8 text-center drop-shadow-lg leading-tight">🚂 Rod Town 數棒鎮</h1>
+        <div id="loginSpinner" class="spinner"></div>
+        <button id="loginBtn" class="hidden bubbly-btn bg-white text-orange-500 font-bold text-xl md:text-2xl py-4 px-8 rounded-full border-4 border-orange-200 w-[90%] max-w-sm">Login with Google</button>
+        <a href="index.html" class="text-white mt-6 underline font-bold">⬅ Back to games</a>
+    </div>
+
+    <div id="gameScreen" class="hidden absolute inset-0 flex flex-col bg-sky-100 overflow-hidden">
+        <div id="feverOverlayText">🔥 FEVER x2! 🔥</div>
+        <div id="hud" class="hidden flex-none flex justify-between items-center px-3 py-1 bg-white/90 border-b-4 border-orange-200 game-layer">
+            <div class="text-lg md:text-2xl font-bold text-gray-700">Time: <span id="timerDisplay" class="text-red-500">60</span>s</div>
+            <div class="text-lg md:text-2xl font-bold text-gray-700">Score: <span id="scoreDisplay" class="text-yellow-500">0</span></div>
+            <div class="text-sm md:text-xl font-bold text-purple-600 bg-purple-100 px-2 py-1 rounded-full">Combo: <span id="comboDisplay">0</span></div>
+        </div>
+        <div id="phaser" class="flex-1 relative min-h-0"></div>
+        <div class="absolute top-2 right-2 flex gap-2 z-20">
+            <div class="test-badge hidden bg-purple-600 text-white font-bold px-2 py-1 rounded-full text-sm self-center">🧪 Test</div>
+            <button id="muteBtn" class="bg-white/80 rounded-lg px-2 py-1 text-xl bubbly-btn">🔊</button>
+            <button id="adminBtn" class="bg-gray-800 text-white rounded-lg px-2 py-1 font-bold bubbly-btn">⚙️</button>
+        </div>
+    </div>
+
+    <div id="rankPopup">
+        <h2 class="text-3xl md:text-5xl mb-4 text-center font-bold px-4">完成！Finished!</h2>
+        <div id="rankScore" class="text-4xl md:text-6xl font-bold mb-4"></div>
+        <div id="rankTrophy" class="rank-anim px-4"></div>
+    </div>
+
+    <div id="leaderboardScreen" class="hidden absolute inset-0 flex flex-col items-center bg-purple-500 z-40 p-4 md:p-8 overflow-y-auto">
+        <h1 class="text-4xl md:text-5xl font-bold text-white mb-4 drop-shadow-md mt-4 text-center">🏆 Rod Town Rush</h1>
+        <div class="flex flex-none w-full max-w-md rounded-t-2xl overflow-hidden shadow-md text-sm md:text-base">
+            <button id="tab-bonds1" class="flex-1 py-3 font-bold bg-white text-purple-600" data-lb="1">W1 草地</button>
+            <button id="tab-bonds2" class="flex-1 py-3 font-bold bg-purple-300 text-purple-700" data-lb="2">W2 海邊</button>
+            <button id="tab-bonds3" class="flex-1 py-3 font-bold bg-purple-300 text-purple-700" data-lb="3">W3 森林</button>
+            <button id="tab-bonds4" class="flex-1 py-3 font-bold bg-purple-300 text-purple-700" data-lb="4">W4 雪山</button>
+        </div>
+        <div class="bg-white rounded-b-3xl w-full max-w-md p-4 md:p-6 shadow-xl border-x-4 border-b-4 border-purple-300 mb-6">
+            <table class="w-full text-left text-sm md:text-base"><thead><tr class="text-gray-400 border-b-2"><th>Rank</th><th>Name</th><th>Score</th></tr></thead><tbody id="leaderboardBody"></tbody></table>
+        </div>
+        <button id="lbBack" class="bubbly-btn bg-yellow-400 text-yellow-900 font-bold text-xl md:text-2xl py-3 px-8 rounded-full border-4 border-yellow-500 mb-8">Back to map 返回地圖</button>
+    </div>
+
+    <script type="module" src="bonds/main.js?v=0"></script>
+</body>
+</html>

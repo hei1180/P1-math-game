@@ -54,7 +54,7 @@ Text is bilingual: large Traditional Chinese, small English under it.
 - Question: whole N, given part a already parked on the track; empty gap of N − a outlined.
 - Tray: 5 rods, sorted by length, containing b = N − a plus unique distractors from {b−2, b−1, b+1, b+2} within 1-10, topped up randomly from 1-10.
 - Correct: tapping rod b. Wrong rod: bounces back, counts one mistake, question stays.
-- Hint 💡 (N ≥ 11 and a = 9 or 8 or b = 9 or 8): plays the make-ten move once (see §4). Hint does not cost stars.
+- Hint 💡 (shown only when N ≥ 11 and neither part is 10): plays the make-ten move once (see §4): 10 − max(a, b) units move from the smaller part to the larger, which becomes an orange 10. Hint does not cost stars.
 
 ### Mode: 分解 Break (切棒店 Rod cutter)
 
@@ -166,7 +166,7 @@ Rod buddies:
 Answer moments:
 - Build correct: glow sweep along both rods, star burst, bond lines draw on, train toots, steam puffs, rolls out; next train rolls in (overlapping, ≤ 0.6 s input block).
 - Break: saw swipe with sparks on the cut; halves hop onto their diagram circles; step-2 correct as Build.
-- Make-ten hint: one unit lifts from the smaller part, arcs into the other part's frame, that part becomes an orange 10 with a flash; equation morphs to `10 + (N − 10)`.
+- Make-ten hint: the needed units (10 − larger part) lift from the smaller part one by one, arc into the larger part's frame, which becomes an orange 10 with a flash; the equation morphs to `10 + (N − 10)`, then everything eases back to the question.
 - House: floor windows light when filled; on completion lights run bottom → top, door opens, the rod buddy of N waves.
 
 Flow:

@@ -44,7 +44,7 @@ export const fx = {
     const { width: w, height: h } = scene.scale;
     const g = scene.add.graphics().setDepth(2000).setScrollFactor(0);
     const r = { v: Math.hypot(w, h) };
-    const mask = scene.make.graphics({ add: false });
+    const mask = scene.make.graphics({ add: false }).setScrollFactor(0);
     const bmask = mask.createGeometryMask();
     bmask.setInvertAlpha(true);
     g.setMask(bmask);
@@ -67,7 +67,7 @@ export const fx = {
     const { width: w, height: h } = scene.scale;
     const g = scene.add.graphics().setDepth(2000).setScrollFactor(0);
     const r = { v: 0 };
-    const mask = scene.make.graphics({ add: false });
+    const mask = scene.make.graphics({ add: false }).setScrollFactor(0);
     const bmask = mask.createGeometryMask();
     bmask.setInvertAlpha(true);
     g.setMask(bmask);

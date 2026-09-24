@@ -258,7 +258,8 @@ export class LevelScene extends Phaser.Scene {
 
   async onChoose(rod) {
     const q = this.q, b = this.board;
-    const ready = q && !this.busy && !this.ended && !this.hinting && (q.type === 'build' ? b.step === 'build' : b.step === 'answer');
+    // answering during the make-ten hint is fine: the board cancels the hint when a rod lands
+    const ready = q && !this.busy && !this.ended && (q.type === 'build' ? b.step === 'build' : b.step === 'answer');
     if (!ready) { this.settle(rod); return; }
     if (rod.len === q.b) {
       const gen = this.gen;
@@ -332,14 +333,12 @@ export class LevelScene extends Phaser.Scene {
   async hint() {
     if (this.busy || this.hinting || this.leaving || !this.canHint()) return;
     const gen = this.gen, b = this.hintBtn;
-    this.hinting = true;
-    this.tray.setEnabled(false);
+    this.hinting = true; // the tray stays live: a child who gets it mid-hint can answer at once
     b.setAlpha(0.5);
     await this.board.playMakeTen();
     if (gen !== this.gen) return;
     this.hinting = false;
     b.setAlpha(1);
-    if (!this.busy && !this.ended) this.tray.setEnabled(true);
   }
 
   async finish() {

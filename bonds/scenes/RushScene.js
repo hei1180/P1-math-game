@@ -10,9 +10,9 @@ import { sfx } from '../sfx.js?v=0';
 import { Board } from '../ui/Board.js?v=0';
 import { Tray } from '../ui/Tray.js?v=0';
 import { DPR, worldPos, reducedMotion } from '../ui/Rod.js?v=0';
+import { domLeft, backButton, makeBubble } from '../ui/Chrome.js?v=0';
 
 const BUILD_PTS = 10, BREAK_PTS = 15;
-const TOP = 84;             // top bar: lights row + back button + instruction bubble + combo badge
 const LIGHT_PERIOD = [900, 900, 900, 480, 300, 150]; // ms per chase step by combo (index = min(combo, 5))
 const hsv = (h, s = 0.8, v = 1) => Phaser.Display.Color.HSVToRGB(((h % 1) + 1) % 1, s, v).color;
 const T = (scene, x, y, s, size, color = '#1f2937', extra = {}) =>
@@ -44,12 +44,11 @@ export class RushScene extends Phaser.Scene {
     this.board.on('cut', k => this.onCut(k));
     this.rainbow = null;
 
-    this.backBtn = this.makeBack();
-    this.bubble = this.add.container(0, 0).setDepth(20);
-    this.bubbleG = this.add.graphics();
-    this.bubbleZh = T(this, 0, -9, '', 20);
-    this.bubbleEn = T(this, 0, 14, '', 12, '#6b7280');
-    this.bubble.add([this.bubbleG, this.bubbleZh, this.bubbleEn]);
+    this.th = WORLD_THEME[this.w] || WORLD_THEME[1];
+    this.top = 84; this.comboX = 0;
+    this.backBtn = backButton(this, () => this.leave()).setDepth(30);
+    this.bubble = makeBubble(this).setDepth(20);
+    this.bubble.stroke = this.th.accent;
     this.makeCombo();
 
     if (!this.textures.exists('rushVignette')) this.textures.createCanvas('rushVignette', 256, 256);
@@ -59,7 +58,7 @@ export class RushScene extends Phaser.Scene {
     this.cdText = T(this, 0, 0, '', 120, '#f97316', { stroke: '#ffffff', strokeThickness: 12 }).setDepth(950).setAlpha(0);
     this.cdSub = T(this, 0, 0, '', 20, '#ffffff', { stroke: '#1f2937', strokeThickness: 5 }).setDepth(950);
 
-    this.setBubble('準備好了嗎？', 'Get ready!');
+    this.setBubble('⏱', '準備好了嗎？', 'Get ready!');
     this.scale.on('resize', this.relayout, this);
     this.events.once('shutdown', this.cleanup, this);
     this.relayout();
@@ -89,23 +88,6 @@ export class RushScene extends Phaser.Scene {
   }
 
   // ---------------------------------------------------------------- building blocks
-  makeBack() {
-    const c = this.add.container(34, 46).setDepth(30);
-    const g = this.add.graphics();
-    g.fillStyle(0x000000, 0.15).fillCircle(0, 3, 24);
-    g.fillStyle(0xffffff, 0.95).fillCircle(0, 0, 24);
-    g.lineStyle(3, 0xfde68a, 1).strokeCircle(0, 0, 24);
-    // arrow drawn, not an emoji: '⬅' renders as a pale glyph on some systems
-    g.lineStyle(5, 0x1f2937, 1).beginPath().moveTo(9, 0).lineTo(-9, 0).strokePath();
-    g.beginPath().moveTo(-1, -8).lineTo(-9, 0).lineTo(-1, 8).strokePath();
-    c.add(g);
-    c.setSize(52, 52).setInteractive({ hitArea: new Phaser.Geom.Circle(26, 26, 28), hitAreaCallback: Phaser.Geom.Circle.Contains, useHandCursor: true });
-    c.on('pointerdown', () => { sfx.tick(2); this.tweens.add({ targets: c, scale: 0.88, duration: 70 }); });
-    c.on('pointerout', () => c.setScale(1));
-    c.on('pointerup', () => { c.setScale(1); this.leave(); });
-    return c;
-  }
-
   makeCombo() {
     const c = this.comboC = this.add.container(0, 46).setDepth(25).setAlpha(0);
     this.comboG = this.add.graphics();
@@ -122,30 +104,12 @@ export class RushScene extends Phaser.Scene {
     g.lineStyle(3, hot ? 0xfde047 : 0xffffff, 1).strokeCircle(0, 0, 26);
   }
 
-  setBubble(zh, en) {
-    this.bubbleZh.setText(zh); this.bubbleEn.setText(en);
-    this.fitBubble();
-    this.bubble.setScale(0.9);
-    this.tweens.add({ targets: this.bubble, scale: 1, duration: 160, ease: 'Back.easeOut' });
-  }
-
-  fitBubble() {
-    const bw = this.bubbleW || 200, bh = 56;
-    for (const [t, size] of [[this.bubbleZh, 20], [this.bubbleEn, 12]]) {
-      t.setScale(1);
-      t.setFontSize(size);
-      if (t.width > bw - 16) t.setScale((bw - 16) / t.width);
-    }
-    const g = this.bubbleG; g.clear();
-    g.fillStyle(0x000000, 0.12).fillRoundedRect(-bw / 2 + 2, -bh / 2 + 4, bw, bh, 18);
-    g.fillStyle(0xffffff, 0.97).fillRoundedRect(-bw / 2, -bh / 2, bw, bh, 18);
-    g.lineStyle(3, this.fever ? 0xf97316 : 0xfbbf24, 1).strokeRoundedRect(-bw / 2, -bh / 2, bw, bh, 18);
-  }
+  setBubble(icon, zh, en) { this.bubble.setText(icon, zh, en); }
 
   // ---------------------------------------------------------------- layout
   relayout() {
     const W = this.scale.width, H = this.scale.height;
-    const th = WORLD_THEME[this.w] || WORLD_THEME[1];
+    const th = this.th;
     this.bg.clear();
     this.bg.fillGradientStyle(th.sky, th.sky, 0xffffff, 0xffffff, 1).fillRect(0, 0, W, H);
     this.bg.fillStyle(th.ground, 0.5).fillEllipse(W * 0.25, H + 20, W * 0.9, H * 0.35).fillEllipse(W * 0.8, H + 30, W * 0.8, H * 0.3);
@@ -162,13 +126,14 @@ export class RushScene extends Phaser.Scene {
       this.bulbs.push(b); this.lights.add(b);
     }
     this.paintLights();
-    // top bar
+    // top bar: back button, bubble, combo badge — all left of the DOM test / mute / admin buttons
     this.backBtn.setPosition(34, 46);
-    this.comboC.setPosition(W - 40, 46);
-    const bx0 = 66, bx1 = W - 76;
-    this.bubbleW = Math.min(420, bx1 - bx0);
-    this.bubble.setPosition((bx0 + bx1) / 2, 46);
-    this.fitBubble();
+    this.comboX = domLeft(this) - 40; // the badge grows to r ≈ 42 at high combos
+    this.comboC.setPosition(this.comboX, 46);
+    const bx0 = 66, rowW = this.comboX - 44 - bx0;
+    if (rowW >= 300) { const bw = Math.min(560, rowW); this.bubble.layout(bx0 + (rowW - bw) / 2, 17, bw, 58); this.top = 92; }
+    else { this.bubble.layout(10, 94, W - 20, 58); this.top = 160; } // narrow: own row, clear of the grown combo badge
+    const TOP = this.top;
     // board + tray (LevelScene rules: wide when W > 1.1 H → board left 65 %, tray column right)
     const m = 10;
     if (W > H * 1.1) {
@@ -226,11 +191,11 @@ export class RushScene extends Phaser.Scene {
     this.busy = false;
     this.board.setQuestion(q, { labels: true });
     if (q.type === 'build') {
-      this.setBubble(`合成 ${q.n}：還差多少？`, `Make ${q.n}: what's missing?`);
+      this.setBubble('🚂', `合成 ${q.n}：還差多少？`, `Make ${q.n}: what's missing?`);
       this.tray.setRods(q.tray, { unit: this.board.unit, labels: true });
       this.tray.setEnabled(true);
     } else {
-      this.setBubble(`分解 ${q.n}：切出 ${q.a}`, `Split ${q.n}: cut off ${q.a}`);
+      this.setBubble('🪚', `分解 ${q.n}：切出 ${q.a}`, `Split ${q.n}: cut off ${q.a}`);
       this.tray.setRods([], { unit: this.board.unit, labels: true });
       this.tray.setEnabled(false);
     }
@@ -270,7 +235,7 @@ export class RushScene extends Phaser.Scene {
       this.busy = true;
       await this.board.cutAt(k);
       if (this.state !== 'play' || this.q !== q) return;
-      this.setBubble(`${q.n} − ${q.a} = ？`, `${q.n} take away ${q.a} is…?`);
+      this.setBubble('❓', `${q.n} − ${q.a} = ？`, `What's left?`);
       this.tray.setRods(q.tray, { unit: this.board.unit, labels: true });
       this.tray.setEnabled(true);
       this.applyMood();
@@ -300,7 +265,7 @@ export class RushScene extends Phaser.Scene {
       if (!wasFever) {
         fx.shake(this, 0.008);
         fx.burst(this, this.comboC.x, this.comboC.y, { count: 20, tint: [0xef4444, 0xfacc15, 0x22c55e, 0x3b82f6, 0xa855f7] });
-        const t = T(this, this.scale.width / 2, TOP + 70, '😎 FEVER!', 44, '#f97316', { stroke: '#ffffff', strokeThickness: 8 }).setDepth(960).setScale(0.3);
+        const t = T(this, this.scale.width / 2, this.top + 70, '😎 FEVER!', 44, '#f97316', { stroke: '#ffffff', strokeThickness: 8 }).setDepth(960).setScale(0.3);
         this.tweens.add({ targets: t, scale: 1.1, duration: 260, ease: 'Back.easeOut' });
         this.tweens.add({ targets: t, alpha: 0, y: t.y - 40, delay: 700, duration: 350, onComplete: () => t.destroy() });
       }
@@ -317,7 +282,7 @@ export class RushScene extends Phaser.Scene {
     this.drawComboBadge(st.isFever);
     const target = Math.min(1.6, 1 + 0.1 * st.combo);
     this.tweens.killTweensOf(c);
-    c.x = this.scale.width - 40;
+    c.x = this.comboX;
     c.angle = 0;
     if (!animate || reducedMotion()) { c.setScale(target); return; }
     if (st.combo > prev) {
@@ -327,13 +292,13 @@ export class RushScene extends Phaser.Scene {
       this.tweens.add({ targets: c, angle: { from: -amp, to: amp }, duration: 55, yoyo: true, repeat: 3, onComplete: () => { c.angle = 0; } });
     } else if (st.combo < prev) {
       this.tweens.add({ targets: c, scale: target, duration: 220, ease: 'Quad.easeOut' });
-      this.tweens.add({ targets: c, x: c.x + 5, duration: 45, yoyo: true, repeat: 3, onComplete: () => { c.x = this.scale.width - 40; } });
+      this.tweens.add({ targets: c, x: c.x + 5, duration: 45, yoyo: true, repeat: 3, onComplete: () => { c.x = this.comboX; } });
     } else c.setScale(target);
   }
 
   setFever(on) {
     this.fever = on;
-    this.fitBubble();
+    this.bubble.setStroke(on ? 0xf97316 : this.th.accent);
     this.applyMood();
     if (!on && this.rainbow && this.rainbow.active) this.rainbow.clear();
   }

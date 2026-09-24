@@ -1,4 +1,5 @@
 // Visual effects shared by all Rod Town scenes. Textures come from BootScene.
+import { FONT } from './theme.js?v=0';
 const MAX_LIVE = 60;
 // Live-particle budget per scene. Scene objects are reused on restart and a shutdown drops the pending
 // "particles died" timers, so the budget is reset on every shutdown (else it leaks until no fx show).
@@ -44,7 +45,7 @@ export const fx = {
     scene.tweens.add({ targets: cam, zoom: 1 + amount, duration: 120, yoyo: true, ease: 'Sine.easeOut' });
   },
   floatText(scene, x, y, text, color = '#f97316') {
-    const t = scene.add.text(x, y, text, { fontFamily: 'sans-serif', fontSize: '28px', fontStyle: 'bold', color, stroke: '#ffffff', strokeThickness: 5 }).setOrigin(0.5).setDepth(1001);
+    const t = scene.add.text(x, y, text, { fontFamily: FONT, fontSize: '28px', fontStyle: 'bold', color, stroke: '#ffffff', strokeThickness: 5, padding: { x: 2, y: 4 }, resolution: Math.min(3, window.devicePixelRatio || 1) }).setOrigin(0.5).setDepth(1001);
     scene.tweens.add({ targets: t, y: y - 60, alpha: 0, scale: 1.4, duration: 700, ease: 'Cubic.easeOut', onComplete: () => t.destroy() });
   },
   /** Circle-wipe out of the current scene, then start `targetKey` (which should call fx.irisIn in create). */

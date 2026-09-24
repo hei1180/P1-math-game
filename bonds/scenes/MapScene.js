@@ -4,6 +4,7 @@ import { WORLDS, RODS, LEVEL_COUNT, levelKey, isWorldOpen, isLevelOpen, isRushOp
 import { UI, WORLD_THEME, textStyle } from '../theme.js?v=0';
 import { fx } from '../fx.js?v=0';
 import { sfx } from '../sfx.js?v=0';
+import { domLeft, roundButton } from '../ui/Chrome.js?v=0';
 
 const PER_WORLD = LEVEL_COUNT + 1; // levels 1..6 + boss house
 // Horizontal position (0..1 of the track span) of level 1..6 and the boss in each world. Each world's
@@ -659,26 +660,16 @@ export class MapScene extends Phaser.Scene {
     if (plan.sticker) this.time.delayedCall(t, () => this.openBook(plan.sticker));
   }
 
-  hudButton(x, y, emoji, onTap) {
-    const c = this.add.container(x, y);
-    const g = this.add.graphics();
-    g.fillStyle(0x000000, 0.15).fillCircle(0, 3, 26);
-    g.fillStyle(0xffffff, 0.95).fillCircle(0, 0, 26);
-    g.lineStyle(3, 0xfde68a, 1).strokeCircle(0, 0, 26);
-    c.add([g, this.add.text(0, 1, emoji, { fontSize: '28px', padding: { x: 2, y: 4 } }).setOrigin(0.5)]);
-    c.setSize(56, 56).setInteractive({ hitArea: new Phaser.Geom.Circle(28, 28, 30), hitAreaCallback: Phaser.Geom.Circle.Contains, useHandCursor: true });
-    c.on('pointerdown', () => this.tweens.add({ targets: c, scale: 0.88, duration: 70 }));
-    c.on('pointerout', () => c.setScale(1));
-    c.on('pointerup', () => { c.setScale(1); if (this.leaving || this.book) return; this.tweens.add({ targets: c, scale: 1.12, duration: 110, yoyo: true }); onTap(); });
-    return c;
+  hudButton(x, y, emoji, onTap, sound) {
+    return roundButton(this, { icon: emoji, sound, onTap: () => { if (this.leaving || this.book) return; onTap(); } }).setPosition(x, y);
   }
 
   buildHud() {
     const L = this.L;
     const hud = this.hud = this.add.container(0, 0).setDepth(100);
     // The DOM leaderboard covers the whole game; stop the map underneath so its "back" button (go('Map')) starts it fresh.
-    hud.add(this.hudButton(40, 40, '🏆', () => { sfx.tick(3); this.bridge.showLeaderboard(1); this.scene.stop(); }));
-    const bookBtn = this.hudButton(102, 40, '📒', () => this.openBook(null));
+    hud.add(this.hudButton(34, 36, '🏆', () => { this.bridge.showLeaderboard(1); this.scene.stop(); }, () => sfx.tick(3)));
+    const bookBtn = this.hudButton(96, 36, '📒', () => this.openBook(null));
     const got = [1, 2, 3, 4].filter(w => this.hasSticker(w)).length;
     if (got) {
       bookBtn.add(this.add.circle(19, -19, 11, UI.bad, 1));
@@ -690,7 +681,7 @@ export class MapScene extends Phaser.Scene {
     const y = this.bridge.today(), yd = new Date(y + 'T00:00:00Z'); yd.setUTCDate(yd.getUTCDate() - 1);
     const live = st.lastDay === y || st.lastDay === yd.toISOString().slice(0, 10);
     if (st.count > 0 && live) {
-      const c = this.add.container(L.W / 2, 40);
+      const c = this.add.container(0, 36);
       const txt = this.add.text(0, 1, `🔥 ${st.count}`, textStyle(26, '#c2410c', { padding: { x: 2, y: 4 } })).setOrigin(0.5);
       const pw = txt.width + 28, ph = 48;
       const g = this.add.graphics();
@@ -698,8 +689,10 @@ export class MapScene extends Phaser.Scene {
       g.fillStyle(0xfff7ed, 1).fillRoundedRect(-pw / 2, -ph / 2, pw, ph, ph / 2);
       g.lineStyle(3, 0xfb923c, 1).strokeRoundedRect(-pw / 2, -ph / 2, pw, ph, ph / 2);
       c.add([g, txt]);
+      // centred between the book button and the DOM test / mute / admin buttons
+      c.x = clamp((128 + domLeft(this)) / 2, 128 + pw / 2, L.W - pw / 2 - 8);
       c.setSize(pw, ph).setInteractive();
-      c.on('pointerup', () => { if (!this.tapOK()) return; sfx.star(0); fx.floatText(this, L.W / 2, this.cam.scrollY + 80, `連續 ${st.count} 天！`, '#f97316'); });
+      c.on('pointerup', () => { if (!this.tapOK()) return; sfx.star(0); fx.floatText(this, c.x, this.cam.scrollY + 80, `連續 ${st.count} 天！`, '#f97316'); });
       this.tweens.add({ targets: txt, scale: 1.12, duration: 650, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
       hud.add(c);
       this.streakPill = c;

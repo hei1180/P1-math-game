@@ -71,8 +71,11 @@ const AC = window.AudioContext || window.webkitAudioContext;
 let audioCtx;
 export function initAudio() { if (!audioCtx) audioCtx = new AC(); if (audioCtx.state === 'suspended') audioCtx.resume(); }
 
+/** A page with its own sound engine (Rod Town: soft synth + its own mute) can silence these shared beeps. */
+export const sharedSound = { on: true };
+
 export function playSound(type) {
-  if (!audioCtx) return;
+  if (!audioCtx || !sharedSound.on) return;
   const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
   osc.connect(gain); gain.connect(audioCtx.destination);

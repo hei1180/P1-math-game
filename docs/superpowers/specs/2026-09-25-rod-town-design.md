@@ -40,7 +40,7 @@ Each rod is a "rod buddy": a rounded bar with unit grooves, two eyes and a mouth
 
 ### The linked board (every question)
 
-1. **Rod track** — units 1-20 laid in two rows of 10, each row with a visual gap after 5.
+1. **Rod track** — a single row of N units (rods cannot bend across rows), with ticks and a heavier mark every 5 and at 10. The two ten-frames below carry the 2-row structure.
 2. **Ten-frames** — two 2×5 frames; each unit of a placed rod lights one cell in that rod's colour, in placement order, filling frame 1 then frame 2.
 3. **Bond diagram** — whole circle N on top, two part circles; parts fill as rods land.
 4. **Equation** — `a + □ = N` for Build, `N − a = □` for Break; the box fills when answered.

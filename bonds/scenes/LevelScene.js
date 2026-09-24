@@ -3,14 +3,14 @@
 // Start data: { w: 1..4, level: 1..6 }.
 // Test hook: scene.__test = { answer(), mistakes(), index(), step(), q() }.
 import { levelPlan, starsFor, levelKey, makeTenMove, isLevelOpen, LEVEL_COUNT, world } from '../../bonds-logic.js?v=0';
-import { UI, WORLD_THEME, textStyle } from '../theme.js?v=0';
+import { UI, WORLD_THEME } from '../theme.js?v=0';
 import { fx } from '../fx.js?v=0';
 import { sfx } from '../sfx.js?v=0';
 import { Board } from '../ui/Board.js?v=0';
 import { Tray } from '../ui/Tray.js?v=0';
-import { DPR, dur, reducedMotion } from '../ui/Rod.js?v=0';
+import { dur, reducedMotion } from '../ui/Rod.js?v=0';
+import { T, domLeft, roundButton, backButton, makeBubble, pillButton, drawStarSlot, drawPanel, dropStar, newBestBadge, shineStars } from '../ui/Chrome.js?v=0';
 
-const RIGHT_DOM = 190; // fallback width of the DOM test badge + mute + admin cluster, top-right
 const QN = 5;
 const PRAISE = [['好叻！', '#16a34a'], ['正呀！', '#f97316'], ['好棒！', '#2563eb'], ['Yeah!', '#a855f7'], ['叻叻！', '#db2777']];
 const END_MSG = {
@@ -19,16 +19,6 @@ const END_MSG = {
   1: ['做得好！', 'Well done!'],
 };
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
-const T = (size, color = '#1f2937', extra = {}) => textStyle(size, color, { padding: { x: 2, y: 4 }, resolution: DPR, ...extra });
-
-function starPts(r, cx = 0, cy = 0, inner = 0.5) {
-  const pts = [];
-  for (let i = 0; i < 10; i++) {
-    const rr = i % 2 ? r * inner : r, a = -Math.PI / 2 + (i * Math.PI) / 5;
-    pts.push(new Phaser.Geom.Point(cx + rr * Math.cos(a), cy + rr * Math.sin(a)));
-  }
-  return pts;
-}
 
 export class LevelScene extends Phaser.Scene {
   constructor() { super('Level'); }
@@ -45,7 +35,7 @@ export class LevelScene extends Phaser.Scene {
     this.idx = 0; this.done = 0; this.mistakes = 0; this.wrongHere = 0; this.gen = 0;
     this.busy = true; this.ended = false; this.leaving = false; this.hinting = false; this.dead = false;
     this.q = null; this.trayShown = false; this.trayOff = { x: 0, y: 0 };
-    this.endLayer = null; this.result = null; this.bubbleRect = null; this.bubbleText = null;
+    this.endLayer = null; this.result = null; this.bubbleRect = null;
     this.hintRoom = world(this.w).max >= 11; // only worlds with n ≥ 11 can ever show 💡
 
     this.bg = this.add.graphics().setDepth(-10);
@@ -94,45 +84,23 @@ export class LevelScene extends Phaser.Scene {
     this.clouds.forEach(c => { c.y = H * c.fy; });
   }
 
-  circleBtn(emoji, onTap) {
-    const c = this.add.container(0, 0).setDepth(60);
-    const g = this.add.graphics();
-    g.fillStyle(0x000000, 0.15).fillCircle(0, 3, 25);
-    g.fillStyle(0xffffff, 0.95).fillCircle(0, 0, 25);
-    g.lineStyle(3, 0xfde68a, 1).strokeCircle(0, 0, 25);
-    c.add([g, this.add.text(0, 1, emoji, { fontSize: '26px', color: '#1f2937', padding: { x: 2, y: 4 } }).setOrigin(0.5)]);
-    c.setSize(56, 56).setInteractive({ hitArea: new Phaser.Geom.Circle(28, 28, 30), hitAreaCallback: Phaser.Geom.Circle.Contains, useHandCursor: true });
-    c.on('pointerdown', () => { sfx.tick(4); this.tweens.add({ targets: c, scale: 0.86, duration: 60 }); });
-    c.on('pointerout', () => c.setScale(1));
-    c.on('pointerup', () => { c.setScale(1); onTap(); });
-    return c;
-  }
-
   buildTopBar() {
-    this.backBtn = this.circleBtn('⬅️', () => { if (!this.endLayer) this.leave('Map', { focusW: this.w }); });
+    this.backBtn = backButton(this, () => { if (!this.endLayer) this.leave('Map', { focusW: this.w }); }).setDepth(60);
     this.titleLong = `${this.th.emoji} W${this.w} · 第 ${this.level} 關`;
     this.titleShort = `${this.th.emoji} 第 ${this.level} 關`;
     this.titleT = this.add.text(0, 0, this.titleLong, T(20)).setOrigin(0, 0.5).setDepth(60);
     this.dots = [];
     for (let i = 0; i < QN; i++) this.dots.push(this.add.graphics().setDepth(60));
     // instruction bubble
-    const b = this.bubble = this.add.container(0, 0).setDepth(55);
-    b.bg = this.add.graphics();
-    b.icon = this.add.text(0, 0, '', { fontSize: '26px', padding: { x: 2, y: 4 } }).setOrigin(0.5);
-    b.zh = this.add.text(0, 0, '', T(24)).setOrigin(0.5);
-    b.en = this.add.text(0, 0, '', T(14, '#475569')).setOrigin(0.5);
-    b.add([b.bg, b.icon, b.zh, b.en]);
+    this.bubble = makeBubble(this).setDepth(55);
+    this.bubble.stroke = this.th.accent;
     // break step 1: a friendly pointer where the tray will slide in
     const ct = this.cutTip = this.add.container(0, 0).setDepth(5).setAlpha(0);
     const ctBg = this.add.graphics();
     ctBg.fillStyle(UI.paper, 0.9).fillRoundedRect(-112, -34, 224, 68, 22);
     ct.add([this.add.text(0, -12, '👆 點木頭切開', T(22, '#57534e')).setOrigin(0.5), this.add.text(0, 16, 'Tap the log to cut it', T(14, '#78716c')).setOrigin(0.5)]);
     ct.addAt(ctBg, 0);
-    this.hintBtn = this.circleBtn('💡', () => this.hint()).setVisible(false);
-    this.hintBtn.list[0].clear()
-      .fillStyle(0x000000, 0.15).fillCircle(0, 3, 25)
-      .fillStyle(0xfef9c3, 1).fillCircle(0, 0, 25)
-      .lineStyle(3, 0xfacc15, 1).strokeCircle(0, 0, 25);
+    this.hintBtn = roundButton(this, { icon: '💡', fill: 0xfef9c3, rim: 0xfacc15, onTap: () => this.hint() }).setDepth(60).setVisible(false);
   }
 
   drawDots() {
@@ -159,54 +127,14 @@ export class LevelScene extends Phaser.Scene {
     if (g) { g.setScale(0.3); this.tweens.add({ targets: g, scale: 1, duration: dur(260), ease: 'Back.easeOut', easeParams: [3] }); }
   }
 
-  setBubble(icon, zh, en) {
-    this.bubbleText = { icon, zh, en };
-    this.renderBubble();
-    const b = this.bubble;
-    this.tweens.killTweensOf(b);
-    b.setScale(0.9);
-    this.tweens.add({ targets: b, scale: 1, duration: dur(240), ease: 'Back.easeOut' });
-  }
-
-  renderBubble() {
-    const r = this.bubbleRect, t = this.bubbleText, b = this.bubble;
-    if (!r || !t) return;
-    const { bx, by, bw, bh } = r, th = this.th;
-    b.setPosition(bx + bw / 2, by + bh / 2);
-    const g = b.bg;
-    g.clear();
-    g.fillStyle(0x000000, 0.12).fillRoundedRect(-bw / 2 + 2, -bh / 2 + 4, bw, bh, 18);
-    g.fillStyle(UI.paper, 1).fillRoundedRect(-bw / 2, -bh / 2, bw, bh, 18);
-    g.lineStyle(3, th.accent, 1).strokeRoundedRect(-bw / 2, -bh / 2, bw, bh, 18);
-    const big = bh >= 64;
-    b.icon.setText(t.icon).setFontSize(big ? 30 : 26).setPosition(-bw / 2 + 28, 0);
-    b.zh.setText(t.zh).setFontSize(big ? 28 : 24).setScale(1);
-    b.en.setText(t.en).setFontSize(big ? 15 : 14).setScale(1);
-    const left = -bw / 2 + 52, right = bw / 2 - 12, avail = right - left;
-    [b.zh, b.en].forEach(o => { if (o.width > avail) o.setScale(avail / o.width); });
-    const cx = (left + right) / 2;
-    b.zh.setPosition(cx, big ? -10 : -9);
-    b.en.setPosition(cx, big ? 18 : 16);
-  }
+  setBubble(icon, zh, en) { this.bubble.setText(icon, zh, en); }
 
   // ---------------------------------------------------------------- layout
-  /** Left edge (game px) of the DOM button cluster (test badge, mute, admin) floating over the top-right. */
-  domLeft(W) {
-    try {
-      const el = document.getElementById('muteBtn'), cv = this.game.canvas;
-      if (el && el.parentElement && cv) {
-        const r = el.parentElement.getBoundingClientRect(), c = cv.getBoundingClientRect();
-        if (r.width > 0 && c.width > 0) return (r.left - c.left) * (W / c.width) - 8;
-      }
-    } catch (e) { /* fall through */ }
-    return W - RIGHT_DOM;
-  }
-
   relayout() {
     const W = this.scale.width, H = this.scale.height;
     this.drawBg(W, H);
     this.backBtn.setPosition(34, 36);
-    const tx = 66, domL = this.domLeft(W);
+    const tx = 66, domL = domLeft(this);
     this.titleT.setText(this.titleLong).setScale(1);
     if (tx + this.titleT.width > domL) this.titleT.setText(this.titleShort);
     if (tx + this.titleT.width > domL) this.titleT.setScale(Math.max(0.6, (domL - tx) / this.titleT.width));
@@ -222,7 +150,7 @@ export class LevelScene extends Phaser.Scene {
       bh = H >= 760 ? 66 : 58; by = 72; bx = 10; bw = W - 20 - hintW; TOP = by + bh + 8;
     }
     this.bubbleRect = { bx, by, bw, bh };
-    this.renderBubble();
+    this.bubble.layout(bx, by, bw, bh);
     this.hintBtn.setPosition(bx + bw + 8 + 26, by + bh / 2);
 
     const m = 10;
@@ -453,22 +381,7 @@ export class LevelScene extends Phaser.Scene {
 
   // ---------------------------------------------------------------- end panel
   pill(zh, en, fill, ink, stroke, onTap) {
-    const c = this.add.container(0, 0);
-    const w = 118, h = 66;
-    const g = this.add.graphics();
-    g.fillStyle(0x000000, 0.18).fillRoundedRect(-w / 2 + 2, -h / 2 + 5, w, h, 22);
-    g.fillStyle(fill, 1).fillRoundedRect(-w / 2, -h / 2, w, h, 22);
-    g.lineStyle(3, stroke, 1).strokeRoundedRect(-w / 2, -h / 2, w, h, 22);
-    const a = this.add.text(0, -9, zh, T(20, ink)).setOrigin(0.5);
-    const b = this.add.text(0, 17, en, T(13, ink, { fontStyle: 'normal' })).setOrigin(0.5).setAlpha(0.85);
-    [a, b].forEach(o => { if (o.width > w - 10) o.setScale((w - 10) / o.width); });
-    c.add([g, a, b]);
-    c.setSize(w, h).setInteractive({ useHandCursor: true });
-    c.on('pointerdown', () => { sfx.tick(6); this.tweens.add({ targets: c, scale: 0.9, duration: 60 }); });
-    c.on('pointerout', () => c.setScale(1));
-    c.on('pointerup', () => { c.setScale(1); if (!this.leaving) onTap(); });
-    c.pw = w;
-    return c;
+    return pillButton(this, zh, en, { fill, ink, stroke }, () => { if (!this.leaving) onTap(); });
   }
 
   showEnd() {
@@ -483,9 +396,7 @@ export class LevelScene extends Phaser.Scene {
     layer.add([dim, p]);
 
     const g = this.add.graphics();
-    g.fillStyle(0x000000, 0.25).fillRoundedRect(-PW / 2 + 4, -PH / 2 + 8, PW, PH, 26);
-    g.fillStyle(th.accent, 1).fillRoundedRect(-PW / 2, -PH / 2, PW, PH, 26);
-    g.fillStyle(UI.paper, 1).fillRoundedRect(-PW / 2 + 8, -PH / 2 + 8, PW - 16, PH - 16, 20);
+    drawPanel(g, PW, PH, th.accent);
     p.add(g);
     p.setSize(PW, PH).setInteractive();
 
@@ -495,10 +406,7 @@ export class LevelScene extends Phaser.Scene {
     // star slots: middle one larger and higher
     this.slots = [{ x: -104, y: -8, r: 38 }, { x: 0, y: -24, r: 48 }, { x: 104, y: -8, r: 38 }];
     const sg = this.add.graphics();
-    for (const s of this.slots) {
-      sg.fillStyle(0xe5e7eb, 1).fillPoints(starPts(s.r, s.x, s.y), true);
-      sg.lineStyle(4, 0xcbd5e1, 1).strokePoints(starPts(s.r, s.x, s.y), true, true);
-    }
+    for (const s of this.slots) drawStarSlot(sg, s.r, s.x, s.y);
     p.add(sg);
 
     const [mz, me] = END_MSG[stars];
@@ -552,60 +460,12 @@ export class LevelScene extends Phaser.Scene {
 
   dropStar(i) {
     if (this.dead || !this.endPanel) return;
-    const s = this.slots[i], p = this.endPanel;
-    const c = this.add.container(s.x, s.y - 150);
-    const g = this.add.graphics();
-    g.fillStyle(0xf59e0b, 1).fillPoints(starPts(s.r + 3, 0, 3), true);
-    g.fillStyle(UI.gold, 1).fillPoints(starPts(s.r, 0, 0), true);
-    g.fillStyle(0xffffff, 0.55).fillCircle(-s.r * 0.22, -s.r * 0.3, s.r * 0.14);
-    c.add(g);
-    c.setScale(1.7).setAlpha(0);
-    p.add(c);
-    this.tweens.add({
-      targets: c, y: s.y, scale: 1, alpha: 1, duration: dur(260), ease: 'Quad.easeIn',
-      onComplete: () => {
-        if (this.dead) return;
-        sfx.star(i);
-        this.tweens.add({ targets: c, scaleY: 0.78, scaleX: 1.15, duration: 70, yoyo: true, ease: 'Quad.easeOut' });
-        const k = p.scale;
-        fx.burst(this, p.x + s.x * k, p.y + s.y * k, { count: 10 });
-        if (i === 2) fx.shake(this, 0.01);
-      },
-    });
+    dropStar(this, this.endPanel, this.slots[i], i);
   }
 
-  newBestBadge() {
-    const p = this.endPanel;
-    const c = this.add.container(this.PW / 2 - 64, -this.PH / 2 + 26);
-    const g = this.add.graphics();
-    g.fillStyle(UI.bad, 1).fillRoundedRect(-58, -20, 116, 40, 20);
-    g.lineStyle(3, 0xffffff, 1).strokeRoundedRect(-58, -20, 116, 40, 20);
-    const a = this.add.text(0, -7, '新紀錄！', T(15, '#ffffff')).setOrigin(0.5);
-    const b = this.add.text(0, 11, 'New best', T(10, '#ffffff')).setOrigin(0.5);
-    c.add([g, a, b]);
-    c.setAngle(12).setScale(0);
-    p.add(c);
-    this.tweens.add({ targets: c, scale: 1, duration: dur(300), ease: 'Back.easeOut', easeParams: [2.5] });
-  }
+  newBestBadge() { newBestBadge(this, this.endPanel, this.PW, this.PH); }
 
   /** First-time 3★: a gold-white shine sweeps across the three stars. */
-  shine() {
-    if (this.dead || reducedMotion()) return;
-    const p = this.endPanel, k = p.scale;
-    const mg = this.make.graphics({ add: false });
-    mg.fillStyle(0xffffff, 1);
-    for (const s of this.slots) mg.fillPoints(starPts(s.r * k, p.x + s.x * k, p.y + s.y * k), true);
-    const band = this.add.graphics().setDepth(501);
-    const bw = 34 * k, bh = 140 * k;
-    band.fillStyle(0xffffff, 0.75).fillPoints([{ x: 0, y: -bh / 2 }, { x: bw, y: -bh / 2 }, { x: bw - 30 * k, y: bh / 2 }, { x: -30 * k, y: bh / 2 }].map(o => new Phaser.Geom.Point(o.x, o.y)), true);
-    band.fillStyle(0xfef3c7, 0.6).fillRect(bw + 4 * k, -bh / 2, 10 * k, bh);
-    band.setMask(mg.createGeometryMask());
-    const y = p.y - 16 * k, x0 = p.x - 170 * k, x1 = p.x + 170 * k;
-    band.setPosition(x0, y);
-    sfx.star(4);
-    this.tweens.add({
-      targets: band, x: x1, duration: 650, ease: 'Sine.easeInOut', repeat: 1, repeatDelay: 250,
-      onComplete: () => { band.destroy(); mg.destroy(); },
-    });
-  }
+  shine() { if (!this.dead) shineStars(this, this.endPanel, this.slots, 501); }
+
 }

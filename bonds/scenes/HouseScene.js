@@ -17,10 +17,12 @@ import { fx } from '../fx.js?v=0';
 import { sfx } from '../sfx.js?v=0';
 import { Tray } from '../ui/Tray.js?v=0';
 import { Rod, DPR, dur, sleep, reparent, reducedMotion } from '../ui/Rod.js?v=0';
+import { T, domLeft, backButton, makeBubble, pillButton, drawStarSlot, drawPanel, dropStar, newBestBadge, shineStars } from '../ui/Chrome.js?v=0';
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 const TRAY_UNIT = 40; // requested; the Tray caps it so all nine rods fit
-const TOP = 66; // below the back button and the DOM mute/admin cluster
+const TOP0 = 66; // below the back button and the DOM mute/admin cluster (the bubble may push the house lower)
+const END_MSG = { 3: ['完美！', 'Perfect!'], 2: ['好叻！', 'Great job!'], 1: ['做得好！', 'Well done!'] };
 const M = 10;
 const COL_A = 0x2563eb, COL_B = 0xea580c; // left column (goes up) / right column (goes down)
 const CSS_A = '#2563eb', CSS_B = '#ea580c';
@@ -73,6 +75,9 @@ export class HouseScene extends Phaser.Scene {
     this.bgL = this.add.container(0, 0).setDepth(-10);
     this.houseL = this.add.container(0, 0).setDepth(0);
     this.hudL = this.add.container(0, 0).setDepth(100);
+    this.bubble = makeBubble(this).setDepth(99);
+    this.bubble.stroke = this.theme.accent;
+    this.bubble.setText('🏠', `填滿每一層：合成 ${this.house.n}`, `Fill every floor to make ${this.house.n}`);
     this.dropRect = new Phaser.Geom.Rectangle();
     this.tray = new Tray(this);
     this.tray.on('choose', rod => this.onChoose(rod));
@@ -112,7 +117,7 @@ export class HouseScene extends Phaser.Scene {
   doneCount() { return this.floors.filter(f => f.filled).length; }
 
   // ---------------------------------------------------------------- layout
-  computeLayout(W, H) {
+  computeLayout(W, H, TOP) {
     const wide = W > H * 1.1;
     let region, trayR;
     if (wide) {
@@ -164,7 +169,7 @@ export class HouseScene extends Phaser.Scene {
       };
     });
     return {
-      W, H, wide, region, trayR, F, P, roofH, groundH, over, wall, padH, u, rodH, floorH, numW, numFs,
+      W, H, TOP, wide, region, trayR, F, P, roofH, groundH, over, wall, padH, u, rodH, floorH, numW, numFs,
       winW, bodyW, houseH, bottom, top, cx, bodyX, floorsTop, midX, rows,
       groundTop: floorsTop + F * floorH,
     };
@@ -173,9 +178,16 @@ export class HouseScene extends Phaser.Scene {
   relayout() {
     if (this.leaving) return;
     this.gen++;
-    const L = this.L = this.computeLayout(this.scale.width, this.scale.height);
-    this.drawBackground();
+    const W = this.scale.width, H = this.scale.height;
     this.drawHud();
+    // instruction bubble: in the title row when there is room, else its own row, else (a cramped phone with
+    // a tall house) hidden so the floors keep their size
+    const b = this.bubbleRect;
+    let L = this.computeLayout(W, H, b ? b.y + b.h + (b.row ? 8 : 10) : TOP0);
+    if (b && b.row && L.floorH < 40) { this.bubbleRect = null; L = this.computeLayout(W, H, TOP0); }
+    this.L = L;
+    if (this.bubbleRect) { const r = this.bubbleRect; this.bubble.setVisible(true).layout(r.x, r.y, r.w, r.h); } else this.bubble.setVisible(false);
+    this.drawBackground();
     this.buildHouse();
     const t = L.trayR;
     this.tray.layout(t.x, t.y, t.w, t.h, L.wide);
@@ -200,7 +212,7 @@ export class HouseScene extends Phaser.Scene {
     // drifting clouds
     const clouds = [[0.18, 0.2], [0.72, 0.32], [0.45, 0.1]];
     for (const [fxr, fyr] of clouds) {
-      const cy = TOP + (L.top - TOP) * fyr + 10;
+      const cy = L.TOP + (L.top - L.TOP) * fyr + 10;
       if (cy > L.top + L.roofH) continue;
       const c = this.add.container(L.W * fxr, Math.max(20, cy)).setAlpha(0.85);
       c.add([this.add.image(-16, 4, 'puff').setScale(1.1), this.add.image(10, -4, 'puff').setScale(1.4), this.add.image(34, 5, 'puff').setScale(1)]);
@@ -220,27 +232,20 @@ export class HouseScene extends Phaser.Scene {
   drawHud() {
     this.hudL.list.slice().forEach(o => killDeep(this, o));
     this.hudL.removeAll(true);
-    if (this.phase === 'play') {
-      const c = this.add.container(36, 36);
-      const g = this.add.graphics();
-      g.fillStyle(0x000000, 0.15).fillCircle(0, 3, 25);
-      g.fillStyle(0xffffff, 0.95).fillCircle(0, 0, 25);
-      g.lineStyle(3, 0xfde68a, 1).strokeCircle(0, 0, 25);
-      g.fillStyle(UI.ink, 1).fillTriangle(-13, 0, -2, -11, -2, 11).fillRoundedRect(-4, -4.5, 17, 9, 3);
-      c.add(g);
-      c.setSize(56, 56).setInteractive({ hitArea: new Phaser.Geom.Circle(28, 28, 30), hitAreaCallback: Phaser.Geom.Circle.Contains, useHandCursor: true });
-      c.on('pointerdown', () => { sfx.tick(2); this.tweens.add({ targets: c, scale: 0.88, duration: 70, yoyo: true }); });
-      c.on('pointerup', () => this.goMap(null));
-      this.hudL.add(c);
-    }
+    const W = this.scale.width, H = this.scale.height;
+    if (this.phase === 'play') this.hudL.add(backButton(this, () => this.goMap(null)).setPosition(34, 36));
+    // title like the levels: "🌼 W1 · 數字屋", English underneath
     const wd = WORLDS[this.w - 1];
-    const x0 = this.phase === 'play' ? 72 : 16;
-    const avail = this.L.W - x0 - 150;
-    const t1 = this.add.text(x0, 24, `數字屋 ${this.theme.emoji}`, textStyle(22, '#1f2937', { resolution: DPR, padding: { x: 2, y: 4 } })).setOrigin(0, 0.5);
-    const t2 = this.add.text(x0, 50, `W${this.w} ${wd.en} · Number House`, textStyle(12, '#475569', { resolution: DPR, padding: { x: 1, y: 2 } })).setOrigin(0, 0.5);
-    const k = Math.min(1, avail / Math.max(t1.width, t2.width));
-    if (k < 1) { t1.setScale(k); t2.setScale(k); }
+    const x0 = this.phase === 'play' ? 66 : 16, domL = domLeft(this);
+    const t1 = this.add.text(x0, 24, `${this.theme.emoji} W${this.w} · 數字屋`, T(20)).setOrigin(0, 0.5);
+    const t2 = this.add.text(x0, 50, `Number House · ${wd.en}`, T(12, '#475569', { padding: { x: 1, y: 2 } })).setOrigin(0, 0.5);
+    const k = Math.min(1, (domL - x0) / Math.max(t1.width, t2.width));
+    if (k < 1) { t1.setScale(Math.max(0.6, k)); t2.setScale(Math.max(0.6, k)); }
     this.hudL.add([t1, t2]);
+    // bubble slot (drawn by relayout): the title row when wide enough, else a row of its own
+    const leftR = x0 + Math.max(t1.displayWidth, t2.displayWidth) + 14, rowW = domL - leftR;
+    if (rowW >= 330) { const w = Math.min(rowW, 620); this.bubbleRect = { x: leftR + (rowW - w) / 2, y: 6, w, h: 64, row: false }; }
+    else { const h = H >= 760 ? 66 : 58; this.bubbleRect = { x: 10, y: 72, w: W - 20, h, row: true }; }
   }
 
   // ---------------------------------------------------------------- house
@@ -516,8 +521,8 @@ export class HouseScene extends Phaser.Scene {
   refillTray(len) {
     this.tray.setRods(this.house.tray, { unit: TRAY_UNIT, labels: false });
     for (const r of this.tray.rods) {
-      this.tweens.killTweensOf(r.lift);
-      if (r.len === len) { r.popIn(120); } else r.lift.setScale(1);
+      this.tweens.killTweensOf([r.lift, r.shadow]);
+      if (r.len === len) { r.popIn(120); } else { r.lift.setScale(1); r.shadow.setAlpha(0.6); }
     }
   }
 
@@ -529,6 +534,7 @@ export class HouseScene extends Phaser.Scene {
     const gen = this.gen, L = this.L;
     this.activate(-1);
     this.drawHud(); // back button goes away: the result is being saved
+    this.bubble.setText('🎉', `${this.house.n} 的分法全部找到！`, `All the ways to make ${this.house.n}!`);
     this.tweens.add({ targets: this.tray, alpha: 0, duration: 300, onComplete: () => this.tray.setVisible(false) });
 
     const stars = starsFor(this.mistakes);
@@ -622,100 +628,74 @@ export class HouseScene extends Phaser.Scene {
   }
 
   // ---------------------------------------------------------------- end panel
-  /** Stars drop one by one; Replay / Map. `instant` redraws the final state (after a resize). */
+  /** Same end panel as the levels: stars drop one by one; Replay / Map. `instant` redraws the final state (after a resize). */
   showEndPanel(stars, result, instant = false) {
     this.phase = 'end';
     if (this.panelL) { this.panelL.list.slice().forEach(o => killDeep(this, o)); this.panelL.destroy(); }
-    if (this.shine) { this.shine.destroy(); this.shine = null; }
-    const W = this.scale.width, H = this.scale.height;
+    const W = this.scale.width, H = this.scale.height, th = this.theme;
     const P = this.panelL = this.add.container(0, 0).setDepth(900);
-    const dim = this.add.rectangle(0, 0, W, H, 0x0f172a, instant ? 0.4 : 0).setOrigin(0).setInteractive();
+    const dim = this.add.rectangle(0, 0, W, H, 0x0f172a, 0.45).setOrigin(0).setInteractive();
     P.add(dim);
-    if (!instant) this.tweens.add({ targets: dim, fillAlpha: 0.4, duration: 250 });
+    if (!instant) { dim.setAlpha(0); this.tweens.add({ targets: dim, alpha: 1, duration: 200 }); }
 
     const hasSticker = !!(result && result.sticker);
-    const cw = Math.min(W - 32, 400), ch = hasSticker ? 330 : 300;
+    const PW = 400, PH = hasSticker ? 460 : 410;
+    const k = Math.min(1, (W - 24) / PW, (H - 24) / PH);
     // tall screens: sit a little high so the waving buddy stays visible below the card
-    const cx = W / 2, cy = clamp(H / 2 - (W < H ? H * 0.06 : 0), ch / 2 + 12, H - ch / 2 - 12);
+    const cx = W / 2, cy = clamp(H / 2 - (W < H ? H * 0.06 : 0), (PH * k) / 2 + 12, H - (PH * k) / 2 - 12);
     const card = this.add.container(cx, cy);
     const g = this.add.graphics();
-    g.fillStyle(0x000000, 0.18).fillRoundedRect(-cw / 2 + 3, -ch / 2 + 7, cw, ch, 26);
-    g.fillStyle(UI.paper, 1).fillRoundedRect(-cw / 2, -ch / 2, cw, ch, 26);
-    g.lineStyle(5, UI.gold, 1).strokeRoundedRect(-cw / 2, -ch / 2, cw, ch, 26);
+    drawPanel(g, PW, PH, th.accent);
     card.add(g);
-    const top = -ch / 2;
-    card.add(txt(this, 0, top + 40, '數字屋完成！', 30, '#1f2937'));
-    card.add(txt(this, 0, top + 74, 'Number House complete!', 16, '#475569'));
+    card.setSize(PW, PH).setInteractive();
+    const top = -PH / 2;
+    card.add(this.add.text(0, top + 46, '數字屋完成！', T(36)).setOrigin(0.5));
+    card.add(this.add.text(0, top + 82, `Number House complete · W${this.w}`, T(15, '#64748b')).setOrigin(0.5));
 
-    const sy = top + 136, gap = Math.min(92, (cw - 40) / 3);
-    const slots = [-1, 0, 1].map(k => ({ x: k * gap, y: sy }));
-    for (const s of slots) card.add(this.add.image(s.x, s.y, 'star').setScale(2.5).setTint(0xe5e7eb));
-    const bigStars = [];
-    for (let i = 0; i < stars; i++) {
-      const st = this.add.image(slots[i].x, slots[i].y, 'star').setScale(2.7).setTint(UI.gold);
-      card.add(st);
-      bigStars.push(st);
-      if (instant) continue;
-      st.setVisible(false);
-      this.time.delayedCall(350 + i * 300, () => {
-        if (!st.active) return;
-        st.setVisible(true).setY(sy - 150).setAngle(-40);
-        this.tweens.add({
-          targets: st, y: sy, angle: 0, duration: dur(320), ease: 'Bounce.easeOut',
-          onComplete: () => {
-            sfx.star(i);
-            fx.burst(this, cx + slots[i].x, cy + sy, { count: 8 });
-            if (i === 2) fx.shake(this);
-            if (i === stars - 1) {
-              fx.confetti(this);
-              if (stars === 3 && result && result.newBest) this.shineSweep(cx, cy + sy, cw);
-            }
-          },
-        });
-      });
-    }
-    let by = top + 206;
-    if (hasSticker) {
-      const stx = txt(this, 0, top + 196, '📒 新貼紙！New sticker!', 18, '#c2410c');
-      card.add(stx);
-      if (!instant) { stx.setScale(0); this.tweens.add({ targets: stx, scale: 1, delay: 350 + stars * 300, duration: 300, ease: 'Back.easeOut', onStart: () => sfx.page() }); }
-      by = top + 238;
-    }
-    const bw = Math.min(150, (cw - 48) / 2), bh = 56;
-    const replay = this.panelButton(-bw / 2 - 8, by + bh / 2, bw, bh, '再玩', 'Replay', 0xffffff, 0xfbbf24, '#1f2937', () => this.leave('House', { w: this.w }));
-    const map = this.panelButton(bw / 2 + 8, by + bh / 2, bw, bh, '地圖', 'Map', UI.good, 0x15803d, '#ffffff', () => this.goMap({ key: levelKey(this.w, 'boss'), stars, ...(result || {}) }));
+    const sy = top + 181; // same star row as the level panel
+    const slots = [{ x: -104, y: sy + 16, r: 38 }, { x: 0, y: sy, r: 48 }, { x: 104, y: sy + 16, r: 38 }];
+    const sg = this.add.graphics();
+    for (const sl of slots) drawStarSlot(sg, sl.r, sl.x, sl.y);
+    card.add(sg);
+    const [mz, me] = END_MSG[stars];
+    const msg = [this.add.text(0, top + 267, mz, T(24)).setOrigin(0.5), this.add.text(0, top + 295, me, T(14, '#64748b')).setOrigin(0.5)];
+    card.add(msg);
+    let stx = null;
+    if (hasSticker) { stx = this.add.text(0, top + 334, '📒 新貼紙！New sticker!', T(18, '#c2410c')).setOrigin(0.5); card.add(stx); }
+
+    const replay = pillButton(this, '🔁 再玩', 'Replay', { stroke: th.accent }, () => this.leave('House', { w: this.w }));
+    const map = pillButton(this, '🗺 地圖', 'Map', { fill: 0xf97316, ink: '#ffffff', stroke: 0xffffff },
+      () => this.goMap({ key: levelKey(this.w, 'boss'), stars, ...(result || {}) }));
+    replay.setPosition(-(replay.pw + 12) / 2, PH / 2 - 56);
+    map.setPosition((map.pw + 12) / 2, PH / 2 - 56);
     card.add([replay, map]);
     P.add(card);
-    if (!instant) {
-      card.setScale(0.6).setAlpha(0);
-      this.tweens.add({ targets: card, scale: 1, alpha: 1, duration: dur(320), ease: 'Back.easeOut' });
+    card.setScale(k);
+
+    if (instant) {
+      for (let i = 0; i < stars; i++) {
+        const st = dropStar(this, card, slots[i], i);
+        this.tweens.killTweensOf(st);
+        st.setPosition(slots[i].x, slots[i].y).setScale(1).setAlpha(1);
+      }
+      if (result && result.newBest) { const nb = newBestBadge(this, card, PW, PH); this.tweens.killTweensOf(nb); nb.setScale(1); }
+      return;
     }
-  }
-
-  panelButton(x, y, w, h, zh, en, fill, edge, color, onTap) {
-    const c = this.add.container(x, y);
-    const g = this.add.graphics();
-    g.fillStyle(0x000000, 0.15).fillRoundedRect(-w / 2 + 1, -h / 2 + 5, w, h, 18);
-    g.fillStyle(fill, 1).fillRoundedRect(-w / 2, -h / 2, w, h, 18);
-    g.lineStyle(3, edge, 1).strokeRoundedRect(-w / 2, -h / 2, w, h, 18);
-    c.add([g, txt(this, 0, -8, zh, 20, color), txt(this, 0, 14, en, 12, color)]);
-    c.setSize(w, h).setInteractive({ useHandCursor: true });
-    c.on('pointerdown', () => { sfx.tick(4); this.tweens.add({ targets: c, scale: 0.92, duration: 70, yoyo: true }); });
-    c.on('pointerup', onTap);
-    return c;
-  }
-
-  shineSweep(x, y, cw) {
-    const band = this.shine = this.add.graphics().setDepth(950);
-    const bh = 90, bw = 46;
-    band.fillStyle(0xffffff, 0.55).fillPoints([{ x: 0, y: -bh / 2 }, { x: bw, y: -bh / 2 }, { x: bw - 24, y: bh / 2 }, { x: -24, y: bh / 2 }], true);
-    band.fillStyle(UI.gold, 0.35).fillRect(bw * 0.3, -bh / 2, 8, bh);
-    const mask = this.make.graphics({ add: false });
-    mask.fillStyle(0xffffff).fillRoundedRect(x - cw / 2 + 12, y - bh / 2, cw - 24, bh, 16);
-    band.setMask(mask.createGeometryMask());
-    band.setPosition(x - cw / 2 - bw, y);
-    sfx.star(4);
-    this.tweens.add({ targets: band, x: x + cw / 2, duration: 700, ease: 'Sine.easeInOut', repeat: 1, repeatDelay: 500, onComplete: () => { band.destroy(); mask.destroy(); if (this.shine === band) this.shine = null; } });
+    card.setScale(k * 0.6).setAlpha(0);
+    this.tweens.add({ targets: card, scale: k, alpha: 1, duration: dur(360), ease: 'Back.easeOut' });
+    msg.forEach(o => o.setAlpha(0));
+    if (stx) stx.setScale(0);
+    this.tweens.add({ targets: map, scale: 1.06, duration: 700, yoyo: true, repeat: -1, delay: 1400, ease: 'Sine.easeInOut' });
+    const t0 = 480, step = 300;
+    for (let i = 0; i < stars; i++) this.time.delayedCall(t0 + i * step, () => { if (card.active) dropStar(this, card, slots[i], i); });
+    this.time.delayedCall(t0 + (stars - 1) * step + 320, () => {
+      if (!card.active) return;
+      msg.forEach((o, i) => this.tweens.add({ targets: o, alpha: 1, y: { from: o.y + 10, to: o.y }, duration: dur(240), delay: i * 60 }));
+      if (stx) this.tweens.add({ targets: stx, scale: 1, delay: 200, duration: 300, ease: 'Back.easeOut', onStart: () => sfx.page() });
+      fx.confetti(this);
+      if (result && result.newBest) newBestBadge(this, card, PW, PH);
+      if (stars === 3 && result && result.newBest) shineStars(this, card, slots, 950);
+    });
   }
 
   // ---------------------------------------------------------------- navigation

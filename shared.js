@@ -25,10 +25,12 @@ const provider = new GoogleAuthProvider();
 export const TEACHER_PIN = '1128';
 export const NUM_KEYS = ['num1', 'num2', 'num3', 'num4'];
 const defaultNumUnlock = () => Object.fromEntries(NUM_KEYS.map(k => [k, false]));
-export const DEFAULT_SETTINGS = { timeLimit: 30, unlockMedium: false, unlockHard: false, numTimeLimit: 30, numUnlock: defaultNumUnlock(), trophy: { ...DEFAULT_TROPHY } };
+export const BONDS_KEYS = ['w1', 'w2', 'w3', 'w4'];
+const defaultBondsUnlock = () => Object.fromEntries(BONDS_KEYS.map(k => [k, false]));
+export const DEFAULT_SETTINGS = { timeLimit: 30, unlockMedium: false, unlockHard: false, numTimeLimit: 30, numUnlock: defaultNumUnlock(), bondsUnlock: defaultBondsUnlock(), bondsTimeLimit: 60, lessMotion: false, trophy: { ...DEFAULT_TROPHY } };
 
 export const player = { name: 'Guest', uid: null, highScores: {} };
-export const settings = { ...DEFAULT_SETTINGS, numUnlock: defaultNumUnlock(), trophy: { ...DEFAULT_TROPHY } };
+export const settings = { ...DEFAULT_SETTINGS, numUnlock: defaultNumUnlock(), bondsUnlock: defaultBondsUnlock(), trophy: { ...DEFAULT_TROPHY } };
 
 /** Teacher test mode: this browser tab only, all levels open, nothing saved. Cleared when the tab closes. */
 const TEST_KEY = 'p1maths.testMode';
@@ -172,6 +174,7 @@ export async function loadSettings() {
       Object.assign(settings, DEFAULT_SETTINGS, d);
       settings.trophy = validateCutoffs(d.trophy) ? { ...d.trophy } : { ...DEFAULT_TROPHY };
       settings.numUnlock = { ...defaultNumUnlock(), ...(d.numUnlock || {}) };
+      settings.bondsUnlock = { ...defaultBondsUnlock(), ...(d.bondsUnlock || {}) };
     }
   } catch (e) { console.warn('settings offline', e); }
 }
@@ -314,6 +317,17 @@ const TEACHER_MODAL_HTML = `
           <label class="flex items-center gap-2 font-bold text-gray-700 cursor-pointer"><input type="checkbox" id="settingNum4" class="w-6 h-6 accent-indigo-500 rounded"> Lv4 奇偶線</label>
         </div>
       </div>
+      <div class="bg-orange-50 p-4 rounded-xl mb-4 border-2 border-orange-200">
+        <div class="font-bold text-gray-700 mb-2">Rod Town 數棒鎮</div>
+        <div class="grid grid-cols-2 gap-2">
+          <label class="flex items-center gap-2 font-bold text-gray-700 cursor-pointer"><input type="checkbox" id="settingBonds1" class="w-6 h-6 accent-orange-500 rounded"> W1 草地 2-5</label>
+          <label class="flex items-center gap-2 font-bold text-gray-700 cursor-pointer"><input type="checkbox" id="settingBonds2" class="w-6 h-6 accent-orange-500 rounded"> W2 海邊 6-10</label>
+          <label class="flex items-center gap-2 font-bold text-gray-700 cursor-pointer"><input type="checkbox" id="settingBonds3" class="w-6 h-6 accent-orange-500 rounded"> W3 森林 11-13</label>
+          <label class="flex items-center gap-2 font-bold text-gray-700 cursor-pointer"><input type="checkbox" id="settingBonds4" class="w-6 h-6 accent-orange-500 rounded"> W4 雪山 14-18</label>
+        </div>
+        <label class="flex items-center gap-2 font-bold text-gray-700 mt-3">Rush time (s)<input type="number" id="settingBondsTime" min="10" max="300" class="border-2 border-gray-300 p-1 rounded-lg w-20 text-center font-bold outline-none"></label>
+        <label class="flex items-center gap-2 font-bold text-gray-700 mt-2 cursor-pointer"><input type="checkbox" id="settingLessMotion" class="w-6 h-6 accent-gray-500 rounded"> Less motion 減少動畫</label>
+      </div>
       <div class="grid grid-cols-2 gap-3 mb-4">
         <label class="text-sm font-bold text-gray-700 text-center">Market time (s)<input type="number" id="settingTime" min="10" max="300" class="border-4 border-gray-300 p-2 rounded-xl w-full text-center text-xl font-bold outline-none"></label>
         <label class="text-sm font-bold text-gray-700 text-center">Number Shop time (s)<input type="number" id="settingNumTime" min="10" max="300" class="border-4 border-gray-300 p-2 rounded-xl w-full text-center text-xl font-bold outline-none"></label>
@@ -347,6 +361,8 @@ export function mountTeacherModal(onSaved) {
     $('pinView').classList.add('hidden'); $('settingsView').classList.remove('hidden');
     $('settingMed').checked = settings.unlockMedium; $('settingHard').checked = settings.unlockHard;
     NUM_KEYS.forEach((k, i) => { $('settingNum' + (i + 1)).checked = !!settings.numUnlock[k]; });
+    BONDS_KEYS.forEach((k, i) => { $('settingBonds' + (i + 1)).checked = !!settings.bondsUnlock[k]; });
+    $('settingBondsTime').value = settings.bondsTimeLimit; $('settingLessMotion').checked = !!settings.lessMotion;
     $('settingTime').value = settings.timeLimit; $('settingNumTime').value = settings.numTimeLimit;
     $('settingBronze').value = settings.trophy.bronze; $('settingSilver').value = settings.trophy.silver; $('settingGold').value = settings.trophy.gold;
   });
@@ -357,6 +373,9 @@ export function mountTeacherModal(onSaved) {
       unlockMedium: $('settingMed').checked, unlockHard: $('settingHard').checked,
       timeLimit: parseInt($('settingTime').value) || 30, numTimeLimit: parseInt($('settingNumTime').value) || 30,
       numUnlock: Object.fromEntries(NUM_KEYS.map((k, i) => [k, $('settingNum' + (i + 1)).checked])),
+      bondsUnlock: Object.fromEntries(BONDS_KEYS.map((k, i) => [k, $('settingBonds' + (i + 1)).checked])),
+      bondsTimeLimit: parseInt($('settingBondsTime').value) || 60,
+      lessMotion: $('settingLessMotion').checked,
       trophy
     };
     const ok = await saveSettings(patch);

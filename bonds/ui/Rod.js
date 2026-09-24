@@ -303,6 +303,9 @@ export class Rod extends Phaser.GameObjects.Container {
   popIn(delay = 0) {
     this.lift.setScale(0.01);
     this.scene.tweens.add({ targets: this.lift, scaleX: 1, scaleY: 1, delay, duration: dur(260), ease: 'Back.easeOut' });
+    // the shadow fades in with the body (else a grey ghost pill shows while the rod is still tiny)
+    this.shadow.setAlpha(0);
+    this.scene.tweens.add({ targets: this.shadow, alpha: SHADOW_REST, delay, duration: dur(260) });
     return this;
   }
 

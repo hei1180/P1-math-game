@@ -65,7 +65,7 @@ function startGame() {
     scene: [BootScene, MapScene, LevelScene, HouseScene, RushScene, SandboxScene],
   });
   game.registry.set('bridge', bridge);
-  window.__rodTown = { game, bridge, go: (key, data) => { game.scene.getScenes(true).forEach(s => s.scene.stop()); game.scene.start(key, data); } };
+  window.__rodTown = { game, bridge, go: (key, data) => { game.scene.getScenes(true).forEach(s => { if (s.scene.key !== key) s.scene.stop(); }); game.scene.start(key, data); } };
 }
 
 // ---- DOM wiring ----

@@ -1,6 +1,14 @@
 // Visual effects shared by all Rod Town scenes. Textures come from BootScene.
 const MAX_LIVE = 60;
-const live = scene => (scene.__fxLive = scene.__fxLive || { n: 0 });
+// Live-particle budget per scene. Scene objects are reused on restart and a shutdown drops the pending
+// "particles died" timers, so the budget is reset on every shutdown (else it leaks until no fx show).
+const live = scene => {
+  if (!scene.__fxHooked) {
+    scene.__fxHooked = true;
+    scene.events.on('shutdown', () => { scene.__fxLive = { n: 0 }; });
+  }
+  return (scene.__fxLive = scene.__fxLive || { n: 0 });
+};
 const reduced = () => fx.lessMotion || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
 function emitOnce(scene, x, y, texture, config, count) {
@@ -10,7 +18,7 @@ function emitOnce(scene, x, y, texture, config, count) {
   const em = scene.add.particles(x, y, texture, { emitting: false, ...config });
   em.setDepth(1000);
   l.n += n; em.explode(n);
-  scene.time.delayedCall((config.lifespan?.max || config.lifespan || 800) + 100, () => { l.n -= n; em.destroy(); });
+  scene.time.delayedCall((config.lifespan?.max || config.lifespan || 800) + 100, () => { l.n = Math.max(0, l.n - n); em.destroy(); });
 }
 
 export const fx = {

@@ -57,12 +57,12 @@ function setHud(on) {
   game.scale.refresh();
 }
 
-function applyMotion() { fx.lessMotion = !!settings.lessMotion; }
+// Less motion follows the teacher setting live (also when settings change after the game started).
+Object.defineProperty(fx, 'lessMotion', { get: () => !!settings.lessMotion, set: v => { settings.lessMotion = !!v; }, configurable: true });
 
 function startGame() {
   $('loginScreen').classList.add('hidden');
   $('gameScreen').classList.remove('hidden');
-  applyMotion();
   if (game) return;
   game = new Phaser.Game({
     type: Phaser.AUTO,
@@ -84,7 +84,7 @@ $('muteBtn').addEventListener('click', () => { sfx.muted = !sfx.muted; $('muteBt
 document.addEventListener('pointerdown', () => sfx.unlock(), { once: false, passive: true });
 document.querySelectorAll('[data-lb]').forEach(b => b.addEventListener('click', () => renderLeaderboard(TABS, 'bonds' + b.dataset.lb)));
 $('lbBack').addEventListener('click', () => { $('leaderboardScreen').classList.add('hidden'); if (game) window.__rodTown.go('Map'); });
-mountTeacherModal(() => { applyMotion(); if (game && game.scene.isActive('Map')) window.__rodTown.go('Map'); });
+mountTeacherModal(() => { if (game && game.scene.isActive('Map')) window.__rodTown.go('Map'); });
 
 const isLocal = ['localhost', '127.0.0.1'].includes(location.hostname);
 if (isLocal && new URLSearchParams(location.search).has('dev')) {

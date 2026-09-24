@@ -33,7 +33,7 @@ const bridge = {
   },
   rushStart(w, onTimeUp) {
     initAudio();
-    $('hud').classList.remove('hidden'); game.scale.refresh();
+    setHud(true);
     resetEngine(settings.bondsTimeLimit);
     startTimer(settings.bondsTimeLimit, onTimeUp);
   },
@@ -41,12 +41,21 @@ const bridge = {
   rushState() { return { score: engine.score, combo: engine.combo, isFever: engine.isFever, timeLeft: engine.timeLeft }; },
   rushEnd(w) {
     stopTimer(); endFever();
-    $('hud').classList.add('hidden'); game.scale.refresh();
+    setHud(false);
     return saveScore('bonds' + w).then(() => new Promise(res => showRankPopup(engine.score, () => { bridge.showLeaderboard(w); res(); })));
   },
-  rushAbort() { stopTimer(); endFever(); $('hud').classList.add('hidden'); game.scale.refresh(); },
+  rushAbort() { stopTimer(); endFever(); setHud(false); },
   showLeaderboard(w) { $('leaderboardScreen').classList.remove('hidden'); renderLeaderboard(TABS, 'bonds' + w); },
 };
+
+/** Show/hide the Rush HUD; resize the canvas from the parent's new size and move the corner buttons out of the HUD's way. */
+function setHud(on) {
+  $('hud').classList.toggle('hidden', !on);
+  $('cornerBtns').classList.toggle('top-14', on);
+  $('cornerBtns').classList.toggle('top-2', !on);
+  game.scale.getParentBounds();
+  game.scale.refresh();
+}
 
 function applyMotion() { fx.lessMotion = !!settings.lessMotion; }
 

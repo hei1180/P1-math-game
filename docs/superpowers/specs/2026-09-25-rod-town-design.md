@@ -79,12 +79,17 @@ Text is bilingual: large Traditional Chinese, small English under it.
 - Step 2: equation `N − a = □`; answer with the rod tray (as Build). Wrong rod: one mistake.
 - Break counts as one question for level progress and Rush scoring.
 
-### Mode: 數字屋 Number House (boss)
+### Mode: 數字屋 Number House (boss) — owner redesign 2026-09-25
 
-- House for N: one floor per split (a | N − a) with both parts 1-9, a ascending from top floor down (as in the textbook).
-- Each floor shows the left part as a rod; the child places the right part from the tray (all 1-9 rods available). The twin floor (a = N − a) glows gold.
-- As floors fill, the right-hand column's descending pattern animates (numbers slide in).
-- Boss N is drawn randomly from the world's range restricted to numbers with at least 4 floors: W1 → 5; W2 → 6-10; W3 → 11-13; W4 → 14-15.
+- **Question rod** on top, under the roof badge N: a rod of length N (N ≥ 11: an orange 10-rod joined to the (N − 10)-rod, drawn as one train).
+- **Shuffled rod pile** in a "rod box" below/beside the house: for every floor (a | N − a) of `splitsOf(N)`, one rod a and one rod N − a (so each length appears as often as it is needed), laid out in random order and random positions within the box (horizontal rods, no overlap, ≥ 44 px touch rows). No floor is pre-filled.
+- **Find a floor:** tap (or drag) a first rod → it moves to a "workbench" slot under the question rod's left end; tap a second rod → it lines up after the first.
+  - Sum = N and this ordered pair not yet found → the two rods **merge** (glow, squash, click) into one two-colour train, and the train slides up to line up exactly under the question rod as a new floor (same left edge, same length — visible proof a + b = N). The floor's numerals `a | b` appear beside it.
+  - Sum ≠ N, or the ordered pair is already found → both rods bounce back to the pile, 😵, one mistake.
+  - Tapping the rod on the workbench returns it to the pile (no mistake).
+- Order matters, as in the textbook house: `2 | 9` and `9 | 2` are different floors. Floors appear in the order found; when the house is complete, floors re-sort by a (top → bottom ascending) with a slide animation so the ladder pattern shows, then the pattern arrows and the completion sequence (lights, door, character, fireworks) play.
+- Twin floor (a = N − a) glows gold. Boss N choice unchanged (≥ 4 floors).
+- Stars from mistakes as elsewhere.
 
 ## §2 Progression, Rush, teacher, data
 

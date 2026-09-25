@@ -17,7 +17,8 @@ test('RODS: 10 Cuisenaire colours', () => {
 });
 
 test('WORLDS ranges and bosses', () => {
-  assert.deepEqual(WORLDS.map(x => [x.min, x.max]), [[2, 5], [6, 10], [11, 13], [14, 18]]);
+  assert.deepEqual(WORLDS.map(x => [x.min, x.max]), [[2, 9], [10, 10], [11, 13], [14, 18]]);
+  assert.deepEqual(world(2).boss, [10]);
   assert.equal(world(3).key, 'w3');
   for (const wd of WORLDS) for (const n of wd.boss) {
     assert.ok(n >= wd.min && n <= wd.max);
@@ -26,21 +27,21 @@ test('WORLDS ranges and bosses', () => {
   assert.equal(LEVEL_COUNT, 6);
 });
 
-test('partRange keeps both parts 1..10', () => {
+test('partRange keeps both parts single-digit (1..9)', () => {
   assert.deepEqual(partRange(2), { lo: 1, hi: 1 });
   assert.deepEqual(partRange(10), { lo: 1, hi: 9 });
-  assert.deepEqual(partRange(14), { lo: 4, hi: 10 });
-  assert.deepEqual(partRange(18), { lo: 8, hi: 10 });
+  assert.deepEqual(partRange(14), { lo: 5, hi: 9 });
+  assert.deepEqual(partRange(18), { lo: 9, hi: 9 });
 });
 
 test('trayFor: 5 unique sorted rods containing the answer, near distractors first', () => {
   const rng = lcg(1);
-  for (let ans = 1; ans <= 10; ans++) for (let i = 0; i < 50; i++) {
+  for (let ans = 1; ans <= 9; ans++) for (let i = 0; i < 50; i++) {
     const t = trayFor(ans, rng);
     assert.equal(t.length, 5); assert.equal(new Set(t).size, 5);
     assert.ok(t.includes(ans)); assert.deepEqual([...t].sort((x, y) => x - y), t);
-    assert.ok(t.every(v => v >= 1 && v <= 10));
-    const near = [ans - 1, ans + 1, ans - 2, ans + 2].filter(v => v >= 1 && v <= 10);
+    assert.ok(t.every(v => v >= 1 && v <= 9), 'no 10 rod offered');
+    const near = [ans - 1, ans + 1, ans - 2, ans + 2].filter(v => v >= 1 && v <= 9);
     for (const v of near) assert.ok(t.includes(v), `near ${v} for ${ans}`);
   }
 });
@@ -54,7 +55,8 @@ for (const [name, gen, type] of [['genBuild', genBuild, 'build'], ['genBreak', g
       assert.equal(q.type, type);
       assert.ok(q.n >= wd.min && q.n <= wd.max, 'n in range');
       assert.equal(q.a + q.b, q.n);
-      assert.ok(q.a >= 1 && q.a <= 10 && q.b >= 1 && q.b <= 10);
+      assert.ok(q.a >= 1 && q.a <= 9 && q.b >= 1 && q.b <= 9, 'single-digit parts');
+      assert.ok(q.tray.every(v => v <= 9));
       assert.ok(q.tray.includes(q.b));
     }
   });

@@ -3,7 +3,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
 import { getFirestore, collection, doc, getDoc, setDoc, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
-import { DEFAULT_TROPHY, TROPHY_ICON, TROPHY_LABEL, trophyFor, validateCutoffs } from './trophy.js?v=202609251311';
+import { DEFAULT_TROPHY, TROPHY_ICON, TROPHY_LABEL, trophyFor, validateCutoffs } from './trophy.js?v=202609251524';
 
 export { TROPHY_ICON, TROPHY_LABEL };
 
@@ -323,8 +323,8 @@ const TEACHER_MODAL_HTML = `
       <div class="bg-orange-50 p-4 rounded-xl mb-4 border-2 border-orange-200">
         <div class="font-bold text-gray-700 mb-2">Rod Town 數棒鎮</div>
         <div class="grid grid-cols-2 gap-2">
-          <label class="flex items-center gap-2 font-bold text-gray-700 cursor-pointer"><input type="checkbox" id="settingBonds1" class="w-6 h-6 accent-orange-500 rounded"> W1 草地 2-5</label>
-          <label class="flex items-center gap-2 font-bold text-gray-700 cursor-pointer"><input type="checkbox" id="settingBonds2" class="w-6 h-6 accent-orange-500 rounded"> W2 海邊 6-10</label>
+          <label class="flex items-center gap-2 font-bold text-gray-700 cursor-pointer"><input type="checkbox" id="settingBonds1" class="w-6 h-6 accent-orange-500 rounded"> W1 草地 2-9</label>
+          <label class="flex items-center gap-2 font-bold text-gray-700 cursor-pointer"><input type="checkbox" id="settingBonds2" class="w-6 h-6 accent-orange-500 rounded"> W2 海邊 10</label>
           <label class="flex items-center gap-2 font-bold text-gray-700 cursor-pointer"><input type="checkbox" id="settingBonds3" class="w-6 h-6 accent-orange-500 rounded"> W3 森林 11-13</label>
           <label class="flex items-center gap-2 font-bold text-gray-700 cursor-pointer"><input type="checkbox" id="settingBonds4" class="w-6 h-6 accent-orange-500 rounded"> W4 雪山 14-18</label>
         </div>

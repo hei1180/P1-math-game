@@ -349,6 +349,8 @@ export class LevelScene extends Phaser.Scene {
     this.drawDots();
     const stars = starsFor(this.mistakes);
     let result = { newBest: false, sticker: null };
+    const P0 = this.bridge.progress;
+    const prev = (P0 && P0.levels && P0.levels[levelKey(this.w, this.level)]) || 0; // the Map upgrades this medal
     try {
       if (this.bridge.complete) {
         const r = await this.bridge.complete(levelKey(this.w, this.level), stars);
@@ -356,7 +358,7 @@ export class LevelScene extends Phaser.Scene {
       }
     } catch (e) { console.warn('[Level] could not save the result', e); }
     if (this.dead) return;
-    this.result = { stars, ...result };
+    this.result = { stars, prev, ...result };
     this.time.delayedCall(200, () => this.showEnd());
   }
 
@@ -374,8 +376,8 @@ export class LevelScene extends Phaser.Scene {
     const unlock = (br.settings && br.settings.bondsUnlock) || {};
     const lv = this.level < LEVEL_COUNT ? this.level + 1 : 'boss';
     if (!isLevelOpen(P, this.w, lv, unlock, !!br.testMode)) return null;
-    return lv === 'boss' ? { key: 'House', data: { w: this.w }, zh: '🏠 數字屋', en: 'Number house' }
-      : { key: 'Level', data: { w: this.w, level: lv }, zh: '▶ 下一關', en: 'Next' };
+    return lv === 'boss' ? { goTo: { w: this.w, level: 'boss' }, zh: '🏠 數字屋', en: 'Number house' }
+      : { goTo: { w: this.w, level: lv }, zh: '▶ 下一關', en: 'Next' };
   }
 
   // ---------------------------------------------------------------- end panel
@@ -415,14 +417,16 @@ export class LevelScene extends Phaser.Scene {
 
     // buttons
     const nx = this.nextTarget();
+    const justDone = () => ({ key: levelKey(this.w, this.level), stars, ...this.resultData() });
     const btns = [
       this.pill('🗺 地圖', 'Map', 0xffffff, '#1f2937', th.accent, () => {
         sfx.whoosh();
-        this.leave('Map', { focusW: this.w, justDone: { key: levelKey(this.w, this.level), stars, ...this.resultData() } });
+        this.leave('Map', { focusW: this.w, justDone: justDone() });
       }),
       this.pill('🔁 再玩', 'Replay', 0xffffff, '#1f2937', th.accent, () => { sfx.whoosh(); this.leave('Level', { w: this.w, level: this.level }); }),
     ];
-    if (nx) btns.push(this.pill(nx.zh, nx.en, 0xf97316, '#ffffff', 0xffffff, () => { sfx.whoosh(); this.leave(nx.key, nx.data); }));
+    // Next / 數字屋: back to the Map for the win sequence, then the train chugs to the next stage and opens it.
+    if (nx) btns.push(this.pill(nx.zh, nx.en, 0xf97316, '#ffffff', 0xffffff, () => { sfx.whoosh(); this.leave('Map', { focusW: this.w, justDone: justDone(), goTo: nx.goTo }); }));
     const gap = 12, total = btns.reduce((s, b) => s + b.pw, 0) + gap * (btns.length - 1);
     let x = -total / 2;
     btns.forEach(b => { b.setPosition(x + b.pw / 2, PH / 2 - 56); x += b.pw + gap; p.add(b); });
@@ -446,7 +450,7 @@ export class LevelScene extends Phaser.Scene {
     });
   }
 
-  resultData() { const r = this.result || {}; return { newBest: !!r.newBest, sticker: r.sticker == null ? null : r.sticker }; }
+  resultData() { const r = this.result || {}; return { newBest: !!r.newBest, sticker: r.sticker == null ? null : r.sticker, prev: r.prev || 0 }; }
 
   layoutEnd() {
     const W = this.scale.width, H = this.scale.height;

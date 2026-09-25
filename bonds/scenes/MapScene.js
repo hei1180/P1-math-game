@@ -47,20 +47,25 @@ let rodModule = null;
 const loadRod = () => (rodModule = rodModule || import('../ui/Rod.js?v=202609250809').catch(() => null));
 function makeStickerRod(scene, x, y, len, unit) {
   const holder = scene.add.container(x, y);
-  const fallback = () => {
-    const w = len * unit, h = Math.max(22, unit * 1.4), rad = Math.min(8, h / 3);
+  const fallback = () => { // same look as Rod: one square tall, joined squares, a face on the right end, no number
+    const u = unit, w = len * u, h = u, rad = Math.max(2, Math.min(u * 0.22, 9)), b = Math.max(1, u * 0.075);
+    const hex = RODS[len].hex, edge = len === 1 ? 0x94a3b8 : mix(hex, 0x000000, 0.28);
     const g = scene.add.graphics();
     g.fillStyle(0x000000, 0.15).fillRoundedRect(2, -h / 2 + 3, w, h, rad);
-    g.fillStyle(RODS[len].hex, 1).fillRoundedRect(0, -h / 2, w, h, rad);
-    g.lineStyle(2, 0x000000, 0.25).strokeRoundedRect(0, -h / 2, w, h, rad);
-    g.lineStyle(1.5, 0x000000, 0.18);
-    for (let i = 1; i < len; i++) g.lineBetween(i * unit, -h / 2 + 3, i * unit, h / 2 - 3);
-    const ex = w - Math.min(unit, 18);
-    g.fillStyle(0xffffff, 1).fillCircle(ex - 5, -h * 0.12, 4).fillCircle(ex + 5, -h * 0.12, 4);
-    g.fillStyle(UI.ink, 1).fillCircle(ex - 4, -h * 0.1, 2).fillCircle(ex + 6, -h * 0.1, 2);
-    const light = [1, 3, 5].includes(len);
-    const t = scene.add.text(Math.min(w / 2, w - 30), 0, String(len), textStyle(Math.max(12, h * 0.55), light ? '#1f2937' : '#ffffff')).setOrigin(0.5);
-    holder.add([g, t]);
+    g.fillStyle(len === 1 ? 0xdfe5ec : mix(hex, 0x000000, 0.09), 1).fillRoundedRect(0, -h / 2, w, h, rad);
+    for (let i = 0; i < len; i++) {
+      g.fillStyle(hex, 1).fillRoundedRect(i * u + b, -h / 2 + b * 0.7, u - 2 * b, h - b * 1.9, Math.min(u * 0.16, 6));
+      g.fillStyle(0xffffff, len === 1 ? 0.9 : 0.3).fillRoundedRect(i * u + b * 1.5, -h / 2 + b, u - 3 * b, h * 0.15, Math.min(u * 0.08, 3));
+    }
+    g.lineStyle(Math.max(1, u * 0.045), edge, 0.6);
+    for (let i = 1; i < len; i++) g.lineBetween(i * u, -h / 2 + 1, i * u, h / 2 - 1);
+    g.lineStyle(Math.max(1.5, u * 0.05), edge, 1).strokeRoundedRect(0, -h / 2, w, h, rad);
+    const fx0 = w - u / 2, dx = u * 0.21, er = Math.max(1.5, u * 0.13);
+    g.fillStyle(0xffffff, 1).fillCircle(fx0 - dx, -u * 0.06, er).fillCircle(fx0 + dx, -u * 0.06, er);
+    g.fillStyle(UI.ink, 1).fillCircle(fx0 - dx, -u * 0.06, er * 0.55).fillCircle(fx0 + dx, -u * 0.06, er * 0.55);
+    g.lineStyle(Math.max(1.2, u * 0.055), len >= 6 && len <= 9 ? 0xffffff : UI.ink, 1);
+    g.beginPath(); g.arc(fx0, u * 0.12, u * 0.12, Math.PI * 0.2, Math.PI * 0.8, false); g.strokePath();
+    holder.add(g);
     setSF(holder, holder.scrollFactorX);
   };
   loadRod().then(mod => {
@@ -739,7 +744,8 @@ export class MapScene extends Phaser.Scene {
     const left = -pw / 2 + 40, right = pw / 2 - 16, rowTop = -ph / 2 + 86;
     const rowH = (ph / 2 - 16 - rowTop) / 4;
     const lw = Math.min(96, (right - left) * 0.3);
-    const unit = Math.floor(Math.min((right - left - lw - 30) / 10, (rowH - 20) / 1.4));
+    // rods are one square tall; hats / hair reach ≈ 0.45·unit above, so rods sit 0.2·unit low in their row
+    const unit = Math.floor(Math.min((right - left - lw - 30) / 10, (rowH - 16) / 1.6));
     let popTarget = null;
     for (let w = 1; w <= 4; w++) {
       const wd = WORLDS[w - 1], th = WORLD_THEME[w];
@@ -752,16 +758,18 @@ export class MapScene extends Phaser.Scene {
       [l1, l2].forEach(t => { if (t.width > lw) t.setScale(lw / t.width); panel.add(t); });
       const rx = left + lw + 18, len = wd.sticker;
       if (this.hasSticker(w)) {
-        const rod = makeStickerRod(this, rx, cy, len, unit);
+        const rod = makeStickerRod(this, rx, cy + Math.round(unit * 0.2), len, unit);
         panel.add(rod);
         if (newW === w) { rod.setScale(0); popTarget = rod; }
       } else {
-        const h = Math.max(22, unit * 1.4);
+        const h = unit, rad = Math.max(2, Math.min(unit * 0.22, 8)); // ghost rod: one square tall, square cells
         const sg = this.add.graphics();
-        sg.fillStyle(0x94a3b8, 0.3).fillRoundedRect(rx, cy - h / 2, len * unit, h, 8);
-        sg.lineStyle(2, 0x94a3b8, 0.8).strokeRoundedRect(rx, cy - h / 2, len * unit, h, 8);
+        sg.fillStyle(0x94a3b8, 0.3).fillRoundedRect(rx, cy - h / 2, len * unit, h, rad);
+        sg.lineStyle(1.5, 0x94a3b8, 0.6);
+        for (let i = 1; i < len; i++) sg.lineBetween(rx + i * unit, cy - h / 2 + 2, rx + i * unit, cy + h / 2 - 2);
+        sg.lineStyle(2, 0x94a3b8, 0.8).strokeRoundedRect(rx, cy - h / 2, len * unit, h, rad);
         panel.add(sg);
-        panel.add(this.add.text(rx + (len * unit) / 2, cy, '?', textStyle(Math.max(16, h * 0.7), '#94a3b8')).setOrigin(0.5));
+        panel.add(this.add.text(rx + (len * unit) / 2, cy, '?', textStyle(Math.max(12, h * 0.75), '#94a3b8')).setOrigin(0.5));
         if (rowH > 70) panel.add(this.add.text(rx, cy + h / 2 + 12, '🏠 打敗數字屋 Beat the house', textStyle(11, '#64748b', { padding: { x: 1, y: 3 } })).setOrigin(0, 0.5));
       }
     }

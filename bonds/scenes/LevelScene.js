@@ -33,6 +33,7 @@ export class LevelScene extends Phaser.Scene {
     this.plan = levelPlan(this.w, this.level, Math.random);
     this.labels = this.plan.labels;
     this.idx = 0; this.done = 0; this.mistakes = 0; this.wrongHere = 0; this.gen = 0;
+    this.startedAt = Date.now(); // for the attempt log's durationSec
     this.busy = true; this.ended = false; this.leaving = false; this.hinting = false; this.dead = false;
     this.q = null; this.trayShown = false; this.trayOff = { x: 0, y: 0 };
     this.endLayer = null; this.result = null; this.bubbleRect = null;
@@ -353,7 +354,8 @@ export class LevelScene extends Phaser.Scene {
     const prev = (P0 && P0.levels && P0.levels[levelKey(this.w, this.level)]) || 0; // the Map upgrades this medal
     try {
       if (this.bridge.complete) {
-        const r = await this.bridge.complete(levelKey(this.w, this.level), stars);
+        const r = await this.bridge.complete(levelKey(this.w, this.level), stars,
+          { mistakes: this.mistakes, durationSec: Math.round((Date.now() - this.startedAt) / 1000) });
         if (r) result = { newBest: !!r.newBest, sticker: r.sticker == null ? null : r.sticker };
       }
     } catch (e) { console.warn('[Level] could not save the result', e); }

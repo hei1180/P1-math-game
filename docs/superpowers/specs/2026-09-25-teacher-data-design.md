@@ -36,8 +36,8 @@ Out of scope: class grouping (not requested yet), migrating old data (old best-s
 | `ts` | server timestamp | |
 | `day` | string `YYYY-MM-DD` (device local) | for grouping without timestamp maths |
 
-Labels (single source: `modeLabel(game, mode)` exported from `shared.js`):
-- market: easy → `數數 Market · Easy 1-10`, medium → `Market · Medium 1-20`, hard → `Market · Hard`
+Labels (single source: pure module `labels.js` — `modeLabel(mode)`, `gameOf(mode)`, `GAME_LABEL`; already implemented and tested):
+- market: easy → `Market · Easy 1-10`, medium → `Market · Medium 1-20`, hard → `Market · Hard`
 - numbers: num1 `Number Shop Lv1 比較`, num2 `Lv2 奇偶`, num3 `Lv3 數線`, num4 `Lv4 奇偶數線`
 - bonds: bondsN `Rod Town Rush W{N}`; `wN-L` `Rod Town W{N} 第{L}關`; `wN-boss` `Rod Town W{N} 數字屋`
 

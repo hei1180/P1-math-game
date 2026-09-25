@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Math Market Mini-Boss</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="shared.css?v=202609141909">
+    <link rel="stylesheet" href="shared.css?v=202609251311">
 </head>
 <body class="h-[100dvh] w-full flex flex-col relative">
 
@@ -27,6 +27,7 @@
         <div class="flex flex-col gap-4 w-[90%] max-w-sm">
             <button onclick="showMarketMenu()" class="bubbly-btn bg-white text-orange-600 font-bold text-2xl md:text-3xl py-5 rounded-2xl border-4 border-orange-300 w-full">🍎 Math Market<br><span class="text-sm font-normal text-gray-500">數一數 Counting</span></button>
             <a href="numbers.html" class="bubbly-btn bg-white text-indigo-600 font-bold text-2xl md:text-3xl py-5 rounded-2xl border-4 border-indigo-300 w-full text-center block">🔢 Number Shop<br><span class="text-sm font-normal text-gray-500">比較 · 奇偶 · 數線</span></a>
+            <a href="bonds.html" class="bubbly-btn bg-white text-orange-600 font-bold text-2xl md:text-3xl py-5 rounded-2xl border-4 border-orange-300 w-full text-center block">🚂 Rod Town 數棒鎮<br><span class="text-sm font-normal text-gray-500">合成與分解 2-18</span></a>
         </div>
     </div>
 
@@ -104,8 +105,8 @@
     <script type="module">
         import { signIn, onUser, settings, initAudio, playSound, spawnParticle, replay,
                  engine, resetEngine, registerHit, triggerWiggle, endFever, startTimer, stopTimer,
-                 saveScore, renderLeaderboard, refreshLevelButton, isUnlocked, showRankPopup, mountTeacherModal } from './shared.js?v=202609141909';
-        import { squish, bounce, popScore, flashRed, burst, flyTo, react } from './juice.js?v=202609141909';
+                 saveScore, renderLeaderboard, refreshLevelButton, isUnlocked, showRankPopup, mountTeacherModal } from './shared.js?v=202609251311';
+        import { squish, bounce, popScore, flashRed, burst, flyTo, react } from './juice.js?v=202609251311';
 
         const $ = id => document.getElementById(id);
         const TABS = [{ key: 'easy', label: 'Easy' }, { key: 'medium', label: 'Medium' }, { key: 'hard', label: 'Hard' }];

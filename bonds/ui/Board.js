@@ -110,7 +110,7 @@ export class Board extends Phaser.GameObjects.Container {
     const { x, y, width: w, height: h } = this.rect;
     const n = this.q ? this.q.n : 10;
     const unit = Math.max(8, Math.min(Math.floor((w - 24) / n), 44));
-    const rodH = Math.max(22, unit * 1.4);
+    const rodH = unit; // rods are one square tall (Rod.h)
     const railH = rodH + 12;
     const above = Math.round(clamp(unit * 0.62, 11, 16) * 1.6 + 8); // ruler numbers + cut marker
     const below = 26; // ticks + 5/10/15 labels

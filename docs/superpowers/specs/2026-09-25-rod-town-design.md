@@ -178,6 +178,16 @@ Rod buddies:
 - Snap: squash (scaleY 0.8 → 1), dust puff, click; ten-frame cells pop in one by one with rising ticks.
 - Wrong: bounce back along an arc, sad face for 0.6 s, gap outline flashes red once; soft "bonk", no buzzer.
 
+Merge sequence (every correct answer: Build, Break step 2, Rush; owner decision 2026-09-25):
+1. The answer rod snaps into the gap.
+2. Squares drop into the ten-frames one by one with a counting tick, part a first then part b, each in its rod colour (n ≤ 10: both in frame 1; n ≥ 11: a in frame 1, b in frame 2).
+3. Merge:
+   - n ≥ 11 and neither part is 10: the smaller part's **last** k = 10 − max(a, b) squares fly into the larger part's frame; that frame fills, flashes and turns orange (a ten). On the track the same k squares hop onto the larger rod, which becomes an orange 10-rod, and the rest of the smaller rod becomes the rod of length n − 10. Equation morphs `a + b` → `10 + (n − 10)` → `= n`.
+   - n ≥ 11 and one part is 10: the 10 frame flashes; equation `10 + (n − 10) = n`.
+   - n ≤ 10: the two rods fuse into the single rod of length n (Cuisenaire: 3 + 4 is as long as black 7); the frame cells recolour to rod n's colour. Equation `a + b = n`.
+4. Celebrate (burst, characters cheer, train rolls out / halves hop).
+Levels play the full sequence (~2 s, input locked only until step 2 starts); Rush plays a fast version (~0.8 s).
+
 Answer moments:
 - Build correct: glow sweep along both rods, star burst, bond lines draw on, train toots, steam puffs, rolls out; next train rolls in (overlapping, ≤ 0.6 s input block).
 - Break: saw swipe with sparks on the cut; halves hop onto their diagram circles; step-2 correct as Build.

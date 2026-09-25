@@ -32,7 +32,6 @@ export class RushScene extends Phaser.Scene {
     this.lastSec = null;
     this.lightT = 0; this.lightPhase = 0;
     this.cam = this.cameras.main;
-    this.cam.setZoom(1);
     this.input.enabled = true; // finish() turns it off; the input plugin survives restarts
 
     this.bg = this.add.graphics().setDepth(-10);
@@ -447,6 +446,5 @@ export class RushScene extends Phaser.Scene {
     if (this.state === 'play') { this.bridge.rushAbort(); this.fixScale(); } // stopped from outside mid-run (dev go(), restart)
     this.state = 'left';
     this.resetTimerStyle();
-    this.cam.setZoom(1);
   }
 }

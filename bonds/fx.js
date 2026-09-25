@@ -39,10 +39,19 @@ export const fx = {
     for (let i = 0; i < 4; i++) scene.time.delayedCall(i * 300, () => fx.burst(scene, scene.scale.width * (0.2 + 0.2 * i), scene.scale.height * (0.2 + 0.1 * (i % 2)), { count: 14 }));
   },
   shake(scene, intensity = 0.006) { if (!reduced()) scene.cameras.main.shake(180, intensity); },
+  /** Brief zoom-in around the screen centre, relative to the camera's base zoom (DPR on retina, see hidpi.js). */
   zoomPulse(scene, amount = 0.03) {
-    if (reduced()) return;
     const cam = scene.cameras.main;
-    scene.tweens.add({ targets: cam, zoom: 1 + amount, duration: 120, yoyo: true, ease: 'Sine.easeOut' });
+    if (reduced() || cam.__pulsing) return;
+    cam.__pulsing = true;
+    const z0 = cam.zoom, sx0 = cam.scrollX, sy0 = cam.scrollY, k = { v: 1 };
+    const apply = () => {
+      const z = z0 * k.v;
+      cam.setZoom(z);
+      if (cam.originX === 0) { cam.scrollX = sx0 + cam.width / (2 * z0) - cam.width / (2 * z); cam.scrollY = sy0 + cam.height / (2 * z0) - cam.height / (2 * z); }
+    };
+    const done = () => { k.v = 1; apply(); cam.__pulsing = false; };
+    scene.tweens.add({ targets: k, v: 1 + amount, duration: 120, yoyo: true, ease: 'Sine.easeOut', onUpdate: apply, onComplete: done, onStop: done });
   },
   floatText(scene, x, y, text, color = '#f97316') {
     const t = scene.add.text(x, y, text, { fontFamily: FONT, fontSize: '28px', fontStyle: 'bold', color, stroke: '#ffffff', strokeThickness: 5, padding: { x: 2, y: 4 }, resolution: Math.min(3, window.devicePixelRatio || 1) }).setOrigin(0.5).setDepth(1001);

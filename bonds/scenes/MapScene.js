@@ -106,7 +106,7 @@ export class MapScene extends Phaser.Scene {
 
   rebuild() {
     if (this.leaving) return;
-    const L = this.L, H0 = this.cam.height;
+    const L = this.L, H0 = this.scale.height;
     const frac = (this.cam.scrollY + H0 / 2) / L.mapH;
     const bookOpen = !!this.book;
     this.tweens.killAll(); this.time.removeAllEvents();
@@ -149,7 +149,7 @@ export class MapScene extends Phaser.Scene {
     this.test = !!b.testMode;
     const L = this.L = this.layout();
     const { W, nodes } = L;
-    this.cam.setBounds(0, 0, W, L.mapH);
+    // no cam.setBounds: clampScroll() keeps the scroll in range (Phaser's bounds clamp assumes a centred camera origin)
 
     for (const n of nodes) {
       n.stars = this.P.levels[n.key] || 0;
@@ -806,20 +806,21 @@ export class MapScene extends Phaser.Scene {
   }
 
   bindInput() {
+    const py = p => p.y / this.cam.zoom; // screen y in CSS px (the camera zooms by DPR, see hidpi.js)
     this.input.on('pointerdown', p => {
       if (this.book || this.leaving || this.drag) return;
-      this.drag = { id: p.id, y0: p.y, s0: this.cam.scrollY, moved: 0, ly: p.y, lt: performance.now(), v: 0 };
+      this.drag = { id: p.id, y0: py(p), s0: this.cam.scrollY, moved: 0, ly: py(p), lt: performance.now(), v: 0 };
       this.vel = 0;
     });
     this.input.on('pointermove', p => {
       const d = this.drag;
       if (!d || d.id !== p.id || !p.isDown) return;
-      const dy = p.y - d.y0;
+      const dy = py(p) - d.y0;
       d.moved = Math.max(d.moved, Math.abs(dy));
       this.cam.scrollY = this.clampScroll(d.s0 - dy);
       const now = performance.now(), dt = now - d.lt;
-      if (dt > 0) d.v = 0.6 * ((d.ly - p.y) / dt) + 0.4 * d.v;
-      d.ly = p.y; d.lt = now;
+      if (dt > 0) d.v = 0.6 * ((d.ly - py(p)) / dt) + 0.4 * d.v;
+      d.ly = py(p); d.lt = now;
     });
     const end = p => {
       const d = this.drag;
@@ -847,7 +848,7 @@ export class MapScene extends Phaser.Scene {
     const W = this.L.W;
     if (this.clouds) for (const c of this.clouds) { c.x += (c.vx * delta) / 1000; if (c.x > W + 110) c.x = -110; }
     // Only draw the worlds (and fog) near the view.
-    const y0 = cam.scrollY - 80, y1 = cam.scrollY + cam.height + 80;
+    const y0 = cam.scrollY - 80, y1 = cam.scrollY + cam.height / cam.zoom + 80;
     for (const w in this.layers) { const l = this.layers[w]; l.visible = l.range[1] > y0 && l.range[0] < y1; }
     for (const w in this.fogs) { const f = this.fogs[w]; f.visible = f.range[1] > y0 && f.range[0] < y1; }
   }

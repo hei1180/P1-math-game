@@ -41,10 +41,10 @@
  * pointer (scene 'update' listener, removed in destroy()). Body and accessories are drawn once per
  * unit size; only the face redraws, and only on a mood change.
  */
-import { RODS } from '../../bonds-logic.js?v=202609250809';
-import { UI } from '../theme.js?v=202609250809';
-import { fx } from '../fx.js?v=202609250809';
-import { sfx } from '../sfx.js?v=202609250809';
+import { RODS } from '../../bonds-logic.js?v=202609251311';
+import { UI } from '../theme.js?v=202609251311';
+import { fx } from '../fx.js?v=202609251311';
+import { sfx } from '../sfx.js?v=202609251311';
 
 export const DPR = Math.min(3, Math.max(1, window.devicePixelRatio || 1));
 export const reducedMotion = () => fx.lessMotion || !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);

@@ -24,7 +24,7 @@
  *     (board.placeAnswer). If neither happens within 1.5 s it quietly settles home.
  *   - Rods that left the tray (placed on the board) are never destroyed by setRods().
  */
-import { Rod, dur, tweenP, reparent } from './Rod.js?v=0';
+import { Rod, dur, tweenP, reparent } from './Rod.js?v=202609250809';
 
 const PAD = 12;
 const GAP = 12;

@@ -11,30 +11,51 @@
  *   board.setQuestion(q, { labels })         build: parks rod a, outlines the gap; break: shows the log with cut points
  *   board.on('cut', k => ...)                break step 1: child tapped cut point k (1..n−1)
  *   board.cutAt(k) -> Promise                saw, split into rods k and n−k, park rod a, gap for b (step 2)
- *   board.placeAnswer(rod) -> Promise        rod flies into the gap; frames, diagram and equation fill
+ *   board.placeAnswer(rod) -> Promise        rod flies into the gap; diagram + equation fill; then the merge
+ *                                            sequence's first half: a part already in the frames pulses with
+ *                                            its rod, the other part's squares drop from the rod into the
+ *                                            ten-frames one by one with a counting tick
  *   board.rejectAt()                         wrong answer: gap flashes red once (break step 1: log wobbles + bonk)
  *   board.playMakeTen() -> Promise           make-ten hint (n ≥ 11, neither part 10); no-op otherwise
- *   board.celebrate() -> Promise             glow, burst, bond lines; build: engine + roll-out; break: halves hop
- *                                            onto the diagram. Resolves ≤ 600 ms; setQuestion() may be called at
- *                                            once (the old train keeps rolling out, the new one rolls in)
+ *   board.celebrate() -> Promise             merge (below), then glow, burst, bond lines; build: engine +
+ *                                            roll-out; break: the merged rods hop into the whole circle.
+ *                                            setQuestion() may be called at once when it resolves (the old
+ *                                            train keeps rolling out, the new one rolls in)
  *   board.frames -> { litA, litB }           lit ten-frame cells per part (logical, updated immediately)
  *
  * Extras:
- *   new Board(scene, { panel = true })       panel: soft paper card behind the board for readability
+ *   new Board(scene, { panel = true, fast = false })
+ *                                            panel: soft paper card behind the board for readability
+ *   board.fast                               false: full merge sequence (levels, sandbox; placeAnswer +
+ *                                            celebrate ≈ 2 s); true: the short version (Rush, ≈ 0.8-1 s).
+ *                                            Plain property, may be changed between questions.
  *   board.step                               'idle' | 'build' | 'cut' | 'cutting' | 'answer' | 'done'
  *                                            (build = waiting for rod b; cut = break step 1; answer = break step 2)
  *   board.q                                  the board's copy of the question { type, n, a, b }
- *   board.setLabels(bool)                    toggle rod numbers + ruler numbers live
- *   board.rodA / board.rodB                  the parked / placed Rod objects (or null)
+ *   board.setLabels(bool)                    toggle the ruler numbers live (rods never show a number)
+ *   board.rodA / board.rodB                  the parked / placed Rod objects (or null); after the merge the
+ *                                            left / right merged rod (rod._off = start square on the track)
  *
  * Ten-frame placement: n ≤ 10 → part a then part b in frame 1 (frame 2 dimmed);
  *   n ≥ 11 → part a in frame 1, part b in frame 2 (textbook two-colour ten-frames, enables make-ten).
+ *
+ * Merge sequence (spec §4, every correct answer; celebrate() plays it before the cheer):
+ *   n ≤ 10            the two rods squash together and pop out as the single rod n; the frame cells
+ *                     recolour to rod n; equation a + b = n.
+ *   n ≥ 11, a or b 10 the ten's frame flashes, the 10-rod shines; equation 10 + (n − 10) = n.
+ *   n ≥ 11 otherwise  k = 10 − max(a, b) (makeTenMove): the smaller part's LAST k squares lift, in the
+ *                     frames and on the track, and fly to the larger part (on the track the rest of the
+ *                     smaller rod slides over when it sits to the right); the larger frame flashes and
+ *                     turns orange, the larger rod + k squares pop out as the orange 10-rod and the rest as
+ *                     rod n − 10; equation a + b → 10 + (n − 10) → 10 + (n − 10) = n.
+ *   board.frames keeps the logical parts (litA + litB = n); the merged look is stored separately so a
+ *   relayout mid-celebration redraws it.
  */
 import { RODS, makeTenMove } from '../../bonds-logic.js?v=202609250809';
 import { FONT, UI } from '../theme.js?v=202609250809';
 import { fx } from '../fx.js?v=202609250809';
 import { sfx } from '../sfx.js?v=202609250809';
-import { Rod, DPR, dur, tweenP, sleep, worldPos, reparent, darker } from './Rod.js?v=202609250809';
+import { Rod, DPR, dur, tweenP, sleep, worldPos, reparent, darker, drawSquares } from './Rod.js?v=202609250809';
 
 const GO = Phaser.GameObjects;
 const clamp = Phaser.Math.Clamp;
@@ -66,10 +87,15 @@ function dashedRoundRect(g, x, y, w, h, r, dash = 8, gap = 5) {
 }
 
 export class Board extends Phaser.GameObjects.Container {
-  constructor(scene, { panel = true } = {}) {
+  constructor(scene, { panel = true, fast = false } = {}) {
     super(scene, 0, 0);
     scene.add.existing(this);
     this.panel = panel;
+    this.fast = fast;
+    this._cellHex = null; // merged look of the 20 cells (null = derive from the parts)
+    this._eqOverride = null; // merged equation tokens
+    this._eqSeq = 0;
+    this._tmp = []; // loose squares of the drop / merge animations
     this.rect = new Phaser.Geom.Rectangle(0, 0, scene.scale.width, scene.scale.height * 0.65);
     this.trackRect = new Phaser.Geom.Rectangle();
     this.unit = 32;
@@ -169,6 +195,9 @@ export class Board extends Phaser.GameObjects.Container {
     const s = this.scene;
     this._qid++;
     this._cancelMakeTen();
+    this._clearTmp();
+    this._cellHex = null;
+    this._eqOverride = null;
     this.q = { type: q.type, n: q.n, a: q.a, b: q.b != null ? q.b : q.n - q.a };
     this.labels = labels;
     this.step = q.type === 'break' ? 'cut' : 'build';
@@ -185,6 +214,7 @@ export class Board extends Phaser.GameObjects.Container {
     const G = this.g;
     if (this.step === 'build') {
       this.rodA = new Rod(s, G.x0, G.trackY, this.q.a, { unit: G.unit, labels });
+      this.rodA._off = 0;
       this.track.rodsC.add(this.rodA);
     }
     this._renderAll(true);
@@ -214,6 +244,7 @@ export class Board extends Phaser.GameObjects.Container {
     const q = this.q;
     if (!q) return null;
     if (this.step === 'cut' || this.step === 'cutting') return 'cut';
+    if (this._eqOverride) return this._eqOverride;
     const A = { k: 'chip', v: q.a, len: q.a }, N = { k: 'num', v: q.n };
     const B = this._answered ? { k: 'chip', v: q.b, len: q.b, box: true } : { k: 'box' };
     if (q.type === 'build') return [A, { k: 'op', v: '+' }, B, { k: 'op', v: '=' }, N];
@@ -251,6 +282,7 @@ export class Board extends Phaser.GameObjects.Container {
 
   _renderEq(anim, tokens = this._eqTokens()) {
     const s = this.scene, G = this.g;
+    this._eqSeq++; // cancels a pending _morphEq
     clearLayer(s, this.eqLayer);
     this._eqToks = [];
     if (!tokens) return;
@@ -289,7 +321,8 @@ export class Board extends Phaser.GameObjects.Container {
   _morphEq(tokens) {
     const s = this.scene, old = this._eqToks || [];
     if (!old.length) { this._renderEq(true, tokens); return; }
-    s.tweens.add({ targets: old, scale: 0.6, alpha: 0, duration: dur(120), ease: 'Quad.easeIn', onComplete: () => { if (this.active) this._renderEq(true, tokens); } });
+    const seq = ++this._eqSeq; // the latest morph / render wins
+    s.tweens.add({ targets: old, scale: 0.6, alpha: 0, duration: dur(120), ease: 'Quad.easeIn', onComplete: () => { if (this.active && seq === this._eqSeq) this._renderEq(true, tokens); } });
   }
 
   // ------------------------------------------------------------------ bond diagram
@@ -394,6 +427,7 @@ export class Board extends Phaser.GameObjects.Container {
   _cellMode(i) {
     const q = this.q;
     if (!q || this.step === 'cut' || this.step === 'cutting') return null;
+    if (this._cellHex && this._cellHex[i] !== undefined) return this._cellHex[i];
     for (const part of ['a', 'b']) {
       const len = q[part];
       for (let j = 0; j < len; j++) {
@@ -588,8 +622,9 @@ export class Board extends Phaser.GameObjects.Container {
   _placeRods() {
     const t = this.track, G = this.g;
     if (!t) return;
-    for (const [rod, off] of [[this.rodA, 0], [this.rodB, this.q ? this.q.a : 0]]) {
+    for (const [rod, def] of [[this.rodA, 0], [this.rodB, this.q ? this.q.a : 0]]) {
       if (!rod || !rod.active || rod.parentContainer !== t.rodsC) continue;
+      const off = rod._off != null ? rod._off : def;
       if (rod.unit !== G.unit) rod.setUnit(G.unit);
       rod.setPosition(G.x0 + off * G.unit, G.trackY).setScale(1);
       rod.home = { x: rod.x, y: rod.y };
@@ -633,6 +668,7 @@ export class Board extends Phaser.GameObjects.Container {
     t.logC.setVisible(false);
     clearLayer(s, t.labelsC);
     const rA = new Rod(s, G.x0, ty, k, { unit: u, labels: this.labels });
+    rA._off = 0;
     const rB = new Rod(s, cx, ty, q.n - k, { unit: u, labels: this.labels });
     t.rodsC.add([rA, rB]);
     rA.mood('happy', 700); rB.mood('happy', 700);
@@ -669,6 +705,7 @@ export class Board extends Phaser.GameObjects.Container {
     this._answered = true;
     this._lit.b = q.b;
     this.rodB = rod;
+    rod._off = q.a;
     rod._busy = true;
     reparent(rod, null);
     rod.setDepth(50);
@@ -683,7 +720,6 @@ export class Board extends Phaser.GameObjects.Container {
     rod.mood('happy', 800);
     if (this.rodA && this.rodA.active) this.rodA.mood('happy', 800);
     t.gapG.clear(); t.flashG.clear();
-    this._lightCells('b', q.b, { tick0: q.a });
     this._renderEq(false);
     const box = (this._eqToks || []).find(o => o.tok && o.tok.box);
     if (box) {
@@ -696,6 +732,7 @@ export class Board extends Phaser.GameObjects.Container {
       this.parts.b.setScale(0.4);
       s.tweens.add({ targets: this.parts.b, scale: 1, duration: dur(280), ease: 'Back.easeOut' });
     }
+    await this._dropSquares(qid);
   }
 
   rejectAt() {
@@ -744,60 +781,330 @@ export class Board extends Phaser.GameObjects.Container {
   }
 
   async celebrate() {
-    const s = this.scene, q = this.q, t = this.track, G = this.g;
+    const s = this.scene, q = this.q, t = this.track;
     if (!q || !t) return;
+    const qid = this._qid, fast = this.fast;
+    const ok = () => qid === this._qid && this.active && t.active;
     this.step = 'done';
     this._cancelMakeTen();
+    if (this._answered) await this._merge(qid);
+    if (!ok()) return;
+    const G = this.g;
     const rods = [this.rodA, this.rodB].filter(r => r && r.active);
     rods.forEach((r, i) => { r.mood('happy', 1000); s.time.delayedCall(i * 110, () => r.glow()); });
     const midX = G.x0 + (G.n * G.unit) / 2 + t.x;
-    fx.burst(s, midX, G.trackY, { count: 14 });
+    fx.burst(s, midX, G.trackY, { count: fast ? 8 : 14 });
     sfx.star(2);
     // bond lines draw on in green, circles pulse
-    const lp = { p: 0 }, qid = this._qid;
+    const lp = { p: 0 };
     s.tweens.add({ targets: lp, p: 1, duration: dur(300), ease: 'Quad.easeOut', onUpdate: () => { if (qid === this._qid) this._drawLines(lp.p, UI.good, 0.95); } });
     const pulse = [this.wholeC, ...(this.parts ? [this.parts.a, this.parts.b] : [])].filter(Boolean);
     s.tweens.add({ targets: pulse, scale: 1.15, duration: dur(130), yoyo: true, ease: 'Quad.easeOut' });
     (this._eqToks || []).forEach((o, i) => s.tweens.add({ targets: o, scale: 1.15, delay: i * 40, duration: dur(110), yoyo: true }));
     if (q.type === 'build') {
-      await sleep(s, 140);
-      if (!t.active) return;
+      await sleep(s, this._ms(120, 20));
+      if (!ok()) return;
       const eng = this._makeEngine();
       t.add(eng);
       eng.setScale(0.2);
-      s.tweens.add({ targets: eng, scale: 1, duration: dur(160), ease: 'Back.easeOut' });
+      s.tweens.add({ targets: eng, scale: 1, duration: this._ms(160, 100), ease: 'Back.easeOut' });
       sfx.toot();
-      await sleep(s, 120);
-      if (!t.active) return;
+      await sleep(s, this._ms(100, 30));
+      if (!ok()) return;
       t._leaving = true;
       this._rollIn = true;
       const dist = s.scale.width - (G.x0 - 20) + 40;
       const puff = () => { if (t.active) { const w = worldPos(eng); fx.puff(s, w.x + eng.chimney.x, w.y + eng.chimney.y); } };
       puff();
-      [120, 240, 360].forEach(ms => s.time.delayedCall(ms, puff));
-      s.tweens.add({ targets: t, x: t.x + dist, duration: dur(420), ease: 'Cubic.easeIn', onComplete: () => { killDeep(s, t); t.destroy(); } });
-      await sleep(s, 280);
+      if (!fast) [120, 240, 360].forEach(ms => s.time.delayedCall(ms, puff));
+      s.tweens.add({ targets: t, x: t.x + dist, duration: this._ms(420, 320), ease: 'Cubic.easeIn', onComplete: () => { killDeep(s, t); t.destroy(); } });
+      await sleep(s, this._ms(260, 120));
     } else {
-      await sleep(s, 160);
-      if (!this.parts) return;
-      const tgt = [['a', this.rodA], ['b', this.rodB]];
-      tgt.forEach(([p, rod], i) => {
-        if (!rod || !rod.active) return;
+      // break: the merged rods (the whole again) hop into the whole circle as one train
+      await sleep(s, this._ms(160, 30));
+      if (!ok()) return;
+      const wc = this.wholeC, u = G.unit;
+      const L = rods.reduce((m, r) => Math.max(m, (r._off || 0) + r.len), 0) * u;
+      const sc = Math.min(1, (G.R * 1.8) / Math.max(1, L));
+      const hop = this._ms(320, 180);
+      rods.forEach((rod, i) => {
         reparent(rod, this.fxLayer);
-        const pc = this.parts[p];
-        const sc = Math.min(1, (G.r * 1.8) / (rod.len * rod.unit));
-        const tx = pc.x - (rod.len * rod.unit * sc) / 2;
-        s.tweens.add({ targets: rod, scaleX: sc, scaleY: sc, duration: dur(320), delay: i * 60, ease: 'Quad.easeOut' });
-        s.time.delayedCall(i * 60, () => rod.arcTo(tx, pc.y, { height: 40, duration: 320 }).then(() => {
+        const tx = wc.x - (L * sc) / 2 + (rod._off || 0) * u * sc;
+        rod.arcTo(tx, wc.y, { height: 40, duration: this.fast ? 180 : 320 }).then(() => {
           if (!rod.active) return;
           sfx.tick(6 + i * 3);
-          if (pc.active) s.tweens.add({ targets: pc, scale: 1.2, duration: 90, yoyo: true });
+          if (i === 0 && wc.active) s.tweens.add({ targets: wc, scale: 1.2, duration: 90, yoyo: true });
           s.tweens.add({ targets: rod, alpha: 0, duration: 160, onComplete: () => rod.destroy() });
-        }));
+        });
+        s.tweens.add({ targets: rod, scaleX: sc, scaleY: sc, duration: hop, ease: 'Quad.easeOut' }); // after arcTo (it kills the rod's tweens)
       });
       this.rodA = this.rodB = null;
-      await sleep(s, 400);
+      await sleep(s, this._ms(400, 180));
     }
+  }
+
+  // ------------------------------------------------------------------ merge sequence helpers
+  /** Duration for the full (levels) or fast (Rush) sequence, halved under reduced motion. */
+  _ms(full, fast) { return dur(this.fast ? fast : full); }
+
+  _keep(o) { this._tmp.push(o); return o; }
+
+  _clearTmp() {
+    const s = this.scene;
+    for (const o of this._tmp) if (o && o.active) { if (s && s.tweens) s.tweens.killTweensOf(o); o.destroy(); }
+    this._tmp = [];
+  }
+
+  _drop(o) {
+    if (o && o.active) { this.scene.tweens.killTweensOf(o); o.destroy(); }
+    const i = this._tmp.indexOf(o);
+    if (i >= 0) this._tmp.splice(i, 1);
+  }
+
+  /** Parabolic hop of `obj` from a to b (`ms` already scaled), optional scale s0 → s1 on the way. */
+  _hop(obj, a, b, ms, h, { delay = 0, s0 = null, s1 = null } = {}) {
+    const st = { t: 0 };
+    return tweenP(this.scene, {
+      targets: st, t: 1, delay, duration: ms, ease: 'Sine.easeInOut',
+      onUpdate: () => {
+        if (!obj.active) return;
+        const k = st.t;
+        obj.setPosition(a.x + (b.x - a.x) * k, a.y + (b.y - a.y) * k - 4 * h * k * (1 - k));
+        if (s0 != null) obj.setScale(s0 + (s1 - s0) * k);
+      },
+    });
+  }
+
+  /** World centre of track square `off` (0-based, counted from the left end of the rail). */
+  _trackSq(off) {
+    const G = this.g, t = this.track;
+    return { x: G.x0 + (off + 0.5) * G.unit + (t ? t.x : 0), y: G.trackY + (t ? t.y : 0) };
+  }
+
+  /** Snapshot of every cell's current look, so the merge can repaint single cells. */
+  _freezeCells() {
+    if (this._cellHex) return;
+    const m = [];
+    for (let i = 0; i < 20; i++) m.push(this._cellMode(i));
+    this._cellHex = m;
+  }
+
+  /** Repaint cell i (logical + on screen), with a little pop. */
+  _paintCell(i, mode, pop = true) {
+    if (this._cellHex) this._cellHex[i] = mode;
+    const cg = this._cells[i];
+    if (!cg || !cg.active) return;
+    this._drawCell(cg, mode);
+    if (pop && mode != null) {
+      this.scene.tweens.killTweensOf(cg);
+      cg.setScale(1.25);
+      this.scene.tweens.add({ targets: cg, scale: 1, duration: this._ms(160, 100), ease: 'Back.easeOut' });
+    }
+  }
+
+  /** Recolour cells one after another (`step` ms apart). */
+  _recolour(idx, hex, step, qid) {
+    idx.forEach((i, k) => {
+      if (this._cellHex) this._cellHex[i] = hex;
+      this.scene.time.delayedCall(k * step, () => { if (qid === this._qid && this.active) this._paintCell(i, hex); });
+    });
+  }
+
+  /** White flash over ten-frame f (0 or 1). */
+  _flashFrame(f) {
+    const c = this.g.cell, p0 = this._cellPos(f * 10);
+    const g = this._keep(new GO.Graphics(this.scene));
+    this.fxLayer.add(g);
+    g.fillStyle(0xffffff, 0.95).fillRoundedRect(p0.x - c / 2 - 4, p0.y - c / 2 - 4, 5 * c + 8, 2 * c + 8, 8);
+    this.scene.tweens.add({ targets: g, alpha: 0, duration: this._ms(360, 200), onComplete: () => this._drop(g) });
+    fx.sparks(this.scene, p0.x + 2 * c, p0.y + c / 2);
+  }
+
+  _newTrackRod(len, off) {
+    const G = this.g, rod = new Rod(this.scene, G.x0 + off * G.unit, G.trackY, len, { unit: G.unit, labels: this.labels });
+    rod._off = off;
+    rod.home = { x: rod.x, y: rod.y };
+    this.track.rodsC.add(rod);
+    rod.mood('happy', 1400);
+    return rod;
+  }
+
+  /** Squash-pop entrance for a freshly merged rod. */
+  _squashPop(rod) {
+    const s = this.scene;
+    rod.lift.setScale(1.12, 0.55);
+    s.tweens.add({ targets: rod.lift, scaleX: 1, scaleY: 1, duration: this._ms(300, 160), ease: 'Back.easeOut' });
+    const w = worldPos(rod);
+    fx.puff(s, w.x + (rod.len * rod.unit) / 2, w.y + rod.h / 2);
+  }
+
+  _eqSum(x, y, withN = true) {
+    const t = [{ k: 'chip', v: x, len: x }, { k: 'op', v: '+' }, { k: 'chip', v: y, len: y }];
+    if (withN) t.push({ k: 'op', v: '=' }, { k: 'num', v: this.q.n });
+    return t;
+  }
+
+  _setEq(tokens) {
+    this._eqOverride = tokens;
+    if (this.fast) this._renderEq(true, tokens); else this._morphEq(tokens);
+  }
+
+  /** A part already in the frames: its rod shines while its cells pulse left → right. */
+  _pulsePart(part) {
+    const s = this.scene, q = this.q, rod = part === 'a' ? this.rodA : this.rodB;
+    if (rod && rod.active) rod.glow();
+    for (let j = 0; j < q[part]; j++) {
+      const cg = this._cells[this._idx(part, j)];
+      if (!cg || !cg.active) continue;
+      s.tweens.add({ targets: cg, scale: 1.22, delay: dur(j * 22), duration: dur(90), yoyo: true, ease: 'Quad.easeOut' });
+    }
+  }
+
+  /** Step 2: each square travels from its rod square to its ten-frame cell, with a counting tick. */
+  async _dropSquares(qid) {
+    const s = this.scene, q = this.q, G = this.g;
+    const ok = () => qid === this._qid && this.active && this.track;
+    const offs = { a: 0, b: q.a };
+    let pulsed = false;
+    for (const p of ['a', 'b']) if (this._shown[p] >= q[p]) { this._pulsePart(p); pulsed = true; }
+    if (pulsed && !this.fast) { await sleep(s, dur(120)); if (!ok()) return; }
+    for (const p of ['a', 'b']) {
+      const len = q[p], first = this._shown[p];
+      if (first >= len) continue;
+      const cnt = len - first, hex = RODS[len].hex;
+      const step = this._ms(Math.min(55, 300 / Math.max(1, cnt - 1)), Math.min(10, 80 / Math.max(1, cnt - 1)));
+      const travel = this._ms(200, 110), s0 = Math.min(1.8, G.unit / G.cell);
+      let last = null;
+      for (let j = first; j < len; j++) {
+        const i = this._idx(p, j), a = this._trackSq(offs[p] + j), b = this._cellPos(i);
+        const tick = (p === 'b' ? q.a : 0) + j;
+        const mv = this._keep(this._drawCell(new GO.Graphics(s), hex).setPosition(a.x, a.y).setScale(s0).setAlpha(0));
+        this.fxLayer.add(mv);
+        const d = (j - first) * step;
+        s.tweens.add({ targets: mv, alpha: 1, delay: d, duration: 40 });
+        last = this._hop(mv, a, b, travel, G.cell * 0.9, { delay: d, s0, s1: 1 }).then(() => {
+          this._drop(mv);
+          if (qid !== this._qid || !this.active) return;
+          this._shown[p] = Math.max(this._shown[p], j + 1);
+          this._paintCell(i, hex);
+          sfx.tick(tick);
+        });
+      }
+      await last;
+      if (!ok()) return;
+    }
+  }
+
+  /** Step 3: the merge (see the header). */
+  async _merge(qid) {
+    const q = this.q;
+    if (!this.track || !this.track.active) return;
+    this._freezeCells();
+    if (q.n <= 10) return this._fuse(qid);
+    if (q.a === 10 || q.b === 10) return this._tenFlash(qid);
+    return this._makeTen(qid);
+  }
+
+  /** n ≤ 10: both rods squash together and pop out as rod n; cells recolour to rod n. */
+  async _fuse(qid) {
+    const s = this.scene, q = this.q, n = q.n;
+    const ok = () => qid === this._qid && this.active && this.track && this.track.active;
+    if (q.type === 'break') this._setEq(this._eqSum(q.a, q.b));
+    const rods = [this.rodA, this.rodB].filter(r => r && r.active);
+    rods.forEach(r => { s.tweens.killTweensOf(r.lift); s.tweens.add({ targets: r.lift, scaleY: 0.8, scaleX: 1.05, duration: this._ms(120, 60), ease: 'Quad.easeOut' }); });
+    await sleep(s, this._ms(120, 50));
+    if (!ok()) return;
+    rods.forEach(r => r.destroy());
+    const rod = this._newTrackRod(n, 0);
+    this.rodA = rod; this.rodB = null;
+    this._squashPop(rod);
+    sfx.snap(); sfx.star(1);
+    const idx = [];
+    for (let i = 0; i < n; i++) idx.push(i);
+    this._recolour(idx, RODS[n].hex, this._ms(25, 8), qid);
+    await sleep(s, this._ms(260, 90));
+  }
+
+  /** n ≥ 11 with a 10 part: the ten's frame flashes, the 10-rod shines. */
+  async _tenFlash(qid) {
+    const s = this.scene, q = this.q, tenA = q.a === 10;
+    this._flashFrame(tenA ? 0 : 1);
+    sfx.star(3);
+    const r = tenA ? this.rodA : this.rodB;
+    if (r && r.active) { r.glow(); r.mood('happy', 1200); }
+    if (!(q.type === 'build' && tenA)) this._setEq(this._eqSum(10, q.n - 10));
+    await sleep(s, this._ms(350, 80));
+  }
+
+  /** n ≥ 11, neither part 10: the smaller part's last k squares make the larger part a ten. */
+  async _makeTen(qid) {
+    const s = this.scene, q = this.q, G = this.g, u = G.unit, n = q.n;
+    const ok = () => qid === this._qid && this.active && this.track && this.track.active;
+    const { from, to, count: k } = makeTenMove(q.a, q.b);
+    const lf = q[from], lt = q[to], rest = lf - k; // rest = n − 10 ≥ 1
+    const hexF = RODS[lf].hex;
+    const rc = this.track.rodsC;
+    const rodF = from === 'a' ? this.rodA : this.rodB, rodT = to === 'a' ? this.rodA : this.rodB;
+    const offF = from === 'a' ? 0 : q.a;
+    const off10 = to === 'a' ? 0 : rest, offRest = to === 'a' ? 10 : 0;
+    if (q.type === 'break') this._setEq(this._eqSum(q.a, q.b));
+    // track: the smaller rod becomes loose squares (the rest as one block, the last k one by one)
+    const restG = this._keep(drawSquares(new GO.Graphics(s), rest, u, hexF, 0).setPosition(G.x0 + offF * u, G.trackY));
+    const sqs = [];
+    for (let m = 0; m < k; m++) sqs.push(this._keep(drawSquares(new GO.Graphics(s), 1, u, hexF, -u / 2).setPosition(G.x0 + (offF + rest + m + 0.5) * u, G.trackY)));
+    rc.add([restG, ...sqs]);
+    if (rodF && rodF.active) rodF.destroy();
+    if (rodT && rodT.active) rodT.mood('happy', 1400);
+    sfx.whoosh();
+    const step = this._ms(60, 0), travel = this._ms(240, 160);
+    const liftF = G.cell * 1.6, liftT = u * 1.3;
+    if (to === 'a') s.tweens.add({ targets: restG, x: G.x0 + offRest * u, duration: travel + step * (k - 1), ease: 'Sine.easeInOut' });
+    let last = null;
+    for (let m = 0; m < k; m++) {
+      const src = this._idx(from, rest + m), dst = this._idx(to, lt + m), d = m * step;
+      // frame square
+      const a = this._cellPos(src), b = this._cellPos(dst);
+      const mv = this._keep(this._drawCell(new GO.Graphics(s), hexF).setPosition(a.x, a.y));
+      this.fxLayer.add(mv);
+      s.time.delayedCall(d, () => { if (qid === this._qid && this.active) this._paintCell(src, null, false); });
+      // track square (local coords inside the track)
+      // to a (left): over the sliding rest onto a's right end; to b (right): a hop in place onto b's left end
+      const sq = sqs[m], ta = { x: sq.x, y: sq.y }, tb = { x: G.x0 + ((to === 'a' ? lt : rest) + m + 0.5) * u, y: G.trackY };
+      this._hop(sq, ta, tb, travel, liftT, { delay: d });
+      last = this._hop(mv, a, b, travel, liftF, { delay: d }).then(() => {
+        this._drop(mv);
+        if (qid !== this._qid || !this.active) return;
+        this._paintCell(dst, hexF);
+        sfx.tick(10 + m);
+      });
+    }
+    await last;
+    await sleep(s, this._ms(40, 0));
+    if (!ok()) return;
+    // the larger frame flashes and becomes an orange ten; the rest recolours to rod n − 10
+    const fTo = to === 'a' ? 0 : 1, fFrom = 1 - fTo;
+    this._flashFrame(fTo);
+    const tens = [], rests = [];
+    for (let c = 0; c < 10; c++) tens.push(fTo * 10 + c);
+    for (let j = 0; j < rest; j++) rests.push(fFrom * 10 + j);
+    this._recolour(tens, RODS[10].hex, this._ms(18, 5), qid);
+    this._recolour(rests, RODS[rest].hex, this._ms(30, 5), qid);
+    sfx.star(3);
+    // track: the larger rod + k squares → orange 10-rod, the rest → rod n − 10
+    if (rodT && rodT.active) rodT.destroy();
+    [restG, ...sqs].forEach(o => this._drop(o));
+    const ten = this._newTrackRod(10, off10), rr = this._newTrackRod(rest, offRest);
+    this._squashPop(ten); this._squashPop(rr);
+    [this.rodA, this.rodB] = off10 === 0 ? [ten, rr] : [rr, ten];
+    // equation: a + b → 10 + (n − 10) → 10 + (n − 10) = n
+    if (this.fast) this._setEq(this._eqSum(10, n - 10));
+    else {
+      this._setEq(this._eqSum(10, n - 10, false));
+      await sleep(s, dur(180));
+      if (!ok()) return;
+      this._setEq(this._eqSum(10, n - 10));
+    }
+    await sleep(s, this._ms(120, 60));
   }
 
   // ------------------------------------------------------------------ make-ten hint
@@ -812,7 +1119,7 @@ export class Board extends Phaser.GameObjects.Container {
 
   async playMakeTen() {
     const q = this.q;
-    if (!q || !(this.step === 'build' || this.step === 'answer' || this.step === 'done') || this._mt) return;
+    if (!q || !(this.step === 'build' || this.step === 'answer') || this._answered || this._mt) return;
     const mv = makeTenMove(q.a, q.b);
     if (!mv) return;
     const s = this.scene, qid = this._qid;
@@ -847,10 +1154,7 @@ export class Board extends Phaser.GameObjects.Container {
       } else obj = ghosts[from][j];
       movers.push({ obj, src: this._cellPos(srcI), dst: this._cellPos(dstI) });
     }
-    const hop = (obj, a, b, ms, h) => {
-      const st = { t: 0 };
-      return tweenP(s, { targets: st, t: 1, duration: dur(ms), ease: 'Sine.easeInOut', onUpdate: () => { if (obj.active) obj.setPosition(a.x + (b.x - a.x) * st.t, a.y + (b.y - a.y) * st.t - 4 * h * st.t * (1 - st.t)); } });
-    };
+    const hop = (obj, a, b, ms, h) => this._hop(obj, a, b, dur(ms), h);
     const lift = this.g.cell * 1.6;
     for (let m = 0; m < movers.length; m++) {
       const mvr = movers[m];
@@ -895,6 +1199,7 @@ export class Board extends Phaser.GameObjects.Container {
   destroy(fromScene) {
     this._qid++;
     if (this._mt) this._mt.alive = false;
+    this._tmp = [];
     if (this.scene && this.scene.tweens) killDeep(this.scene, this);
     super.destroy(fromScene);
   }

@@ -4,7 +4,7 @@ import { WORLDS, RODS, LEVEL_COUNT, levelKey, isWorldOpen, isLevelOpen, isRushOp
 import { UI, WORLD_THEME, textStyle } from '../theme.js?v=202609251524';
 import { fx } from '../fx.js?v=202609251524';
 import { sfx } from '../sfx.js?v=202609251524';
-import { domLeft, roundButton } from '../ui/Chrome.js?v=202609251524';
+import { domLeft, roundButton, starPts } from '../ui/Chrome.js?v=202609251524';
 
 const PER_WORLD = LEVEL_COUNT + 1; // levels 1..6 + boss house
 // Horizontal position (0..1 of the track span) of level 1..6 and the boss in each world. Each world's
@@ -23,6 +23,12 @@ const DECOR = {
 };
 const LIVELY = new Set(['🦋', '🐞', '🦀', '🦉', '🐿️', '🐧']);
 const BALLAST = { 1: 0xe9d8a6, 2: 0xc9a86a, 3: 0xcdb892, 4: 0xcbd5e1 };
+// Medal for a cleared station's best stars: 3★ gold, 2★ silver, 1★ bronze.
+const MEDAL = {
+  3: { face: 0xfacc15, rim: 0xb45309, deep: 0xd97706, lite: 0xfef9c3, ribA: 0xef4444, ribB: 0x2563eb },
+  2: { face: 0xe2e8f0, rim: 0x475569, deep: 0x94a3b8, lite: 0xffffff, ribA: 0x2563eb, ribB: 0x93c5fd },
+  1: { face: 0xe29a5e, rim: 0x7c2d12, deep: 0xb45f2b, lite: 0xfde2c8, ribA: 0x16a34a, ribB: 0x86efac },
+};
 const LOCK_TEXT = {
   teacher: ['🔒 老師未開放', 'Locked'],
   house: ['🔒 打敗上一個世界的屋', 'Beat the previous house'],
@@ -82,6 +88,9 @@ function makeStickerRod(scene, x, y, len, unit) {
   return holder;
 }
 
+// Start data: { focusW?, justDone?: { key, stars, newBest, prev?, sticker }, goTo?: { w, level: 1..6 | 'boss' } }.
+// justDone plays the after-win sequence (medal award, fog, train to the next station, sticker); goTo ("Next" from a
+// level) then chugs the train on to that station and opens it.
 export class MapScene extends Phaser.Scene {
   constructor() { super('Map'); }
   init(data) { this.startData = data || {}; this.firstBuild = true; }
@@ -114,12 +123,14 @@ export class MapScene extends Phaser.Scene {
     const L = this.L, H0 = this.scale.height;
     const frac = (this.cam.scrollY + H0 / 2) / L.mapH;
     const bookOpen = !!this.book;
+    const target = this.travelTarget ? this.travelTarget.idx : -1; // a trip (or the Next sequence) was under way
     this.tweens.killAll(); this.time.removeAllEvents();
     this.children.list.slice().forEach(o => o.destroy());
     this.__fxLive = { n: 0 };
     this.book = null; this.drag = null; this.vel = 0;
     this.build();
     this.cam.scrollY = this.clampScroll(frac * this.L.mapH - this.scale.height / 2);
+    if (target >= 0) { this.openNode(this.L.nodes[target]); return; } // the resize cut the trip short: open the stage now
     if (bookOpen) this.openBook(null, true);
   }
 
@@ -159,6 +170,7 @@ export class MapScene extends Phaser.Scene {
     for (const n of nodes) {
       n.stars = this.P.levels[n.key] || 0;
       n.open = n.stars > 0 || isLevelOpen(this.P, n.w, n.level, this.unlock, this.test);
+      n.medal = clamp(n.stars, 0, 3);
     }
     this.worldOpen = w => isWorldOpen(this.P, w, this.unlock, this.test);
 
@@ -188,10 +200,20 @@ export class MapScene extends Phaser.Scene {
         const m = /^w(\d)-boss$/.exec(jd.key);
         const k = m ? Number(m[1]) : 0;
         const fogW = k && k < 4 && jd.sticker === k && !this.test && this.worldOpen(k + 1) ? k + 1 : 0;
-        plan = { from, to, fogW, sticker: jd.sticker || null };
+        // Medal award: test mode saves nothing, so the finished station shows at least this run's stars.
+        from.medal = clamp(Math.max(from.stars, Math.round(Number(jd.stars) || 0)), 0, 3);
+        const award = !!jd.newBest && from.medal > 0;
+        const prevMedal = award ? clamp(Math.round(Number(jd.prev) || 0), 0, from.medal - 1) : from.medal;
+        // "Next" from a level: after the win sequence the train carries on to goTo and opens it.
+        const g = this.startData.goTo;
+        const goKey = g && g.w >= 1 && g.w <= 4 && (g.level === 'boss' || (g.level >= 1 && g.level <= LEVEL_COUNT)) ? levelKey(g.w, g.level) : null;
+        const goTo = goKey ? nodes.find(n => n.key === goKey && n.open) || null : null;
+        plan = { from, to, fogW, sticker: jd.sticker || null, award, prevMedal, goTo };
       }
     }
     this.plan = plan;
+    this.traveling = !!(plan && plan.goTo); // the Next sequence runs on its own: taps wait until the stage opens
+    this.travelTarget = plan && plan.goTo ? plan.goTo : null;
 
     this.layers = {};
     this.fogs = {};
@@ -452,39 +474,40 @@ export class MapScene extends Phaser.Scene {
     }
     const g = this.add.graphics();
     body.add(g);
+    // Before a justDone award the finished station still wears its old medal (or none); awardMedal() upgrades it.
+    const shown = this.plan && this.plan.from === n && this.plan.award ? this.plan.prevMedal : n.medal;
     if (boss) this.drawHouse(g, body, n, th);
     else {
-      const fill = !n.open ? 0xd1d5db : n.stars ? th.accent : 0xffffff;
-      g.fillStyle(fill, 1).fillCircle(0, 0, r);
-      g.lineStyle(5, !n.open ? 0x9ca3af : n.stars ? 0xffffff : th.accent, 1).strokeCircle(0, 0, r);
-      g.fillStyle(0xffffff, n.open && !n.stars ? 0.0 : 0.3).fillEllipse(-r * 0.3, -r * 0.42, r * 0.8, r * 0.4);
-      if (n.open) body.add(this.add.text(0, 1, String(n.level), textStyle(r * 1.05, n.stars ? '#ffffff' : css(th.accent), { padding: { x: 2, y: 4 } })).setOrigin(0.5));
+      this.drawLevelFace(g, n, shown);
+      if (n.open) body.add(this.add.text(0, 1, String(n.level), textStyle(r * 1.05, n.medal ? '#ffffff' : css(th.accent), { padding: { x: 2, y: 4 } })).setOrigin(0.5));
       else body.add(this.add.text(0, 0, '🔒', { fontSize: `${Math.round(r * 0.9)}px`, padding: { x: 2, y: 4 } }).setOrigin(0.5));
     }
+    n.faceG = g;
     c.add(body);
-    if (n.stars > 0) {
-      const sy = boss ? r * 1.35 : r + 11, gapX = r * 0.7;
-      for (let k = 0; k < 3; k++) {
-        const got = k < n.stars;
-        c.add(this.add.image((k - 1) * gapX, sy, 'star').setScale(0.62).setTint(got ? 0x92400e : 0x64748b).setAlpha(got ? 1 : 0.35));
-        c.add(this.add.image((k - 1) * gapX, sy, 'star').setScale(0.5).setTint(got ? UI.gold : 0xffffff).setAlpha(got ? 1 : 0.7));
-      }
+    n.medalView = null;
+    if (n.medal > 0) { // the "done" signal: a medal hanging at the station's lower right
+      const R = boss ? r * 0.66 : r * 0.6;
+      const m = this.makeMedal(shown || n.medal, R);
+      if (boss) m.setPosition(r * 1.0, -r * 0.2).setAngle(-16);
+      else m.setPosition(r * 0.5, r * 0.62).setAngle(-24);
+      m.rest = m.angle;
+      if (!shown) m.setScale(0); // first clear: pops in with the award
+      body.add(m);
+      if (!fx.lessMotion) this.tweens.add({ targets: m, angle: m.rest + 7, duration: 1500 + (n.idx % 5) * 90, yoyo: true, repeat: -1, ease: 'Sine.easeInOut', delay: (n.idx * 211) % 1500 });
+      n.medalView = m;
     }
     if (n.open) this.tweens.add({ targets: body, y: { from: -3, to: 3 }, duration: 1200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut', delay: (n.idx * 173) % 1200 });
 
     const hs = boss ? r * 3 : r * 2 + 20;
     c.setSize(hs, hs).setInteractive({ hitArea: new Phaser.Geom.Circle(hs / 2, hs / 2, hs / 2), hitAreaCallback: Phaser.Geom.Circle.Contains, useHandCursor: n.open });
-    c.on('pointerdown', () => { if (!this.book) this.tweens.add({ targets: body, scale: 0.88, duration: 70 }); });
+    c.on('pointerdown', () => { if (!this.book && !this.traveling && !this.leaving) this.tweens.add({ targets: body, scale: 0.88, duration: 70 }); });
     c.on('pointerout', () => { body.setScale(1); });
     c.on('pointerup', () => {
       body.setScale(1);
       if (!this.tapOK()) return;
       if (n.open) {
-        sfx.whoosh();
         this.tweens.add({ targets: body, scale: 1.2, duration: 120, yoyo: true });
-        fx.burst(this, n.x, n.y, { count: 8 });
-        if (boss) this.leave('House', { w: n.w });
-        else this.leave('Level', { w: n.w, level: n.level });
+        this.travelTo(n, () => this.openNode(n));
       } else {
         sfx.bonk(); this.wobble(body);
         fx.floatText(this, n.x, n.y - r, '🔒', '#64748b');
@@ -492,6 +515,107 @@ export class MapScene extends Phaser.Scene {
     });
     n.view = c; n.body = body;
     return c;
+  }
+
+  /** Level station face: grey when locked, white with a world-accent rim when open, accent fill with a medal-coloured rim when cleared. */
+  drawLevelFace(g, n, tier) {
+    const r = this.L.r, th = WORLD_THEME[n.w], done = n.medal > 0;
+    g.clear();
+    g.fillStyle(!n.open ? 0xd1d5db : done ? th.accent : 0xffffff, 1).fillCircle(0, 0, r);
+    if (tier) {
+      const M = MEDAL[tier];
+      g.lineStyle(6, M.face, 1).strokeCircle(0, 0, r);
+      g.lineStyle(1.5, M.rim, 0.85).strokeCircle(0, 0, r + 3).strokeCircle(0, 0, r - 3);
+    } else g.lineStyle(5, !n.open ? 0x9ca3af : done ? 0xffffff : th.accent, 1).strokeCircle(0, 0, r);
+    g.fillStyle(0xffffff, n.open && !done ? 0.0 : 0.3).fillEllipse(-r * 0.3, -r * 0.42, r * 0.8, r * 0.4);
+  }
+
+  // ---------------------------------------------------------------- medals
+  /** A hanging medal: the container sits at the ribbon's pin, the disc hangs L below it (so an angle tween swings it). */
+  makeMedal(tier, R) {
+    const m = this.add.container(0, 0);
+    const g = this.add.graphics();
+    m.add(g);
+    m.g = g; m.R = R; m.Lh = R * 1.55; m.tier = tier;
+    this.drawMedal(m, tier);
+    return m;
+  }
+
+  drawMedal(m, tier) {
+    const g = m.g, R = m.R, L = m.Lh, M = MEDAL[tier];
+    m.tier = tier;
+    g.clear();
+    // ribbon: two crossed tails from the pin down behind the disc
+    const tail = (sx, col, stripe) => {
+      const pts = [{ x: sx * 0.9 * R, y: 0 }, { x: sx * 0.28 * R, y: 0 }, { x: -sx * 0.3 * R, y: L - 0.3 * R }, { x: sx * 0.3 * R, y: L - 0.3 * R }];
+      g.fillStyle(col, 1).fillPoints(pts, true);
+      g.lineStyle(Math.max(1.5, R * 0.14), stripe, 0.9).lineBetween(sx * 0.59 * R, 0, 0, L - 0.3 * R);
+      g.lineStyle(1, 0x000000, 0.3).strokePoints(pts, true, true);
+    };
+    tail(-1, M.ribA, M.ribB);
+    tail(1, M.ribB, M.ribA);
+    g.fillStyle(0x475569, 1).fillRoundedRect(-0.95 * R, -0.22 * R, 1.9 * R, 0.36 * R, 0.12 * R); // pin bar
+    // disc: shadow, rim, face, inner ring
+    g.fillStyle(0x000000, 0.22).fillCircle(1.5, L + 2.5, R);
+    g.fillStyle(M.rim, 1).fillCircle(0, L, R);
+    g.fillStyle(M.deep, 1).fillCircle(0, L, R * 0.88);
+    g.fillStyle(M.face, 1).fillCircle(0, L, R * 0.8);
+    g.lineStyle(Math.max(1, R * 0.07), M.deep, 0.8).strokeCircle(0, L, R * 0.64);
+    // embossed star: light edge up-left, dark edge down-right, face on top
+    const sr = R * 0.5, e = Math.max(0.8, R * 0.07);
+    g.fillStyle(M.lite, 1).fillPoints(starPts(sr, -e, L - e), true);
+    g.fillStyle(M.rim, 0.75).fillPoints(starPts(sr, e, L + e), true);
+    g.fillStyle(mix(M.face, 0xffffff, 0.25), 1).fillPoints(starPts(sr, 0, L), true);
+    // shine
+    g.fillStyle(0xffffff, 0.65).fillEllipse(-R * 0.36, L - R * 0.42, R * 0.52, R * 0.24);
+    g.fillStyle(0xffffff, 0.9).fillCircle(R * 0.42, L - R * 0.46, Math.max(1, R * 0.08));
+  }
+
+  /** Disc centre of a node's medal in world space. */
+  medalAt(n) {
+    const m = n.medalView, a = Phaser.Math.DegToRad(m.angle);
+    return { x: n.x + n.body.x + m.x - m.Lh * Math.sin(a), y: n.y + n.body.y + m.y + m.Lh * Math.cos(a) };
+  }
+
+  /** A white band sweeps diagonally across the disc (clipped to the disc: chord polygons, no mask). */
+  shineMedal(m, times = 1) {
+    if (fx.lessMotion || !m.active) return;
+    const g = this.add.graphics();
+    m.add(g);
+    const R = m.R * 0.8, L = m.Lh, u = { x: Math.SQRT1_2, y: Math.SQRT1_2 }, v = { x: -u.y, y: u.x }, bw = R * 0.45;
+    const chord = d => { const h = Math.sqrt(Math.max(0, R * R - d * d)); return [{ x: d * u.x + h * v.x, y: L + d * u.y + h * v.y }, { x: d * u.x - h * v.x, y: L + d * u.y - h * v.y }]; };
+    const s = { d: -R - bw };
+    this.tweens.add({
+      targets: s, d: R, duration: 420, ease: 'Sine.easeInOut', repeat: times - 1, repeatDelay: 160,
+      onUpdate: () => {
+        g.clear();
+        const d1 = clamp(s.d, -R, R), d2 = clamp(s.d + bw, -R, R);
+        if (d2 - d1 < 0.5) return;
+        const [a, b] = chord(d1), [c2, d] = chord(d2);
+        g.fillStyle(0xffffff, 0.75).fillPoints([a, b, d, c2], true);
+      },
+      onComplete: () => g.destroy(),
+    });
+  }
+
+  /** justDone: a new best pops the medal in (or flips the old one over to the better medal) with a shine and a star sound. */
+  awardMedal(plan) {
+    const n = plan.from, m = n.medalView;
+    if (!m || !plan.award || !m.active) return false;
+    const tier = n.medal, upgrade = plan.prevMedal > 0;
+    const pop = () => {
+      this.drawMedal(m, tier);
+      if (n.level !== 'boss') this.drawLevelFace(n.faceG, n, tier);
+      m.setScale(fx.lessMotion ? 1 : 0.2);
+      this.tweens.add({ targets: m, scale: 1, duration: 420, ease: 'Back.easeOut', easeParams: [3] });
+      sfx.star(tier + 1);
+      const p = this.medalAt(n), M = MEDAL[tier];
+      fx.burst(this, p.x, p.y, { count: tier === 3 ? 14 : 10, tint: [M.face, M.lite, 0xffffff] });
+      this.time.delayedCall(260, () => { if (m.active) { this.shineMedal(m, tier === 3 ? 2 : 1); sfx.star(4); } });
+    };
+    if (upgrade && !fx.lessMotion) this.tweens.add({ targets: m, scaleX: 0, duration: 140, ease: 'Sine.easeIn', onComplete: pop });
+    else pop();
+    return true;
   }
 
   drawHouse(g, body, n, th) {
@@ -630,43 +754,105 @@ export class MapScene extends Phaser.Scene {
     this.tweens.add({ targets: p, y: p.y - 26, x: p.x - dir * 6, scale: 0.75, alpha: 0, duration: 950, ease: 'Sine.easeOut', onComplete: () => p.destroy() });
   }
 
-  /** After a win: celebrate the finished station, clear fog of a newly opened world, chug to the next station, show a new sticker. */
+  /** Fraction of the railway's length at a train spot (for constant-speed travel along the spline). */
+  arcU(t) {
+    const ls = this.spline.getLengths(), n = ls.length - 1;
+    return ls[clamp(Math.round(t * n), 0, n)] / ls[n];
+  }
+
+  /** Trip time for the distance between two stations: ~0.5 s next door, ≤ 1.5 s across the map. */
+  travelDur(fromIdx, toIdx) {
+    const len = this.spline.getLength() * Math.abs(this.arcU(this.trainSpot(toIdx).t) - this.arcU(this.trainSpot(fromIdx).t));
+    const d = clamp(350 + len * 0.7, 500, 1500);
+    return fx.lessMotion ? Math.round(d * 0.6) : d;
+  }
+
+  /** Chug the player's train along the railway to station toIdx (toot, steam, camera follows), then onDone. */
+  chug(toIdx, dur, onDone) {
+    const L = this.L, nodes = L.nodes, from = nodes[this.trainIdx], to = nodes[toIdx];
+    const a = this.trainSpot(from.idx), b = this.trainSpot(toIdx);
+    const offA = a.y - from.y, offB = b.y - to.y;
+    const uA = this.arcU(a.t), uB = this.arcU(b.t);
+    this.tweens.killTweensOf(this.train);
+    this.train.setPosition(a.x, a.y);
+    sfx.toot();
+    const u = { v: 0 };
+    let px = this.train.x, lastPuff = 0;
+    this.tweens.add({
+      targets: u, v: 1, duration: dur, ease: 'Sine.easeInOut',
+      onUpdate: () => {
+        const p = this.spline.getPoint(this.spline.getUtoTmapping(uA + (uB - uA) * u.v));
+        this.train.setPosition(p.x, p.y + offA + (offB - offA) * u.v);
+        if (Math.abs(p.x - px) > 0.5) this.train.img.setFlipX(p.x < px);
+        px = p.x;
+        if (this.time.now - lastPuff > 150) { lastPuff = this.time.now; this.steam(); }
+        if (!this.drag) this.cam.scrollY = this.clampScroll(Phaser.Math.Linear(this.cam.scrollY, this.train.y - L.H * 0.55, 0.2));
+      },
+      onComplete: () => {
+        this.trainIdx = toIdx;
+        this.train.setPosition(b.x, b.y);
+        this.train.img.setFlipX(false);
+        fx.puff(this, this.train.x, this.train.y);
+        this.tweens.add({ targets: this.train, y: b.y - 8, duration: 140, yoyo: true });
+        if (onDone) onDone();
+      },
+    });
+  }
+
+  /** Tap on an open station: the train travels there (or hops "ready" if it is already there), then onDone. Taps meanwhile are ignored. */
+  travelTo(n, onDone) {
+    if (this.leaving) return;
+    this.traveling = true; this.travelTarget = n;
+    if (n.idx === this.trainIdx) {
+      sfx.tick(5);
+      const y0 = this.trainSpot(n.idx).y;
+      this.tweens.killTweensOf(this.train);
+      this.train.y = y0;
+      this.tweens.add({ targets: this.train, y: y0 - 12, duration: 150, yoyo: true, ease: 'Quad.easeOut', onComplete: () => { this.steam(); if (onDone) onDone(); } });
+      return;
+    }
+    this.chug(n.idx, this.travelDur(this.trainIdx, n.idx), () => this.time.delayedCall(120, () => { if (onDone) onDone(); }));
+  }
+
+  /** Iris into the station's Level / House. */
+  openNode(n) {
+    if (this.leaving) return;
+    sfx.whoosh();
+    fx.burst(this, n.x, n.y, { count: 8 });
+    if (n.level === 'boss') this.leave('House', { w: n.w });
+    else this.leave('Level', { w: n.w, level: n.level });
+  }
+
+  /**
+   * After a win: award the finished station's medal, clear fog of a newly opened world, chug to the next station,
+   * show a new sticker. With plan.goTo ("Next" from a level) the train carries on to that station and opens it.
+   */
   playWin(plan) {
-    const L = this.L;
     let t = 450;
-    this.time.delayedCall(t, () => { fx.burst(this, plan.from.x, plan.from.y, { count: 12 }); sfx.star(1); });
+    this.time.delayedCall(t, () => { fx.burst(this, plan.from.x, plan.from.y, { count: 12 }); sfx.star(1); this.awardMedal(plan); });
+    if (plan.award) t += 650; // let the medal pop and shine before the train leaves
     if (plan.fogW) { t += 150; this.time.delayedCall(t, () => this.clearFog(plan.fogW)); t += 750; }
+    const go = plan.goTo;
+    const openGo = () => {
+      if (!go || plan.sticker) { this.traveling = false; this.travelTarget = null; return; }
+      if (this.trainIdx === go.idx) this.time.delayedCall(250, () => this.openNode(go));
+      else this.travelTo(go, () => this.openNode(go));
+    };
     if (plan.to) {
       t += 150;
       const dur = fx.lessMotion ? 450 : 1000;
-      this.time.delayedCall(t, () => {
-        const a = this.trainSpot(plan.from.idx), b = this.trainSpot(plan.to.idx);
-        const offA = a.y - plan.from.y, offB = b.y - plan.to.y;
-        sfx.toot();
-        const u = { v: 0 };
-        let px = this.train.x;
-        this.tweens.add({
-          targets: u, v: 1, duration: dur, ease: 'Sine.easeInOut',
-          onUpdate: () => {
-            const p = this.spline.getPoint(a.t + (b.t - a.t) * u.v);
-            this.train.setPosition(p.x, p.y + offA + (offB - offA) * u.v);
-            if (Math.abs(p.x - px) > 0.5) this.train.img.setFlipX(p.x < px);
-            px = p.x;
-            if (!this.drag) this.cam.scrollY = this.clampScroll(Phaser.Math.Linear(this.cam.scrollY, this.train.y - L.H * 0.55, 0.12));
-          },
-          onComplete: () => { this.trainIdx = plan.to.idx; this.train.img.setFlipX(false); fx.puff(this, this.train.x, this.train.y); this.tweens.add({ targets: this.train, y: this.train.y - 8, duration: 140, yoyo: true }); },
-        });
-      });
+      this.time.delayedCall(t, () => this.chug(plan.to.idx, dur, openGo));
       t += dur + 350;
     } else {
       this.time.delayedCall(t + 100, () => this.tweens.add({ targets: this.train, y: this.train.y - 10, duration: 160, yoyo: true, repeat: 1 }));
       t += 500;
+      if (go) this.time.delayedCall(t, openGo);
     }
     if (plan.sticker) this.time.delayedCall(t, () => this.openBook(plan.sticker));
   }
 
   hudButton(x, y, emoji, onTap, sound) {
-    return roundButton(this, { icon: emoji, sound, onTap: () => { if (this.leaving || this.book) return; onTap(); } }).setPosition(x, y);
+    return roundButton(this, { icon: emoji, sound, onTap: () => { if (this.leaving || this.book || this.traveling) return; onTap(); } }).setPosition(x, y);
   }
 
   buildHud() {
@@ -801,7 +987,7 @@ export class MapScene extends Phaser.Scene {
   }
 
   // ---------------------------------------------------------------- input + navigation
-  tapOK() { return !this.leaving && !this.book && (!this.drag || this.drag.moved < 12); }
+  tapOK() { return !this.leaving && !this.book && !this.traveling && (!this.drag || this.drag.moved < 12); }
 
   wobble(target) {
     this.tweens.add({ targets: target, angle: { from: -9, to: 9 }, duration: 70, yoyo: true, repeat: 2, onComplete: () => target.setAngle(0) });
@@ -816,7 +1002,7 @@ export class MapScene extends Phaser.Scene {
   bindInput() {
     const py = p => p.y / this.cam.zoom; // screen y in CSS px (the camera zooms by DPR, see hidpi.js)
     this.input.on('pointerdown', p => {
-      if (this.book || this.leaving || this.drag) return;
+      if (this.book || this.leaving || this.traveling || this.drag) return; // no scrolling while the train travels (the camera follows it)
       this.drag = { id: p.id, y0: py(p), s0: this.cam.scrollY, moved: 0, ly: py(p), lt: performance.now(), v: 0 };
       this.vel = 0;
     });
@@ -839,7 +1025,7 @@ export class MapScene extends Phaser.Scene {
     this.input.on('pointerup', end);
     this.input.on('pointerupoutside', end);
     this.input.on('wheel', (p, over, dx, dy) => {
-      if (this.book || this.leaving) return;
+      if (this.book || this.leaving || this.traveling) return;
       this.vel = 0;
       this.cam.scrollY = this.clampScroll(this.cam.scrollY + dy);
     });

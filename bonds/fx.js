@@ -1,5 +1,5 @@
 // Visual effects shared by all Rod Town scenes. Textures come from BootScene.
-import { FONT } from './theme.js?v=0';
+import { FONT } from './theme.js?v=202609250809';
 const MAX_LIVE = 60;
 // Live-particle budget per scene. Scene objects are reused on restart and a shutdown drops the pending
 // "particles died" timers, so the budget is reset on every shutdown (else it leaks until no fx show).

@@ -30,11 +30,11 @@
  * Ten-frame placement: n ≤ 10 → part a then part b in frame 1 (frame 2 dimmed);
  *   n ≥ 11 → part a in frame 1, part b in frame 2 (textbook two-colour ten-frames, enables make-ten).
  */
-import { RODS, makeTenMove } from '../../bonds-logic.js?v=0';
-import { FONT, UI } from '../theme.js?v=0';
-import { fx } from '../fx.js?v=0';
-import { sfx } from '../sfx.js?v=0';
-import { Rod, DPR, dur, tweenP, sleep, worldPos, reparent, darker } from './Rod.js?v=0';
+import { RODS, makeTenMove } from '../../bonds-logic.js?v=202609250809';
+import { FONT, UI } from '../theme.js?v=202609250809';
+import { fx } from '../fx.js?v=202609250809';
+import { sfx } from '../sfx.js?v=202609250809';
+import { Rod, DPR, dur, tweenP, sleep, worldPos, reparent, darker } from './Rod.js?v=202609250809';
 
 const GO = Phaser.GameObjects;
 const clamp = Phaser.Math.Clamp;

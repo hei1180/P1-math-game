@@ -11,13 +11,13 @@
  * Start data: { w }  (1..4)
  * Test hook: scene.__test = { answer(), mistakes(), n(), floors(), active(), phase(), choose(len) }
  */
-import { WORLDS, houseFor, starsFor, levelKey } from '../../bonds-logic.js?v=0';
-import { UI, WORLD_THEME, textStyle } from '../theme.js?v=0';
-import { fx } from '../fx.js?v=0';
-import { sfx } from '../sfx.js?v=0';
-import { Tray } from '../ui/Tray.js?v=0';
-import { Rod, DPR, dur, sleep, reparent, reducedMotion } from '../ui/Rod.js?v=0';
-import { T, domLeft, backButton, makeBubble, pillButton, drawStarSlot, drawPanel, dropStar, newBestBadge, shineStars } from '../ui/Chrome.js?v=0';
+import { WORLDS, houseFor, starsFor, levelKey } from '../../bonds-logic.js?v=202609250809';
+import { UI, WORLD_THEME, textStyle } from '../theme.js?v=202609250809';
+import { fx } from '../fx.js?v=202609250809';
+import { sfx } from '../sfx.js?v=202609250809';
+import { Tray } from '../ui/Tray.js?v=202609250809';
+import { Rod, DPR, dur, sleep, reparent, reducedMotion } from '../ui/Rod.js?v=202609250809';
+import { T, domLeft, backButton, makeBubble, pillButton, drawStarSlot, drawPanel, dropStar, newBestBadge, shineStars } from '../ui/Chrome.js?v=202609250809';
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 const TRAY_UNIT = 40; // requested; the Tray caps it so all nine rods fit

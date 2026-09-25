@@ -1,7 +1,7 @@
 // Rod Town progress: Firestore bondsProgress/{uid} + localStorage mirror, merged on load.
-import { db } from './shared.js?v=0';
+import { db } from './shared.js?v=202609250809';
 import { doc, getDoc, setDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js';
-import { emptyProgress, mergeProgress } from './bonds-logic.js?v=0';
+import { emptyProgress, mergeProgress } from './bonds-logic.js?v=202609250809';
 
 const lsKey = uid => `bondsProgress:${uid}`;
 const readLocal = uid => { try { return JSON.parse(localStorage.getItem(lsKey(uid)) || 'null'); } catch (e) { return null; } };

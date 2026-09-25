@@ -199,7 +199,8 @@ Answer moments:
 - Build correct: glow sweep along both rods, star burst, bond lines draw on, train toots, steam puffs, rolls out; next train rolls in (overlapping, ≤ 0.6 s input block).
 - Break: saw swipe with sparks on the cut; halves hop onto their diagram circles; step-2 correct as Build.
 - Make-ten hint: the needed units (10 − larger part) lift from the smaller part one by one, arc into the larger part's frame, which becomes an orange 10 with a flash; the equation morphs to `10 + (N − 10)`, then everything eases back to the question.
-- House: floor windows light when filled; on completion lights run bottom → top, door opens, the rod buddy of N waves.
+- House: on completion lights run bottom → top, the door opens and every found floor's train hops out in floor order and cheers in a jumping wave (twin floor spins); the parade stays visible around the end panel. (Owner 2026-09-25: replaces the single sticker buddy, which confused children.)
+- Map: cleared stations wear a medal for their best stars (🥇 3★, 🥈 2★, 🥉 1★); a new or improved medal pops/flips with a shine after a win. Tapping a station makes the train chug there before the stage opens; "Next" returns to the map, awards the medal, chugs to the next stage and opens it.
 
 Flow:
 - Map: parallax clouds, animated water, bobbing nodes, the player's train chugs to the next node after a win; locked worlds under fog that clears with a whoosh when unlocked.

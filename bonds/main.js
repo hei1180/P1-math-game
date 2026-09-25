@@ -1,17 +1,17 @@
 // Rod Town entry: DOM shell wiring, bridge to shared.js, Phaser boot.
 import { signIn, onUser, player, settings, session, enterTestMode, initAudio, engine, resetEngine, registerHit, endFever,
-         startTimer, stopTimer, saveScore, renderLeaderboard, showRankPopup, mountTeacherModal, sharedSound } from '../shared.js?v=202609251524';
-import { recordResult } from '../bonds-logic.js?v=202609251524';
-import { loadProgress, saveProgress, today } from '../bonds-progress.js?v=202609251524';
-import { sfx } from './sfx.js?v=202609251524';
-import { fx } from './fx.js?v=202609251524';
-import { scaleConfig, installHiDPI } from './hidpi.js?v=202609251524';
-import { BootScene } from './scenes/BootScene.js?v=202609251524';
-import { MapScene } from './scenes/MapScene.js?v=202609251524';
-import { LevelScene } from './scenes/LevelScene.js?v=202609251524';
-import { HouseScene } from './scenes/HouseScene.js?v=202609251524';
-import { RushScene } from './scenes/RushScene.js?v=202609251524';
-import { SandboxScene } from './scenes/SandboxScene.js?v=202609251524';
+         startTimer, stopTimer, saveScore, renderLeaderboard, showRankPopup, mountTeacherModal, sharedSound } from '../shared.js?v=202609251810';
+import { recordResult } from '../bonds-logic.js?v=202609251810';
+import { loadProgress, saveProgress, today } from '../bonds-progress.js?v=202609251810';
+import { sfx } from './sfx.js?v=202609251810';
+import { fx } from './fx.js?v=202609251810';
+import { scaleConfig, installHiDPI } from './hidpi.js?v=202609251810';
+import { BootScene } from './scenes/BootScene.js?v=202609251810';
+import { MapScene } from './scenes/MapScene.js?v=202609251810';
+import { LevelScene } from './scenes/LevelScene.js?v=202609251810';
+import { HouseScene } from './scenes/HouseScene.js?v=202609251810';
+import { RushScene } from './scenes/RushScene.js?v=202609251810';
+import { SandboxScene } from './scenes/SandboxScene.js?v=202609251810';
 
 const $ = id => document.getElementById(id);
 // Rush feedback comes from Rod Town's own synth (soft bonk, no buzzer) and obeys its 🔇 button,

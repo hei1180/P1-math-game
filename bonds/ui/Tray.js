@@ -14,7 +14,8 @@
  * Extras:
  *   tray.unit                  the unit actually used after capping (read-only)
  *   tray.setUnit(unit)         change the requested unit and re-arrange (e.g. after board.layout on resize)
- *   tray.setLabels(bool)       show / hide the numbers on all tray rods
+ *   tray.setLabels(bool)       API-compatible: stores the flag and passes it to the rods (rods never show a
+ *                              number since the square-rod redesign, so nothing changes on screen)
  *   tray.enabled               current enabled flag
  * Behaviour notes:
  *   - Horizontal mode packs rods into centred rows (wrapping); vertical mode is a staircase column.

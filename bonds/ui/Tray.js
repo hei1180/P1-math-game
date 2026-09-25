@@ -85,8 +85,8 @@ export class Tray extends Phaser.GameObjects.Container {
   /** Greedy packing for a unit size. */
   _pack(u) {
     const availW = this.rect.width - 2 * PAD;
-    const rodH = Math.max(22, u * 1.4);
-    const pitch = Math.max(48, rodH + 18);
+    const rodH = u; // rods are one square tall (Rod.h); hats/hair reach ≈ 0.45u above
+    const pitch = Math.max(48, u * 1.6 + 12);
     const lens = this.rods.map(r => r.len);
     const rows = [];
     if (this.vertical) {
@@ -102,7 +102,7 @@ export class Tray extends Phaser.GameObjects.Container {
       }
       if (row.length) rows.push(row);
     }
-    return { u, rows, pitch, rodH, height: rows.length * pitch };
+    return { u, rows, pitch, rodH, dy: Math.round(u * 0.22), height: rows.length * pitch }; // dy: centre rods under their hats
   }
 
   _arrange(pop) {
@@ -113,7 +113,7 @@ export class Tray extends Phaser.GameObjects.Container {
       plan = this._pack(u);
       if (plan && plan.height <= availH) break;
     }
-    if (!plan) plan = this._pack(8) || { u: 8, rows: rods.map(r => [r.len]), pitch: 48, rodH: 22, height: rods.length * 48 };
+    if (!plan) plan = this._pack(8) || { u: 8, rows: rods.map(r => [r.len]), pitch: 48, rodH: 8, dy: 2, height: rods.length * 48 };
     this.unit = plan.u;
     if (plan.rows.length) { // spread shelves a little when there is room
       plan.pitch = Math.max(plan.pitch, Math.min(plan.pitch * 1.5, availH / plan.rows.length));
@@ -127,7 +127,7 @@ export class Tray extends Phaser.GameObjects.Container {
     plan.rows.forEach((row, ri) => {
       const rowW = row.reduce((s, l) => s + l * plan.u, 0) + GAP * (row.length - 1);
       let rx = this.vertical ? x + (w - blockW) / 2 : x + (w - rowW) / 2;
-      const ry = top + ri * plan.pitch;
+      const ry = top + ri * plan.pitch + plan.dy;
       for (const len of row) {
         const rod = rods[i++];
         if (rod.unit !== plan.u) rod.setUnit(plan.u);
@@ -154,7 +154,7 @@ export class Tray extends Phaser.GameObjects.Container {
     const blockW = Math.max(0, ...this.rods.map(r => r.len * plan.u));
     plan.rows.forEach((row, ri) => {
       const rowW = this.vertical ? blockW : row.reduce((s, l) => s + l * plan.u, 0) + GAP * (row.length - 1);
-      const py = top + ri * plan.pitch + plan.rodH / 2 + 3;
+      const py = top + ri * plan.pitch + plan.dy + plan.rodH / 2 + 3;
       const px = x + (w - rowW) / 2 - 10;
       g.fillStyle(0xd97706, 0.9).fillRoundedRect(px, py, rowW + 20, 6, 3);
       g.fillStyle(0xfcd34d, 1).fillRoundedRect(px, py, rowW + 20, 3, 2);

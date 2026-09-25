@@ -34,7 +34,8 @@
  *     'cool'/'normal' persist (become the base mood).
  *
  * Shared helpers exported for Tray/Board: DPR, reducedMotion(), dur(ms), tweenP(scene, cfg),
- *   sleep(scene, ms), worldPos(obj), reparent(obj, parentContainer|null), darker(hex, amt).
+ *   sleep(scene, ms), worldPos(obj), reparent(obj, parentContainer|null), darker(hex, amt),
+ *   drawSquares(g, count, unit, hex, left) (the body look, for loose squares).
  *
  * Idle life: breathing (scaleY 1 → 1.03, 1.6 s yoyo), blinks every 2-5 s, pupils follow the
  * pointer (scene 'update' listener, removed in destroy()). Body and accessories are drawn once per
@@ -99,6 +100,30 @@ export function reparent(obj, parent) {
     if (!obj.displayList) obj.addToDisplayList();
     obj.setPosition(p.x, p.y);
   }
+}
+
+/**
+ * Draw `count` joined rod squares (the Rod body look) in colour `hex` into Graphics `g`:
+ * left edge at `left`, vertically centred on y = 0, one square = `u` px. Used by Rod and by the
+ * Board's merge sequence (loose squares that hop between rods).
+ */
+export function drawSquares(g, count, u, hex, left = 0) {
+  const W = count * u, h = u, L = left, T = -h / 2;
+  const white = hex === RODS[1].hex;
+  const edge = white ? 0x94a3b8 : darker(hex, 28);
+  const r = Math.max(2, Math.min(u * 0.22, 9));
+  const b = Math.max(1, u * 0.075); // bevel ring
+  const ri = Math.max(1, Math.min(u * 0.16, 6));
+  g.fillStyle(white ? 0xdfe5ec : darker(hex, 9), 1).fillRoundedRect(L, T, W, h, r);
+  for (let i = 0; i < count; i++) {
+    const x = L + i * u;
+    g.fillStyle(hex, 1).fillRoundedRect(x + b, T + b * 0.7, u - 2 * b, h - b * 1.9, ri);
+    g.fillStyle(0xffffff, white ? 0.9 : 0.3).fillRoundedRect(x + b + ri * 0.4, T + b * 0.7 + Math.max(1, u * 0.04), u - 2 * b - ri * 0.8, h * 0.15, Math.min(ri * 0.6, h * 0.07));
+  }
+  g.lineStyle(Math.max(1, u * 0.045), edge, white ? 0.8 : 0.6);
+  for (let i = 1; i < count; i++) g.lineBetween(L + i * u, T + 1, L + i * u, T + h - 1);
+  g.lineStyle(Math.max(1.5, u * 0.05), edge, 1).strokeRoundedRect(L, T, W, h, r);
+  return g;
 }
 
 const DARK_EYES = new Set([2, 6, 7, 8, 9]); // white eye rims for contrast
@@ -309,8 +334,6 @@ export class Rod extends Phaser.GameObjects.Container {
   _draw() {
     const u = this.unit, len = this.len, W = len * u, h = this.h;
     const hex = RODS[len].hex;
-    const white = len === 1;
-    const edge = white ? 0x94a3b8 : darker(hex, 28);
     const r = Math.max(2, Math.min(u * 0.22, 9));
     this.setSize(W, h);
     this.lift.x = W / 2;
@@ -321,17 +344,7 @@ export class Rod extends Phaser.GameObjects.Container {
     // body: a row of joined squares (linked-cube look)
     const g = this.bodyG; g.clear();
     const L = -W / 2, T = -h / 2;
-    const b = Math.max(1, u * 0.075); // bevel ring
-    const ri = Math.max(1, Math.min(u * 0.16, 6));
-    g.fillStyle(white ? 0xdfe5ec : darker(hex, 9), 1).fillRoundedRect(L, T, W, h, r);
-    for (let i = 0; i < len; i++) {
-      const x = L + i * u;
-      g.fillStyle(hex, 1).fillRoundedRect(x + b, T + b * 0.7, u - 2 * b, h - b * 1.9, ri);
-      g.fillStyle(0xffffff, white ? 0.9 : 0.3).fillRoundedRect(x + b + ri * 0.4, T + b * 0.7 + Math.max(1, u * 0.04), u - 2 * b - ri * 0.8, h * 0.15, Math.min(ri * 0.6, h * 0.07));
-    }
-    g.lineStyle(Math.max(1, u * 0.045), edge, white ? 0.8 : 0.6);
-    for (let i = 1; i < len; i++) g.lineBetween(L + i * u, T + 1, L + i * u, T + h - 1);
-    g.lineStyle(Math.max(1.5, u * 0.05), edge, 1).strokeRoundedRect(L, T, W, h, r);
+    drawSquares(g, len, u, hex, L);
 
     // face geometry (right-end square)
     const f = this._face = {};

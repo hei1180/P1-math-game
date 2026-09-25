@@ -1,0 +1,157 @@
+rules_version = '2';
+
+// Firestore security rules for the P1 maths game site (Firebase project p1-maths).
+//
+// How to apply: Firebase console -> project p1-maths -> Firestore Database ->
+// Rules tab -> paste this whole file -> Publish. See docs/teacher-data-setup.md
+// for a teacher-friendly walkthrough.
+//
+// Collections used by the app today: settings, scores, bondsProgress, attempts.
+// Everything else is denied by default.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---- Shared helpers ----------------------------------------------------
+
+    // Any signed-in Google account (the games require login before they read
+    // or write anything, so "signed in" is the baseline for every rule below).
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Only the class teacher's own Google account, and only once Google has
+    // confirmed that address (Google sign-in always sets this to true, but we
+    // check it anyway so a spoofed/unverified email can never pass as the
+    // teacher).
+    function isTeacher() {
+      return isSignedIn()
+        && request.auth.token.email in ['cyh@clam.edu.hk']
+        && request.auth.token.email_verified == true;
+    }
+
+    // A field that is allowed to be missing, but if present must be null or
+    // a number. Used for the "timed game" vs "level" fields on attempts,
+    // which are mutually exclusive (score/accuracy/maxCombo for timed games,
+    // stars/mistakes for levels) so each side is null on the other kind.
+    function optionalNumber(d, key) {
+      return !(key in d) || d[key] == null || d[key] is number;
+    }
+
+    // A field that is allowed to be missing, but if present must be a string
+    // no longer than maxLen. Keeps free-text fields (names, labels) from
+    // being used to stuff huge payloads into a document.
+    function optionalString(d, key, maxLen) {
+      return !(key in d) || (d[key] is string && d[key].size() <= maxLen);
+    }
+
+    // ---- settings/global -----------------------------------------------------
+    // Global classroom settings (time limits, which levels are unlocked,
+    // trophy cutoffs, the Google Sheet link). Every signed-in player reads
+    // this on load; only the teacher's account may change it, because the
+    // teacher panel is the only thing that writes here (the PIN gate in the
+    // UI is a convenience, this rule is what actually enforces it).
+    match /settings/{doc} {
+      allow read: if isSignedIn();
+      allow write: if isTeacher();
+    }
+
+    // ---- scores/{uid_mode} ----------------------------------------------------
+    // Best score per player per game mode, doc id "<uid>_<mode>", e.g.
+    // "abc123_easy". Read by everyone signed in (leaderboards and "my best
+    // score" both scan the whole collection). A player may only create/update
+    // their OWN doc (uid in the data must match their auth uid, and the doc
+    // id must start with their uid) - never someone else's. Only the teacher
+    // can delete a score.
+    match /scores/{id} {
+      allow read: if isSignedIn();
+
+      allow create, update: if isSignedIn()
+        && request.resource.data.uid == request.auth.uid
+        && id.matches(request.auth.uid + '_.*')
+        && validScore(request.resource.data);
+
+      allow delete: if isTeacher();
+    }
+
+    // Field checks for scores, loose enough to match exactly what shared.js's
+    // saveScore() writes today (playerName, uid, score, maxCombo, accuracy,
+    // mode, timestamp), plus tomorrow's optional "email" field. Never
+    // stricter than the real write - if the app is not sending a field here,
+    // it is not required here.
+    function validScore(d) {
+      return d.keys().hasAll(['playerName', 'uid', 'score', 'maxCombo', 'accuracy', 'mode', 'timestamp'])
+        && d.playerName is string && d.playerName.size() <= 100
+        && d.uid is string
+        && d.score is int && d.score >= 0 && d.score <= 100000
+        && d.maxCombo is int && d.maxCombo >= 0 && d.maxCombo <= 100000
+        && d.accuracy is number && d.accuracy >= 0 && d.accuracy <= 100
+        && d.mode is string && d.mode.size() <= 50
+        && d.timestamp is timestamp
+        && optionalString(d, 'email', 200);
+    }
+
+    // ---- bondsProgress/{uid} ---------------------------------------------------
+    // One doc per player: which Rod Town levels/bosses are cleared, stars,
+    // medals. A player may read/write only their own doc; the teacher may
+    // additionally read any player's doc (for the dashboard), but never
+    // write it - progress is only ever written by the player's own browser.
+    // The document shape (stars per level, medals, soon name/email) comes
+    // from bonds-logic.js and is expected to keep changing, so it is not
+    // field-validated here beyond the ownership check.
+    match /bondsProgress/{uid} {
+      allow read: if isSignedIn() && (request.auth.uid == uid || isTeacher());
+      allow write: if isSignedIn() && request.auth.uid == uid;
+    }
+
+    // ---- attempts/{autoId} -----------------------------------------------------
+    // One document per finished game (the readable history the old
+    // best-score-only data couldn't give). Students can only ever CREATE
+    // their own attempt - never read, edit or delete one, including their
+    // own (that would let a student erase evidence of a bad run). Only the
+    // teacher's dashboard reads, and only the teacher may edit/delete (e.g.
+    // to clean up bad data).
+    match /attempts/{id} {
+      allow create: if isSignedIn()
+        && request.resource.data.uid == request.auth.uid
+        && validAttempt(request.resource.data);
+
+      allow read: if isTeacher();
+      allow update, delete: if isTeacher();
+    }
+
+    // Field checks for attempts. Only the fields every attempt always has
+    // are required (uid, game, mode, kind); everything else logAttempt()
+    // adds (name, email, modeLabel, ts, day) or the caller supplies
+    // (score/accuracy/maxCombo for timed games, stars/mistakes for levels,
+    // durationSec for both) is checked only when present, so this can never
+    // be stricter than what shared.js actually writes.
+    function validAttempt(d) {
+      return d.keys().hasAll(['uid', 'game', 'mode', 'kind'])
+        && d.uid is string
+        && d.game is string && d.game in ['market', 'numbers', 'bonds']
+        && d.mode is string && d.mode.size() <= 50
+        && d.kind is string && d.kind in ['timed', 'level']
+        && optionalString(d, 'name', 200)
+        && optionalString(d, 'email', 200)
+        && optionalString(d, 'modeLabel', 200)
+        && optionalNumber(d, 'score')
+        && optionalNumber(d, 'accuracy')
+        && optionalNumber(d, 'maxCombo')
+        && optionalNumber(d, 'stars')
+        && optionalNumber(d, 'mistakes')
+        && optionalNumber(d, 'durationSec')
+        && (!('ts' in d) || d.ts is timestamp)
+        && (!('day' in d) || (d.day is string && d.day.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')));
+    }
+
+    // ---- everything else: default deny ----------------------------------------
+    // Any collection not listed above (and any other path) is fully closed.
+    // Firestore rules are additive (a request is allowed if ANY matching
+    // rule allows it), so this only ever removes access - it can never
+    // override one of the "allow" rules above.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

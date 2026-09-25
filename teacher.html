@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Teacher Dashboard 老師資料板</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="shared.css?v=202609251810">
+    <style>
+        /* This page scrolls (unlike the games) — undo shared.css's fixed-body lock. */
+        body { position: static; overflow: auto; user-select: text; -webkit-user-select: text; background-color: #f8fafc; }
+        * { touch-action: auto; }
+        .td-table { border-collapse: collapse; white-space: nowrap; }
+        .td-table th, .td-table td { padding: 6px 10px; border-bottom: 1px solid #e2e8f0; text-align: left; }
+        .td-table thead th { position: sticky; top: 0; background: #eef2ff; cursor: pointer; user-select: none; font-size: 0.75rem; line-height: 1.1; }
+        .td-table thead th.no-sort { cursor: default; }
+        .td-table tbody tr:hover { background: #f8fafc; }
+        .td-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 1rem; border: 3px solid #c7d2fe; }
+        .name-link { color: #4338ca; font-weight: 700; text-decoration: underline; cursor: pointer; }
+        .tab-btn { transition: all 0.15s; }
+        .tab-btn.active { background: white; color: #4338ca; }
+        .tab-btn:not(.active) { background: #c7d2fe; color: #3730a3; }
+        .medal-cell { white-space: nowrap; }
+        .grid-cell { width: 44px; height: 44px; border-radius: 10px; border: 2px solid #e2e8f0; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; text-align: center; line-height: 1.1; background: #f8fafc; color: #94a3b8; }
+        .grid-cell.g-gold { background: #fef9c3; border-color: #facc15; color: #854d0e; }
+        .grid-cell.g-silver { background: #f1f5f9; border-color: #94a3b8; color: #334155; }
+        .grid-cell.g-bronze { background: #ffedd5; border-color: #f97316; color: #7c2d12; }
+    </style>
+</head>
+<body class="min-h-screen w-full">
+
+    <!-- ---------- Login ---------- -->
+    <div id="loginScreen" class="fixed inset-0 flex flex-col items-center justify-center bg-indigo-500 z-50 p-4">
+        <h1 class="text-3xl md:text-5xl font-bold text-white mb-8 text-center drop-shadow-lg leading-tight">📊 Teacher Dashboard<br><span class="text-xl md:text-2xl font-normal">老師資料板</span></h1>
+        <div id="loginSpinner" class="spinner"></div>
+        <button id="loginBtn" class="hidden bubbly-btn bg-white text-indigo-600 font-bold text-xl md:text-2xl py-4 px-6 md:px-8 rounded-full border-4 border-indigo-200 flex items-center justify-center gap-3 w-[90%] max-w-sm">
+            <svg class="w-8 h-8 flex-shrink-0" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+            <span class="whitespace-nowrap">Login with Google</span>
+        </button>
+        <a href="index.html" class="text-white mt-6 underline font-bold">⬅ Back to games</a>
+    </div>
+
+    <!-- ---------- Non-teacher ---------- -->
+    <div id="notTeacherScreen" class="hidden fixed inset-0 flex flex-col items-center justify-center bg-gray-500 z-50 p-4 text-center">
+        <div class="text-6xl mb-4">🔒</div>
+        <h1 class="text-2xl md:text-4xl font-bold text-white mb-2">此頁只限老師<br>Teachers only</h1>
+        <p id="notTeacherEmail" class="text-white/80 mb-6"></p>
+        <a href="index.html" class="bubbly-btn bg-white text-gray-700 font-bold text-xl py-3 px-8 rounded-full border-4 border-gray-200">⬅ Back to games</a>
+    </div>
+
+    <!-- ---------- Dashboard ---------- -->
+    <div id="dashboardScreen" class="hidden w-full max-w-[1400px] mx-auto p-3 md:p-6">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <h1 class="text-2xl md:text-3xl font-bold text-indigo-700">📊 Teacher Dashboard <span class="text-base font-normal text-gray-500">老師資料板</span></h1>
+            <div class="flex items-center gap-2">
+                <span id="demoBadge" class="hidden bg-purple-600 text-white font-bold px-3 py-1 rounded-full text-sm">🧪 DEMO DATA</span>
+                <a href="index.html" class="bubbly-btn bg-indigo-100 text-indigo-700 font-bold px-4 py-2 rounded-xl border-2 border-indigo-300 text-sm">⬅ Games</a>
+            </div>
+        </div>
+
+        <!-- filters / date range -->
+        <div class="bg-white rounded-2xl border-2 border-indigo-100 p-3 md:p-4 mb-4 flex flex-wrap items-end gap-3">
+            <label class="text-sm font-bold text-gray-600">開始 From
+                <input id="fromDate" type="date" class="block border-2 border-gray-300 rounded-lg px-2 py-1 mt-1">
+            </label>
+            <label class="text-sm font-bold text-gray-600">結束 To
+                <input id="toDate" type="date" class="block border-2 border-gray-300 rounded-lg px-2 py-1 mt-1">
+            </label>
+            <button id="reloadBtn" class="bubbly-btn bg-indigo-500 text-white font-bold px-4 py-2 rounded-xl">🔄 Reload</button>
+            <span id="loadingBanner" class="hidden text-indigo-600 font-bold flex items-center gap-2"><span class="spinner" style="width:20px;height:20px;border-width:3px;"></span>Loading…</span>
+            <span id="errorBanner" class="hidden text-red-600 font-bold max-w-md"></span>
+            <span id="rangeSummary" class="text-sm text-gray-500 ml-auto"></span>
+        </div>
+
+        <!-- tabs -->
+        <div class="flex gap-1 mb-3">
+            <button data-tab="overview" class="tab-btn active flex-1 py-2 rounded-t-xl font-bold text-sm md:text-base">總覽 Overview</button>
+            <button data-tab="attempts" class="tab-btn flex-1 py-2 rounded-t-xl font-bold text-sm md:text-base">紀錄 Attempts</button>
+            <button data-tab="student" class="tab-btn flex-1 py-2 rounded-t-xl font-bold text-sm md:text-base">學生 Student</button>
+        </div>
+
+        <!-- ===== Overview tab ===== -->
+        <div id="tab-overview" class="tab-panel">
+            <div class="flex flex-wrap items-center gap-3 mb-3">
+                <input id="overviewSearch" type="text" placeholder="🔍 搜尋姓名 Search name…" class="border-2 border-gray-300 rounded-lg px-3 py-2 flex-1 min-w-[180px] max-w-xs">
+                <button id="downloadOverviewBtn" class="bubbly-btn bg-green-500 text-white font-bold px-4 py-2 rounded-xl text-sm">⬇️ Download CSV</button>
+                <span class="text-xs text-gray-400">Click a column header to sort · click a name for details</span>
+            </div>
+            <div class="td-scroll bg-white">
+                <table class="td-table w-full text-sm" id="overviewTable">
+                    <thead><tr id="overviewHead"></tr></thead>
+                    <tbody id="overviewBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ===== Attempts tab ===== -->
+        <div id="tab-attempts" class="tab-panel hidden">
+            <div class="flex flex-wrap items-end gap-3 mb-3">
+                <label class="text-sm font-bold text-gray-600">遊戲 Game
+                    <select id="filterGame" class="block border-2 border-gray-300 rounded-lg px-2 py-1.5 mt-1"><option value="">All 全部</option></select>
+                </label>
+                <label class="text-sm font-bold text-gray-600">學生 Student
+                    <select id="filterStudent" class="block border-2 border-gray-300 rounded-lg px-2 py-1.5 mt-1"><option value="">All 全部</option></select>
+                </label>
+                <button id="downloadAttemptsBtn" class="bubbly-btn bg-green-500 text-white font-bold px-4 py-2 rounded-xl text-sm ml-auto">⬇️ Download CSV</button>
+            </div>
+            <div class="td-scroll bg-white">
+                <table class="td-table w-full text-sm">
+                    <thead><tr class="no-sort">
+                        <th class="no-sort">日期<br>Date</th><th class="no-sort">時間<br>Time</th><th class="no-sort">姓名<br>Name</th>
+                        <th class="no-sort">遊戲<br>Game</th><th class="no-sort">關卡<br>Level</th><th class="no-sort">分數/星星<br>Score/Stars</th>
+                        <th class="no-sort">準確度<br>Accuracy</th><th class="no-sort">錯誤<br>Mistakes</th><th class="no-sort">時長<br>Duration</th>
+                    </tr></thead>
+                    <tbody id="attemptsBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ===== Student tab ===== -->
+        <div id="tab-student" class="tab-panel hidden">
+            <div id="studentEmpty" class="bg-white rounded-2xl border-2 border-indigo-100 p-8 text-center text-gray-500">
+                👈 Click a student's name in Overview or Attempts to see their details.<br>請在「總覽」或「紀錄」點選學生姓名。
+            </div>
+            <div id="studentDetail" class="hidden">
+                <div class="bg-white rounded-2xl border-2 border-indigo-100 p-4 mb-4">
+                    <h2 id="studentName" class="text-xl md:text-2xl font-bold text-indigo-700"></h2>
+                    <p id="studentEmail" class="text-gray-500 text-sm"></p>
+                </div>
+                <h3 class="font-bold text-gray-700 mb-2">🚂 Rod Town 數棒鎮 progress</h3>
+                <div id="studentBondsGrid" class="bg-white rounded-2xl border-2 border-indigo-100 p-4 mb-4 overflow-x-auto"></div>
+                <h3 class="font-bold text-gray-700 mb-2">📋 Attempts 紀錄</h3>
+                <div class="td-scroll bg-white">
+                    <table class="td-table w-full text-sm">
+                        <thead><tr class="no-sort">
+                            <th class="no-sort">日期<br>Date</th><th class="no-sort">時間<br>Time</th>
+                            <th class="no-sort">遊戲<br>Game</th><th class="no-sort">關卡<br>Level</th><th class="no-sort">分數/星星<br>Score/Stars</th>
+                            <th class="no-sort">準確度<br>Accuracy</th><th class="no-sort">錯誤<br>Mistakes</th><th class="no-sort">時長<br>Duration</th>
+                        </tr></thead>
+                        <tbody id="studentAttemptsBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { signIn, onUser, db, auth } from './shared.js?v=202609251810';
+        import {
+            collection, getDocs, query, where, orderBy, Timestamp,
+        } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js';
+        import {
+            buildOverviewRows, buildAttemptRows, filterAttemptRows, sortRows,
+            MEDAL_ICON, WORLD_TOTAL_LEVELS,
+            toCSV, overviewToCSVRows, OVERVIEW_HEADERS, attemptsToCSVRows, ATTEMPTS_HEADERS, csvFilename,
+            GAME_LABEL,
+        } from './teacher-data.js?v=202609251810';
+        import { WORLDS, LEVEL_COUNT, levelKey } from './bonds-logic.js?v=202609251810';
+
+        // shared.js will export TEACHER_EMAILS once the attempt-log write path lands (parallel work);
+        // defined locally here in the meantime.
+        const TEACHER_EMAILS = ['cyh@clam.edu.hk'];
+
+        const $ = id => document.getElementById(id);
+        const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        const qs = new URLSearchParams(location.search);
+        const isLocalHost = ['localhost', '127.0.0.1'].includes(location.hostname);
+
+        // ---------- state ----------
+        const state = {
+            attempts: [], scores: [], bondsProgress: [],
+            overviewRows: [], attemptRows: [],
+            overviewSort: { path: 'name', dir: 1 },
+            overviewSearch: '',
+            filters: { game: '', uid: '' },
+            studentUid: null,
+        };
+
+        function show(id) {
+            for (const s of ['loginScreen', 'notTeacherScreen', 'dashboardScreen']) $(s).classList.add('hidden');
+            $(id).classList.remove('hidden');
+        }
+
+        // ---------- date range ----------
+        function isoDate(d) { return d.toISOString().slice(0, 10); }
+        function defaultRange() {
+            const to = new Date();
+            const from = new Date(to); from.setDate(from.getDate() - 30);
+            return { from, to };
+        }
+        (function initDateInputs() {
+            const { from, to } = defaultRange();
+            $('fromDate').value = isoDate(from);
+            $('toDate').value = isoDate(to);
+        })();
+
+        // ---------- data loading ----------
+        async function fetchLive(fromDate) {
+            const attemptsQ = query(
+                collection(db, 'attempts'),
+                where('ts', '>=', Timestamp.fromDate(fromDate)),
+                orderBy('ts', 'desc'),
+            );
+            const [attemptsSnap, bondsSnap, scoresSnap] = await Promise.all([
+                getDocs(attemptsQ),
+                getDocs(collection(db, 'bondsProgress')),
+                getDocs(collection(db, 'scores')),
+            ]);
+            const attempts = attemptsSnap.docs.map(d => d.data());
+            const bondsProgress = bondsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+            const scores = scoresSnap.docs.map(d => d.data());
+            return { attempts, bondsProgress, scores };
+        }
+
+        async function loadData() {
+            $('errorBanner').classList.add('hidden');
+            $('loadingBanner').classList.remove('hidden');
+            const from = new Date($('fromDate').value + 'T00:00:00');
+            const to = new Date($('toDate').value + 'T23:59:59');
+            try {
+                const data = state.isDemo ? demoDataInRange(from, to) : await fetchLive(from);
+                // client-side upper bound (query only applies a lower bound)
+                data.attempts = data.attempts.filter(a => {
+                    const t = a.ts && a.ts.toDate ? a.ts.toDate() : (a.ts instanceof Date ? a.ts : null);
+                    return !t || t <= to;
+                });
+                state.attempts = data.attempts;
+                state.bondsProgress = data.bondsProgress;
+                state.scores = data.scores;
+                recompute();
+                $('rangeSummary').textContent = `${state.attempts.length} attempts · ${state.overviewRows.length} students`;
+            } catch (e) {
+                console.error(e);
+                const permission = /permission/i.test(e.code || '') || /permission/i.test(e.message || '');
+                $('errorBanner').textContent = permission
+                    ? '沒有權限讀取資料。請確認已用老師帳戶登入，並已在 Firebase 設定安全規則。 / No permission to read data — make sure you are signed in as the teacher account and firestore.rules is published.'
+                    : `讀取失敗 Failed to load data: ${e.message || e}`;
+                $('errorBanner').classList.remove('hidden');
+            } finally {
+                $('loadingBanner').classList.add('hidden');
+            }
+        }
+
+        function recompute() {
+            state.overviewRows = buildOverviewRows({ attempts: state.attempts, scores: state.scores, bondsProgress: state.bondsProgress });
+            state.attemptRows = buildAttemptRows(state.attempts);
+            populateFilterOptions();
+            renderTab();
+        }
+
+        // ---------- tabs ----------
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
+                $('tab-' + btn.dataset.tab).classList.remove('hidden');
+            });
+        });
+        function renderTab() { renderOverview(); renderAttempts(); renderStudent(); }
+
+        // ---------- Overview ----------
+        const OVERVIEW_COLS = [
+            { path: 'name', label: '姓名<br>Name' },
+            { path: 'email', label: 'Email' },
+            { path: 'lastPlayed', label: '最後遊玩<br>Last played' },
+            { path: 'attemptsInRange', label: '次數<br>Attempts' },
+            { path: 'totalMinutes', label: '分鐘<br>Minutes' },
+            { path: 'market.easy', label: 'Market<br>Easy' },
+            { path: 'market.medium', label: 'Market<br>Medium' },
+            { path: 'market.hard', label: 'Market<br>Hard' },
+            { path: 'numbers.num1', label: 'Number<br>Lv1' },
+            { path: 'numbers.num2', label: 'Number<br>Lv2' },
+            { path: 'numbers.num3', label: 'Number<br>Lv3' },
+            { path: 'numbers.num4', label: 'Number<br>Lv4' },
+            { path: 'bondsMedals.gold', label: '🥇🥈🥉<br>Medals', noSort: true },
+            { path: 'bondsCleared.w1', label: `W1<br>/${WORLD_TOTAL_LEVELS}` },
+            { path: 'bondsCleared.w2', label: `W2<br>/${WORLD_TOTAL_LEVELS}` },
+            { path: 'bondsCleared.w3', label: `W3<br>/${WORLD_TOTAL_LEVELS}` },
+            { path: 'bondsCleared.w4', label: `W4<br>/${WORLD_TOTAL_LEVELS}` },
+            { path: 'rush.w1', label: 'Rush<br>W1' },
+            { path: 'rush.w2', label: 'Rush<br>W2' },
+            { path: 'rush.w3', label: 'Rush<br>W3' },
+            { path: 'rush.w4', label: 'Rush<br>W4' },
+        ];
+
+        function buildOverviewHead() {
+            $('overviewHead').innerHTML = OVERVIEW_COLS.map(c => {
+                const active = state.overviewSort.path === c.path;
+                const arrow = active ? (state.overviewSort.dir === 1 ? ' ▲' : ' ▼') : '';
+                return `<th class="${c.noSort ? 'no-sort' : ''}" data-path="${c.path}" data-nosort="${!!c.noSort}">${c.label}${arrow}</th>`;
+            }).join('');
+            $('overviewHead').querySelectorAll('th').forEach(th => {
+                if (th.dataset.nosort === 'true') return;
+                th.addEventListener('click', () => {
+                    const path = th.dataset.path;
+                    if (state.overviewSort.path === path) state.overviewSort.dir *= -1;
+                    else state.overviewSort = { path, dir: 1 };
+                    renderOverview();
+                });
+            });
+        }
+        buildOverviewHead();
+
+        $('overviewSearch').addEventListener('input', () => { state.overviewSearch = $('overviewSearch').value.trim().toLowerCase(); renderOverview(); });
+
+        function fmtDateTime(d) {
+            if (!d) return '—';
+            const pad = n => String(n).padStart(2, '0');
+            return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        }
+        function medalStr(m) { return `${MEDAL_ICON.gold}${m.gold} ${MEDAL_ICON.silver}${m.silver} ${MEDAL_ICON.bronze}${m.bronze}`; }
+
+        function renderOverview() {
+            buildOverviewHead();
+            let rows = state.overviewRows;
+            if (state.overviewSearch) rows = rows.filter(r => r.name.toLowerCase().includes(state.overviewSearch) || (r.email || '').toLowerCase().includes(state.overviewSearch));
+            rows = sortRows(rows, state.overviewSort.path, state.overviewSort.dir);
+            $('overviewBody').innerHTML = rows.map(r => `
+                <tr>
+                    <td><span class="name-link" data-uid="${esc(r.uid)}">${esc(r.name)}</span></td>
+                    <td class="text-gray-500">${esc(r.email)}</td>
+                    <td>${fmtDateTime(r.lastPlayed)}</td>
+                    <td>${r.attemptsInRange}</td>
+                    <td>${r.totalMinutes}</td>
+                    <td>${r.market.easy ?? '—'}</td>
+                    <td>${r.market.medium ?? '—'}</td>
+                    <td>${r.market.hard ?? '—'}</td>
+                    <td>${r.numbers.num1 ?? '—'}</td>
+                    <td>${r.numbers.num2 ?? '—'}</td>
+                    <td>${r.numbers.num3 ?? '—'}</td>
+                    <td>${r.numbers.num4 ?? '—'}</td>
+                    <td class="medal-cell">${medalStr(r.bondsMedals)}</td>
+                    <td>${r.bondsCleared.w1}/${WORLD_TOTAL_LEVELS}</td>
+                    <td>${r.bondsCleared.w2}/${WORLD_TOTAL_LEVELS}</td>
+                    <td>${r.bondsCleared.w3}/${WORLD_TOTAL_LEVELS}</td>
+                    <td>${r.bondsCleared.w4}/${WORLD_TOTAL_LEVELS}</td>
+                    <td>${r.rush.w1 ?? '—'}</td>
+                    <td>${r.rush.w2 ?? '—'}</td>
+                    <td>${r.rush.w3 ?? '—'}</td>
+                    <td>${r.rush.w4 ?? '—'}</td>
+                </tr>`).join('') || `<tr><td colspan="${OVERVIEW_COLS.length}" class="text-center text-gray-400 py-6">No students in range 沒有資料</td></tr>`;
+            $('overviewBody').querySelectorAll('.name-link').forEach(el => el.addEventListener('click', () => openStudent(el.dataset.uid)));
+        }
+
+        $('downloadOverviewBtn').addEventListener('click', () => {
+            let rows = state.overviewRows;
+            if (state.overviewSearch) rows = rows.filter(r => r.name.toLowerCase().includes(state.overviewSearch) || (r.email || '').toLowerCase().includes(state.overviewSearch));
+            rows = sortRows(rows, state.overviewSort.path, state.overviewSort.dir);
+            downloadCSV(toCSV(OVERVIEW_HEADERS, overviewToCSVRows(rows)), csvFilename('overview'));
+        });
+
+        // ---------- Attempts ----------
+        function populateFilterOptions() {
+            const gameSel = $('filterGame');
+            const prevGame = gameSel.value;
+            gameSel.innerHTML = '<option value="">All 全部</option>' + Object.entries(GAME_LABEL).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join('');
+            gameSel.value = prevGame;
+
+            const studentSel = $('filterStudent');
+            const prevStudent = studentSel.value;
+            const students = [...state.overviewRows].sort((a, b) => a.name.localeCompare(b.name));
+            studentSel.innerHTML = '<option value="">All 全部</option>' + students.map(s => `<option value="${esc(s.uid)}">${esc(s.name)}</option>`).join('');
+            studentSel.value = prevStudent;
+        }
+        $('filterGame').addEventListener('change', () => { state.filters.game = $('filterGame').value; renderAttempts(); });
+        $('filterStudent').addEventListener('change', () => { state.filters.uid = $('filterStudent').value; renderAttempts(); });
+
+        function attemptRowHtml(a, { showName } = {}) {
+            return `<tr>
+                <td>${esc(a.date)}</td><td>${esc(a.time)}</td>
+                ${showName ? `<td><span class="name-link" data-uid="${esc(a.uid)}">${esc(a.name)}</span></td>` : ''}
+                <td>${esc(GAME_LABEL[a.game] || a.game)}</td>
+                <td>${esc(a.modeLabel)}</td>
+                <td>${esc(a.primary)}</td>
+                <td>${a.accuracy ?? '—'}</td>
+                <td>${a.mistakes ?? '—'}</td>
+                <td>${esc(a.duration || '—')}</td>
+            </tr>`;
+        }
+
+        function currentAttemptRows() { return filterAttemptRows(state.attemptRows, state.filters); }
+
+        function renderAttempts() {
+            const rows = currentAttemptRows();
+            $('attemptsBody').innerHTML = rows.map(a => attemptRowHtml(a, { showName: true })).join('')
+                || `<tr><td colspan="9" class="text-center text-gray-400 py-6">No attempts in range 沒有紀錄</td></tr>`;
+            $('attemptsBody').querySelectorAll('.name-link').forEach(el => el.addEventListener('click', () => openStudent(el.dataset.uid)));
+        }
+
+        $('downloadAttemptsBtn').addEventListener('click', () => {
+            downloadCSV(toCSV(ATTEMPTS_HEADERS, attemptsToCSVRows(currentAttemptRows())), csvFilename('attempts'));
+        });
+
+        // ---------- Student ----------
+        function openStudent(uid) {
+            state.studentUid = uid;
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === 'student'));
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
+            $('tab-student').classList.remove('hidden');
+            renderStudent();
+        }
+
+        function bondsGridHtml(levels) {
+            let html = '<table class="td-table"><tbody>';
+            for (const wd of WORLDS) {
+                html += `<tr><td class="font-bold text-gray-600 no-sort">W${wd.w}<br>${esc(wd.zh)}</td>`;
+                for (let l = 1; l <= LEVEL_COUNT; l++) {
+                    const stars = levels[levelKey(wd.w, l)] || 0;
+                    html += gridCellHtml(stars, `L${l}`);
+                }
+                const bossStars = levels[levelKey(wd.w, 'boss')] || 0;
+                html += gridCellHtml(bossStars, '🏠');
+                html += '</tr>';
+            }
+            html += '</tbody></table>';
+            return html;
+        }
+        function gridCellHtml(stars, label) {
+            const cls = stars === 3 ? 'g-gold' : stars === 2 ? 'g-silver' : stars === 1 ? 'g-bronze' : '';
+            const stars_str = stars ? '⭐'.repeat(stars) : '·';
+            return `<td class="no-sort"><div class="grid-cell ${cls}">${label}<br>${stars_str}</div></td>`;
+        }
+
+        function renderStudent() {
+            if (!state.studentUid) { $('studentEmpty').classList.remove('hidden'); $('studentDetail').classList.add('hidden'); return; }
+            const row = state.overviewRows.find(r => r.uid === state.studentUid);
+            if (!row) { $('studentEmpty').classList.remove('hidden'); $('studentDetail').classList.add('hidden'); return; }
+            $('studentEmpty').classList.add('hidden'); $('studentDetail').classList.remove('hidden');
+            $('studentName').textContent = row.name;
+            $('studentEmail').textContent = row.email || '';
+            const bp = state.bondsProgress.find(b => (b.uid || b.id) === state.studentUid);
+            $('studentBondsGrid').innerHTML = bondsGridHtml((bp && bp.levels) || {});
+            const rows = state.attemptRows.filter(a => a.uid === state.studentUid);
+            $('studentAttemptsBody').innerHTML = rows.map(a => attemptRowHtml(a, { showName: false })).join('')
+                || `<tr><td colspan="8" class="text-center text-gray-400 py-6">No attempts in range 沒有紀錄</td></tr>`;
+        }
+
+        // ---------- CSV download (plain page, not sandboxed — Blob + <a download> works) ----------
+        function downloadCSV(text, filename) {
+            const blob = new Blob([text], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = filename;
+            document.body.appendChild(a); a.click(); a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+        }
+
+        // ---------- reload ----------
+        $('reloadBtn').addEventListener('click', loadData);
+
+        // ---------- demo mode (dev-only, localhost + ?demo) ----------
+        function demoDataInRange(from, to) {
+            const all = state._demoAll || (state._demoAll = generateDemoData());
+            return {
+                attempts: all.attempts.filter(a => { const t = a.ts.toDate(); return t >= from; }),
+                bondsProgress: all.bondsProgress,
+                scores: all.scores,
+            };
+        }
+
+        function fakeTimestamp(date) { return { toDate: () => date }; }
+
+        function generateDemoData() {
+            const students = [
+                { uid: 'demo-amy', name: 'Amy Chan 陳嘉美', email: 'amy@clam.edu.hk' },
+                { uid: 'demo-ben', name: 'Ben Lee 李本', email: 'ben@clam.edu.hk' },
+                { uid: 'demo-cara', name: 'Cara Wong 黃嘉欣', email: 'cara@clam.edu.hk' },
+                { uid: 'demo-david', name: 'David Ho 何大衛', email: 'david@clam.edu.hk' },
+                { uid: 'demo-old', name: null, email: null }, // simulates an old doc with no name/email yet
+            ];
+            const marketModes = ['easy', 'medium', 'hard'];
+            const numModes = ['num1', 'num2', 'num3', 'num4'];
+            const rushModes = ['bonds1', 'bonds2', 'bonds3', 'bonds4'];
+            const levelModes = [];
+            for (let w = 1; w <= 4; w++) { for (let l = 1; l <= LEVEL_COUNT; l++) levelModes.push(`w${w}-${l}`); levelModes.push(`w${w}-boss`); }
+
+            const rand = (lo, hi) => lo + Math.floor(Math.random() * (hi - lo + 1));
+            const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+
+            const attempts = [];
+            const scoreBest = new Map(); // `${uid}_${mode}` -> best score doc
+            const bondsProgress = [];
+
+            for (const s of students) {
+                const nAttempts = rand(8, 30);
+                const levels = {};
+                for (let i = 0; i < nAttempts; i++) {
+                    const daysAgo = rand(0, 40);
+                    const ts = fakeTimestamp(new Date(Date.now() - daysAgo * 86400000 - rand(0, 80000) * 1000));
+                    const pool = pick(['market', 'numbers', 'bonds-level', 'bonds-rush']);
+                    let attempt;
+                    if (pool === 'market') {
+                        const mode = pick(marketModes);
+                        const score = rand(20, 220);
+                        attempt = { uid: s.uid, name: s.name, email: s.email, game: 'market', mode, kind: 'timed', score, accuracy: rand(50, 100), maxCombo: rand(1, 10), stars: null, mistakes: null, durationSec: 30, ts, day: '' };
+                        const key = `${s.uid}_${mode}`;
+                        if (!scoreBest.has(key) || scoreBest.get(key).score < score) scoreBest.set(key, { uid: s.uid, playerName: s.name, email: s.email, mode, score });
+                    } else if (pool === 'numbers') {
+                        const mode = pick(numModes);
+                        const score = rand(10, 150);
+                        attempt = { uid: s.uid, name: s.name, email: s.email, game: 'numbers', mode, kind: 'timed', score, accuracy: rand(50, 100), maxCombo: rand(1, 8), stars: null, mistakes: null, durationSec: 30, ts, day: '' };
+                        const key = `${s.uid}_${mode}`;
+                        if (!scoreBest.has(key) || scoreBest.get(key).score < score) scoreBest.set(key, { uid: s.uid, playerName: s.name, email: s.email, mode, score });
+                    } else if (pool === 'bonds-level') {
+                        const mode = pick(levelModes);
+                        const mistakes = rand(0, 4);
+                        const stars = mistakes === 0 ? 3 : mistakes <= 2 ? 2 : 1;
+                        attempt = { uid: s.uid, name: s.name, email: s.email, game: 'bonds', mode, kind: 'level', score: null, accuracy: null, maxCombo: null, stars, mistakes, durationSec: rand(20, 90), ts, day: '' };
+                        levels[mode] = Math.max(levels[mode] || 0, stars);
+                    } else {
+                        const mode = pick(rushModes);
+                        const score = rand(10, 120);
+                        attempt = { uid: s.uid, name: s.name, email: s.email, game: 'bonds', mode, kind: 'timed', score, accuracy: rand(50, 100), maxCombo: rand(1, 8), stars: null, mistakes: null, durationSec: 60, ts, day: '' };
+                        const key = `${s.uid}_${mode}`;
+                        if (!scoreBest.has(key) || scoreBest.get(key).score < score) scoreBest.set(key, { uid: s.uid, playerName: s.name, email: s.email, mode, score });
+                    }
+                    attempts.push(attempt);
+                }
+                bondsProgress.push({ id: s.uid, uid: s.uid, name: s.name, email: s.email, levels, stickers: [], streak: { count: rand(0, 5), lastDay: null } });
+            }
+            attempts.sort((a, b) => b.ts.toDate() - a.ts.toDate());
+            return { attempts, scores: [...scoreBest.values()], bondsProgress };
+        }
+
+        // ---------- boot ----------
+        const showLoginButton = () => { $('loginSpinner').classList.add('hidden'); $('loginBtn').classList.remove('hidden'); };
+        $('loginBtn').addEventListener('click', signIn);
+
+        if (isLocalHost && qs.has('demo')) {
+            state.isDemo = true;
+            $('demoBadge').classList.remove('hidden');
+            show('dashboardScreen');
+            loadData();
+        } else {
+            onUser(() => {
+                const email = auth.currentUser ? auth.currentUser.email : '';
+                if (!TEACHER_EMAILS.includes(email)) {
+                    $('notTeacherEmail').textContent = email ? `(${email})` : '';
+                    show('notTeacherScreen');
+                    return;
+                }
+                show('dashboardScreen');
+                loadData();
+            }, showLoginButton);
+        }
+    </script>
+</body>
+</html>

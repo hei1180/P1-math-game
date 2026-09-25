@@ -27,14 +27,18 @@ export function scaleConfig(parentId) {
 /** Call once, right after `new Phaser.Game(...)`. */
 export function installHiDPI(game, parentId) {
   const S = game.scale, el = document.getElementById(parentId);
-  let busy = false;
+  let busy = false, gone = false;
   const fit = () => {
-    if (busy || !S.canvas) return;
+    // hidden tab / page being torn down: WebGL may refuse new render targets, so wait until visible again
+    if (busy || gone || !S.canvas || document.hidden) return;
     const { w, h } = cssSize(el);
     if (Math.abs(S.width - w * DPR) < 1 && Math.abs(S.height - h * DPR) < 1) return;
     busy = true;
-    try { S.resize(w * DPR, h * DPR); } finally { busy = false; }
+    try { S.resize(w * DPR, h * DPR); } catch (e) { console.warn('[hidpi] resize skipped', e); } finally { busy = false; }
   };
+  window.addEventListener('pagehide', () => { gone = true; });
+  window.addEventListener('pageshow', () => { gone = false; fit(); });
+  document.addEventListener('visibilitychange', fit);
   const getParentBounds = S.getParentBounds;
   S.getParentBounds = function () { const r = getParentBounds.apply(this, arguments); fit(); return r; };
   if (window.ResizeObserver) new ResizeObserver(fit).observe(el);

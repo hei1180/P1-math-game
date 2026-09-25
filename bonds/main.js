@@ -5,6 +5,7 @@ import { recordResult } from '../bonds-logic.js?v=0';
 import { loadProgress, saveProgress, today } from '../bonds-progress.js?v=0';
 import { sfx } from './sfx.js?v=0';
 import { fx } from './fx.js?v=0';
+import { scaleConfig, installHiDPI } from './hidpi.js?v=0';
 import { BootScene } from './scenes/BootScene.js?v=0';
 import { MapScene } from './scenes/MapScene.js?v=0';
 import { LevelScene } from './scenes/LevelScene.js?v=0';
@@ -71,11 +72,12 @@ function startGame() {
     type: Phaser.AUTO,
     parent: 'phaser',
     backgroundColor: '#e0f2fe',
-    scale: { mode: Phaser.Scale.RESIZE, width: '100%', height: '100%' },
+    scale: scaleConfig('phaser'), // device-pixel canvas for retina screens (bonds/hidpi.js)
     input: { activePointers: 2 },
     render: { antialias: true, roundPixels: false },
     scene: [BootScene, MapScene, LevelScene, HouseScene, RushScene, SandboxScene],
   });
+  installHiDPI(game, 'phaser');
   game.registry.set('bridge', bridge);
   window.__rodTown = { game, bridge, go: (key, data) => { game.scene.getScenes(true).forEach(s => { if (s.scene.key !== key) s.scene.stop(); }); game.scene.start(key, data); } };
 }

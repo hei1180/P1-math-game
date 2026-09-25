@@ -32,3 +32,10 @@ Google login does not work from file://. Use localhost or the GitHub Pages URL.
 Rod Town without logging in: open `http://localhost:8000/bonds.html?dev` (localhost only). It skips login and starts in test mode as player "Dev". The console hook `window.__rodTown` has `go(scene, data)` (e.g. `__rodTown.go('Level', { w: 4, level: 1 })`, scenes `Map`, `Level`, `House`, `Rush`) and `bridge`; set `__rodTown.bridge.previewLocks = true` to see locks, fog and stickers as a student would (progress kept in memory only). `bonds.html?dev&sandbox` opens the rod/board sandbox.
 
 Design spec and plan: `docs/superpowers/`.
+
+## Teacher data
+
+- `teacher.html` — teacher-only dashboard (overview, every attempt, per-student view, CSV download). Linked from the ⚙️ panel.
+- Every finished game writes a readable record to Firestore `attempts` (and optionally a Google Sheet).
+- Setup (security rules + Google Sheet): see `docs/teacher-data-setup.md`. Rules file: `firestore.rules`; sheet script: `apps-script/Code.gs`.
+- Local preview with sample data: `http://localhost:8000/teacher.html?demo`.

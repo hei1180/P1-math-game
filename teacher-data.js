@@ -2,8 +2,8 @@
 // already-fetched Firestore docs (or plain test fixtures) and returns plain objects/strings.
 // Firestore Timestamp objects (with a .toDate() method) are supported via toDate() below,
 // so callers can pass raw snapshot data straight through.
-import { GAME_LABEL, modeLabel, gameOf } from './labels.js?v=202609251810';
-import { WORLDS, LEVEL_COUNT, levelKey } from './bonds-logic.js?v=202609251810';
+import { GAME_LABEL, modeLabel, gameOf } from './labels.js?v=202609252041';
+import { WORLDS, LEVEL_COUNT, levelKey } from './bonds-logic.js?v=202609252041';
 
 export { GAME_LABEL, modeLabel, gameOf };
 

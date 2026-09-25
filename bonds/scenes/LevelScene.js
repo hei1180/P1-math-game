@@ -2,14 +2,14 @@
 // Five questions on the linked board, a progress dot per question, stars at the end.
 // Start data: { w: 1..4, level: 1..6 }.
 // Test hook: scene.__test = { answer(), mistakes(), index(), step(), q() }.
-import { levelPlan, starsFor, levelKey, makeTenMove, isLevelOpen, LEVEL_COUNT, world } from '../../bonds-logic.js?v=202609251810';
-import { UI, WORLD_THEME } from '../theme.js?v=202609251810';
-import { fx } from '../fx.js?v=202609251810';
-import { sfx } from '../sfx.js?v=202609251810';
-import { Board } from '../ui/Board.js?v=202609251810';
-import { Tray } from '../ui/Tray.js?v=202609251810';
-import { dur, reducedMotion } from '../ui/Rod.js?v=202609251810';
-import { T, domLeft, roundButton, backButton, makeBubble, pillButton, drawStarSlot, drawPanel, dropStar, newBestBadge, shineStars } from '../ui/Chrome.js?v=202609251810';
+import { levelPlan, starsFor, levelKey, makeTenMove, isLevelOpen, LEVEL_COUNT, world } from '../../bonds-logic.js?v=202609252041';
+import { UI, WORLD_THEME } from '../theme.js?v=202609252041';
+import { fx } from '../fx.js?v=202609252041';
+import { sfx } from '../sfx.js?v=202609252041';
+import { Board } from '../ui/Board.js?v=202609252041';
+import { Tray } from '../ui/Tray.js?v=202609252041';
+import { dur, reducedMotion } from '../ui/Rod.js?v=202609252041';
+import { T, domLeft, roundButton, backButton, makeBubble, pillButton, drawStarSlot, drawPanel, dropStar, newBestBadge, shineStars } from '../ui/Chrome.js?v=202609252041';
 
 const QN = 5;
 const PRAISE = [['好叻！', '#16a34a'], ['正呀！', '#f97316'], ['好棒！', '#2563eb'], ['Yeah!', '#a855f7'], ['叻叻！', '#db2777']];

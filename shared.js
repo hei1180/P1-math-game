@@ -2,8 +2,9 @@
 // DOM contract: see docs/superpowers/plans/2026-09-14-number-shop.md ("DOM contract").
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
-import { getFirestore, collection, doc, getDoc, setDoc, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
+import { getFirestore, collection, doc, getDoc, setDoc, getDocs, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
 import { DEFAULT_TROPHY, TROPHY_ICON, TROPHY_LABEL, trophyFor, validateCutoffs } from './trophy.js?v=202609251810';
+import { gameOf, modeLabel } from './labels.js?v=202609251810';
 
 export { TROPHY_ICON, TROPHY_LABEL };
 
@@ -23,13 +24,14 @@ export const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
 
 export const TEACHER_PIN = '1128';
+export const TEACHER_EMAILS = ['cyh@clam.edu.hk'];
 export const NUM_KEYS = ['num1', 'num2', 'num3', 'num4'];
 const defaultNumUnlock = () => Object.fromEntries(NUM_KEYS.map(k => [k, false]));
 export const BONDS_KEYS = ['w1', 'w2', 'w3', 'w4'];
 const defaultBondsUnlock = () => Object.fromEntries(BONDS_KEYS.map(k => [k, false]));
-export const DEFAULT_SETTINGS = { timeLimit: 30, unlockMedium: false, unlockHard: false, numTimeLimit: 30, numUnlock: defaultNumUnlock(), bondsUnlock: defaultBondsUnlock(), bondsTimeLimit: 60, lessMotion: false, trophy: { ...DEFAULT_TROPHY } };
+export const DEFAULT_SETTINGS = { timeLimit: 30, unlockMedium: false, unlockHard: false, numTimeLimit: 30, numUnlock: defaultNumUnlock(), bondsUnlock: defaultBondsUnlock(), bondsTimeLimit: 60, lessMotion: false, trophy: { ...DEFAULT_TROPHY }, sheetUrl: '' };
 
-export const player = { name: 'Guest', uid: null, highScores: {} };
+export const player = { name: 'Guest', uid: null, email: '', highScores: {} };
 export const settings = { ...DEFAULT_SETTINGS, numUnlock: defaultNumUnlock(), bondsUnlock: defaultBondsUnlock(), trophy: { ...DEFAULT_TROPHY } };
 
 /** Teacher test mode: this browser tab only, all levels open, nothing saved. Cleared when the tab closes. */
@@ -61,6 +63,7 @@ export function onUser(cb, onSignedOut = () => {}) {
     if (!user) { onSignedOut(); return; }
     player.name = user.displayName || user.email.split('@')[0];
     player.uid = user.uid;
+    player.email = user.email || '';
     await Promise.all([loadSettings(), loadMyHighScores()]);
     cb(player);
   });
@@ -178,6 +181,7 @@ export async function loadSettings() {
       settings.trophy = validateCutoffs(d.trophy) ? { ...d.trophy } : { ...DEFAULT_TROPHY };
       settings.numUnlock = { ...defaultNumUnlock(), ...(d.numUnlock || {}) };
       settings.bondsUnlock = { ...defaultBondsUnlock(), ...(d.bondsUnlock || {}) };
+      settings.sheetUrl = typeof d.sheetUrl === 'string' ? d.sheetUrl.trim() : '';
     }
   } catch (e) { console.warn('settings offline', e); }
 }
@@ -196,19 +200,73 @@ export async function loadMyHighScores() {
   } catch (e) { console.warn('scores offline', e); }
 }
 
-/** Accuracy % from engine; saves only if higher than stored. Returns accuracy. */
+/** Timer length (s) behind a timed mode key: Market, Number Shop or Rod Town Rush. */
+function timeLimitOf(modeKey) {
+  const g = gameOf(modeKey);
+  return g === 'numbers' ? settings.numTimeLimit : g === 'bonds' ? settings.bondsTimeLimit : settings.timeLimit;
+}
+
+/**
+ * Accuracy % from engine; the best-score doc is saved only if higher than stored,
+ * but every finished game is logged as an attempt. Returns accuracy.
+ */
 export async function saveScore(modeKey) {
   const accuracy = engine.totalAttempts ? Math.round(engine.correctAttempts / engine.totalAttempts * 100) : 0;
   if (session.testMode) return accuracy; // teacher testing: never touch scores
+  // Not awaited: the attempt log must never hold up (or break) the end-of-game flow.
+  logAttempt({ game: gameOf(modeKey), mode: modeKey, kind: 'timed', score: engine.score, accuracy, maxCombo: engine.maxCombo, durationSec: timeLimitOf(modeKey) });
   if (engine.score > (player.highScores[modeKey] || 0)) player.highScores[modeKey] = engine.score;
   try {
     const ref = doc(db, 'scores', `${player.uid}_${modeKey}`);
     const prev = await getDoc(ref);
     if (!prev.exists() || engine.score > prev.data().score) {
-      await setDoc(ref, { playerName: player.name, uid: player.uid, score: engine.score, maxCombo: engine.maxCombo, accuracy, mode: modeKey, timestamp: serverTimestamp() });
+      await setDoc(ref, { playerName: player.name, uid: player.uid, email: player.email || '', score: engine.score, maxCombo: engine.maxCombo, accuracy, mode: modeKey, timestamp: serverTimestamp() });
     }
   } catch (e) { console.warn('score save failed', e); }
   return accuracy;
+}
+
+// ---------- Attempt log (teacher data) ----------
+const ATTEMPT_NUMBERS = ['score', 'accuracy', 'maxCombo', 'stars', 'mistakes', 'durationSec'];
+const pad2 = n => String(n).padStart(2, '0');
+/** Device-local calendar day, YYYY-MM-DD. */
+function localDay(d = new Date()) { return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; }
+
+/** Test seam: when `write` is a function, logAttempt hands it the row instead of Firestore + the sheet POST. */
+export const __attemptSink = { write: null };
+
+/**
+ * One document per finished game in `attempts` (contract: docs/superpowers/specs/2026-09-25-teacher-data-design.md),
+ * plus a fire-and-forget row to the teacher's Google Sheet when settings.sheetUrl is an https URL.
+ * Skipped in test mode or when nobody is signed in. Never throws.
+ * fields: { game?, mode, kind: 'timed' | 'level', score?, accuracy?, maxCombo?, stars?, mistakes?, durationSec? }
+ */
+export async function logAttempt(fields) {
+  try {
+    if (session.testMode || !player.uid) return;
+    const mode = String(fields.mode);
+    const row = {
+      uid: player.uid, name: player.name, email: player.email || '',
+      game: fields.game || gameOf(mode), mode, modeLabel: modeLabel(mode), kind: fields.kind,
+    };
+    for (const k of ATTEMPT_NUMBERS) row[k] = Number.isFinite(fields[k]) ? fields[k] : null;
+    row.ts = serverTimestamp();
+    row.day = localDay();
+    if (typeof __attemptSink.write === 'function') { __attemptSink.write(row); return; }
+    let write; // addDoc can throw synchronously; the sheet row still goes out
+    try { write = addDoc(collection(db, 'attempts'), row); } catch (e) { write = Promise.reject(e); }
+    postToSheet({ ...row, ts: new Date().toISOString() });
+    await write;
+  } catch (e) { console.warn('attempt log failed', e); }
+}
+
+function postToSheet(row) {
+  const url = typeof settings.sheetUrl === 'string' ? settings.sheetUrl.trim() : '';
+  if (!/^https:\/\/\S+$/.test(url)) return;
+  try {
+    fetch(url, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(row) })
+      .catch(e => console.warn('sheet sync failed', e));
+  } catch (e) { console.warn('sheet sync failed', e); }
 }
 
 export async function getTop10(modeKey) {
@@ -306,7 +364,8 @@ const TEACHER_MODAL_HTML = `
       </div>
     </div>
     <div id="settingsView" class="hidden">
-      <h2 class="text-2xl font-bold mb-4 text-center text-purple-600">Classroom Settings</h2>
+      <h2 class="text-2xl font-bold mb-2 text-center text-purple-600">Classroom Settings</h2>
+      <a id="teacherDashLink" href="teacher.html" class="block text-center font-bold text-blue-600 underline mb-4">📊 Teacher dashboard / 教師數據</a>
       <div class="bg-gray-100 p-4 rounded-xl mb-4 border-2 border-gray-200">
         <label class="flex items-center gap-3 text-lg font-bold text-gray-700 mb-2 cursor-pointer"><input type="checkbox" id="settingMed" class="w-6 h-6 accent-yellow-500 rounded"> Unlock Medium (Market)</label>
         <label class="flex items-center gap-3 text-lg font-bold text-gray-700 cursor-pointer"><input type="checkbox" id="settingHard" class="w-6 h-6 accent-red-500 rounded"> Unlock Hard (Market)</label>
@@ -344,11 +403,19 @@ const TEACHER_MODAL_HTML = `
         </div>
         <div class="text-xs text-gray-500 text-center mt-1">Unlock next level = 🥉 cutoff</div>
       </div>
+      <div class="bg-green-50 p-3 rounded-xl mb-4 border-2 border-green-200">
+        <label class="block text-sm font-bold text-gray-700">Google Sheet link (Apps Script URL)
+          <input type="url" id="settingSheetUrl" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off" class="border-2 border-gray-300 p-1 rounded-lg w-full mt-1 text-sm outline-none"></label>
+        <div class="text-xs text-gray-500 mt-1">Leave empty to turn off. 留空即不同步。</div>
+      </div>
       <button id="settingsSave" class="bubbly-btn bg-green-500 text-white py-3 px-4 rounded-xl w-full font-bold text-xl">Save Global Settings</button>
       <button id="testModeBtn" class="bubbly-btn bg-purple-500 text-white py-2 px-4 rounded-xl w-full font-bold mt-3">🧪 Test mode (this device, all levels, no saving)</button>
     </div>
   </div>
 </div>`;
+
+/** Sheet link accepted by the teacher panel: empty (off) or an Apps Script web-app URL. */
+const isSheetUrl = u => u === '' || /^https:\/\/script\.google\.com\/\S+$/.test(u);
 
 /** Injects the modal into document.body and wires #adminBtn. onSaved() runs after a successful save. */
 export function mountTeacherModal(onSaved) {
@@ -367,11 +434,14 @@ export function mountTeacherModal(onSaved) {
     BONDS_KEYS.forEach((k, i) => { $('settingBonds' + (i + 1)).checked = !!settings.bondsUnlock[k]; });
     $('settingBondsTime').value = settings.bondsTimeLimit; $('settingLessMotion').checked = !!settings.lessMotion;
     $('settingTime').value = settings.timeLimit; $('settingNumTime').value = settings.numTimeLimit;
+    $('settingSheetUrl').value = settings.sheetUrl || '';
     $('settingBronze').value = settings.trophy.bronze; $('settingSilver').value = settings.trophy.silver; $('settingGold').value = settings.trophy.gold;
   });
   $('settingsSave').addEventListener('click', async () => {
     const trophy = { bronze: parseInt($('settingBronze').value), silver: parseInt($('settingSilver').value), gold: parseInt($('settingGold').value) };
     if (!validateCutoffs(trophy)) { alert('Trophy cutoffs must be numbers with Bronze < Silver < Gold.'); return; }
+    const sheetUrl = $('settingSheetUrl').value.trim();
+    if (!isSheetUrl(sheetUrl)) { alert('Google Sheet link must be empty or start with https://script.google.com/'); return; }
     const patch = {
       unlockMedium: $('settingMed').checked, unlockHard: $('settingHard').checked,
       timeLimit: parseInt($('settingTime').value) || 30, numTimeLimit: parseInt($('settingNumTime').value) || 30,
@@ -379,7 +449,7 @@ export function mountTeacherModal(onSaved) {
       bondsUnlock: Object.fromEntries(BONDS_KEYS.map((k, i) => [k, $('settingBonds' + (i + 1)).checked])),
       bondsTimeLimit: parseInt($('settingBondsTime').value) || 60,
       lessMotion: $('settingLessMotion').checked,
-      trophy
+      trophy, sheetUrl
     };
     const ok = await saveSettings(patch);
     alert(ok ? 'Settings saved globally.' : 'Saved locally only (offline).');

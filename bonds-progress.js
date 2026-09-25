@@ -1,5 +1,5 @@
 // Rod Town progress: Firestore bondsProgress/{uid} + localStorage mirror, merged on load.
-import { db } from './shared.js?v=202609251810';
+import { db, player } from './shared.js?v=202609251810';
 import { doc, getDoc, setDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js';
 import { emptyProgress, mergeProgress } from './bonds-logic.js?v=202609251810';
 
@@ -21,6 +21,6 @@ export async function loadProgress(uid) {
 export async function saveProgress(uid, progress) {
   writeLocal(uid || 'guest', progress);
   if (!uid) return;
-  try { await setDoc(doc(db, 'bondsProgress', uid), { ...progress, updatedAt: serverTimestamp() }); }
+  try { await setDoc(doc(db, 'bondsProgress', uid), { ...progress, name: player.name, email: player.email || '', updatedAt: serverTimestamp() }); }
   catch (e) { console.warn('progress save failed', e); }
 }

@@ -1,6 +1,6 @@
 // Rod Town entry: DOM shell wiring, bridge to shared.js, Phaser boot.
 import { signIn, onUser, player, settings, session, enterTestMode, initAudio, engine, resetEngine, registerHit, endFever,
-         startTimer, stopTimer, saveScore, renderLeaderboard, showRankPopup, mountTeacherModal, sharedSound } from '../shared.js?v=202609251810';
+         startTimer, stopTimer, saveScore, renderLeaderboard, showRankPopup, mountTeacherModal, sharedSound, logAttempt } from '../shared.js?v=202609251810';
 import { recordResult } from '../bonds-logic.js?v=202609251810';
 import { loadProgress, saveProgress, today } from '../bonds-progress.js?v=202609251810';
 import { sfx } from './sfx.js?v=202609251810';
@@ -26,7 +26,10 @@ const bridge = {
   get testMode() { return session.testMode && !this.previewLocks; },
   progress: null,
   today,
-  async complete(key, stars) {
+  /** extra: { mistakes, durationSec } from the scene, for the teacher's attempt log. */
+  async complete(key, stars, extra = {}) {
+    // Not awaited; logAttempt skips test mode itself and never throws.
+    logAttempt({ game: 'bonds', mode: key, kind: 'level', stars, mistakes: extra.mistakes ?? null, durationSec: extra.durationSec ?? null });
     const r = recordResult(this.progress, key, stars, today());
     if (session.testMode) {
       if (this.previewLocks) this.progress = r.progress; // dev preview: keep in memory only, never saved

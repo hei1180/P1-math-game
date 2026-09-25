@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Teacher Dashboard 老師資料板</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="shared.css?v=202609251810">
+    <link rel="stylesheet" href="shared.css?v=202609252041">
     <style>
         /* This page scrolls (unlike the games) — undo shared.css's fixed-body lock. */
         body { position: static; overflow: auto; user-select: text; -webkit-user-select: text; background-color: #f8fafc; }
@@ -145,7 +145,7 @@
     </div>
 
     <script type="module">
-        import { signIn, onUser, db, auth } from './shared.js?v=202609251810';
+        import { signIn, onUser, db, auth, TEACHER_EMAILS } from './shared.js?v=202609252041';
         import {
             collection, getDocs, query, where, orderBy, Timestamp,
         } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js';
@@ -154,12 +154,9 @@
             MEDAL_ICON, WORLD_TOTAL_LEVELS,
             toCSV, overviewToCSVRows, OVERVIEW_HEADERS, attemptsToCSVRows, ATTEMPTS_HEADERS, csvFilename,
             GAME_LABEL,
-        } from './teacher-data.js?v=202609251810';
-        import { WORLDS, LEVEL_COUNT, levelKey } from './bonds-logic.js?v=202609251810';
+        } from './teacher-data.js?v=202609252041';
+        import { WORLDS, LEVEL_COUNT, levelKey } from './bonds-logic.js?v=202609252041';
 
-        // shared.js will export TEACHER_EMAILS once the attempt-log write path lands (parallel work);
-        // defined locally here in the meantime.
-        const TEACHER_EMAILS = ['cyh@clam.edu.hk'];
 
         const $ = id => document.getElementById(id);
         const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));

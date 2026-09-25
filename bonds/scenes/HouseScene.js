@@ -11,18 +11,20 @@
  *     flashes red, one mistake.
  *   - tapping the rod on the workbench sends it back (no mistake).
  * Floors appear in found order; when the house is full they slide into order (a ascending top → bottom),
- * the pattern arrows grow, the lights run bottom → top, the door opens, the world's rod buddy waves,
- * fireworks, end panel with stars.
+ * the pattern arrows grow, the lights run bottom → top, the door opens and every floor's train hops out
+ * (floor order, staggered) to line up on the ground — happy faces, ♪ / ✨ puffs, equation chips, a jumping
+ * wave, the twin floor spins — fireworks, end panel with stars (the parade stays visible beside / below it).
+ * The sticker itself is a map thing (bridge.complete + the sticker book); the panel only says so.
  *
  * Start data: { w }  (1..4); dev/test: { w, n } with n one of the world's boss numbers.
  * Test hook: scene.__test = { n, floors, phase (getters), remaining(), pick(len), mistakes(),
- *            bench(), tapBench(), pile(), layout() }
+ *            bench(), tapBench(), pile(), layout(), parade() }
  */
 import { WORLDS, RODS, houseFor, splitsOf, starsFor, levelKey } from '../../bonds-logic.js?v=202609251524';
 import { UI, WORLD_THEME, textStyle } from '../theme.js?v=202609251524';
 import { fx } from '../fx.js?v=202609251524';
 import { sfx } from '../sfx.js?v=202609251524';
-import { Rod, DPR, dur, sleep, tweenP, reparent, reducedMotion, darker } from '../ui/Rod.js?v=202609251524';
+import { Rod, DPR, dur, sleep, tweenP, reparent, worldPos, reducedMotion, darker } from '../ui/Rod.js?v=202609251524';
 import { T, domLeft, backButton, makeBubble, pillButton, drawStarSlot, drawPanel, dropStar, newBestBadge, shineStars } from '../ui/Chrome.js?v=202609251524';
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
@@ -192,6 +194,8 @@ export class HouseScene extends Phaser.Scene {
       /** Pile rods in reading order (top row first, left → right). */
       pile: () => self.pileRods().map(r => ({ len: r.len, x: Math.round(r.home.x), y: Math.round(r.home.y) }))
         .sort((p, q) => Math.round((p.y - q.y) / 12) || p.x - q.x),
+      /** The finale parade: one entry per train (centre, scale, equation). */
+      parade: () => (self.paradeL && self.paradeL.active ? self.paradeL.list.filter(c => c.tc).map(c => ({ x: Math.round(c.x), y: Math.round(c.y), s: +c.scaleX.toFixed(2), eq: c.eq })) : []),
       layout: () => { const L = self.L; return { u: L.u, uP: L.uP, wide: L.wide, house: { x: L.bodyX, y: L.top, w: L.bodyW, h: L.houseH }, box: { x: L.box.x, y: L.box.y, w: L.box.width, h: L.box.height }, rows: L.pileRows }; },
     };
 
@@ -446,8 +450,7 @@ export class HouseScene extends Phaser.Scene {
     this.tweens.killTweensOf(this.houseL);
     this.houseL.list.slice().forEach(o => killDeep(this, o));
     this.houseL.removeAll(true);
-    if (this.buddy) { killDeep(this, this.buddy); this.buddy.destroy(); }
-    this.buddy = null;
+    this.clearParade();
     const done = this.phase !== 'play';
     const g = this.add.graphics();
     this.houseL.add(g);
@@ -531,7 +534,7 @@ export class HouseScene extends Phaser.Scene {
     this.drawBench();
     if (done) {
       for (const o of this.floorObjs) o.tc.rods.forEach(r => r.mood('happy', 0));
-      this.makeBuddy(false);
+      this.makeParade(false);
     }
     this.houseL.setAlpha(1).setY(0);
   }
@@ -602,6 +605,10 @@ export class HouseScene extends Phaser.Scene {
     const r = { x: L.bodyX + L.wall + 1, y: -L.fPitch / 2 + 1, w: L.bodyW - 2 * L.wall - 2, h: L.fPitch - 2 };
     const rad = Math.min(6, r.h / 3);
     g.fillStyle(mode === 'flash' ? 0xfde047 : 0xfef3c7, mode === 'flash' ? 0.85 : 0.95).fillRoundedRect(r.x, r.y, r.w, r.h, rad);
+    if (mode === 'ghost') { // the train went out to the parade: a dashed outline keeps its place
+      g.lineStyle(2, WALL_EDGE, 0.35);
+      dashedRoundRect(g, L.trainX, -L.u / 2, L.n * L.u, L.u, Math.max(2, Math.min(L.u * 0.22, 9)), Math.max(4, L.u * 0.4), Math.max(3, L.u * 0.25));
+    }
     if (o.f.a === o.f.b) {
       g.fillStyle(UI.gold, 0.22).fillRoundedRect(r.x, r.y, r.w, r.h, rad);
       g.lineStyle(3, UI.gold, 1).strokeRoundedRect(r.x, r.y, r.w, r.h, rad);
@@ -905,6 +912,8 @@ export class HouseScene extends Phaser.Scene {
 
     const stars = starsFor(this.mistakes);
     const key = levelKey(this.w, 'boss');
+    const pr = this.bridge.progress;
+    this.prevBest = (pr && pr.levels && pr.levels[key]) || 0; // best before this run: the map animates a medal upgrade
     const saving = Promise.resolve()
       .then(() => this.bridge.complete(key, stars))
       .catch(e => { console.warn('house complete', e); return { newBest: false, sticker: null }; });
@@ -959,11 +968,11 @@ export class HouseScene extends Phaser.Scene {
     await new Promise(res => this.tweens.add({ targets: this.door, scaleX: 0.02, duration: dur(420), ease: 'Cubic.easeIn', onComplete: res, onStop: res }));
     if (gen !== this.gen) return this.finishWin(saving, stars);
     this.door.setVisible(false);
-    this.makeBuddy(true);
     sfx.fanfare();
     fx.fireworks(this);
     this.smoke();
-    await sleep(this, 1500);
+    const t = this.makeParade(true);
+    await sleep(this, Math.max(1200, t + 350));
     return this.finishWin(saving, stars);
   }
 
@@ -987,32 +996,156 @@ export class HouseScene extends Phaser.Scene {
     }
   }
 
-  /** The world's rod buddy steps out of the door and waves. */
-  makeBuddy(animate) {
-    const L = this.L, len = WORLDS[this.w - 1].sticker;
-    const bu = clamp(Math.min(L.bodyW * 0.8, L.region.w * 0.8) / len, 10, 30);
-    const rh = Math.max(22, bu * 1.4);
-    // tall: on the grass below the house (where the rod box was); wide: in the rod box's place
-    // (tall: low in the emptied box so the end panel's buttons stay clear)
-    const y = L.wide ? L.box.y + L.box.height * 0.6 : clamp(L.box.y + L.box.height * 0.62, L.bottom + rh, L.H - rh / 2 - 12);
-    const bx = L.wide ? clamp(L.box.x + L.box.width / 2, (len * bu) / 2 + 8, L.W - (len * bu) / 2 - 8) : L.cx;
-    const c = this.buddy = this.add.container(bx, y).setDepth(950); // stays above the end panel's dim
-    const rod = new Rod(this, -(len * bu) / 2, 0, len, { unit: bu, labels: true });
-    c.add(rod);
-    rod.mood('happy', 0);
-    const wave = () => this.tweens.add({ targets: c, angle: { from: -10, to: 10 }, duration: 320, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-    if (!animate) { wave(); return; }
-    const d = this.doorInfo;
-    c.setPosition(L.cx, d.y + d.h / 2).setScale(0.08);
-    sfx.boing(len);
-    this.tweens.add({
-      targets: c, x: bx, y, scale: 1, duration: dur(L.wide ? 650 : 480), ease: 'Back.easeOut',
-      onComplete: () => { fx.puff(this, bx, y + rh / 2); sfx.toot(); wave(); },
+  // ---------------------------------------------------------------- finale parade
+  clearParade() {
+    if (this.paradeL) { killDeep(this, this.paradeL); this.paradeL.destroy(); }
+    this.paradeL = null;
+  }
+
+  /**
+   * Parade spots for F trains of length N: a grid (bottom-aligned, rows centred) in the free ground beside
+   * or below where the end panel will sit (worst case: with the sticker line), never over its buttons.
+   * Returns { u (display unit), gx, chips, cfs, list: [{ x, y (train centre), jump }] }.
+   */
+  paradeSpots(F) {
+    const L = this.L, W = L.W, H = L.H, N = this.n, pb = this.panelBox(true);
+    const regions = [];
+    const y0 = Math.max(pb.y1 + 8, L.groundTop);
+    regions.push({ x: M, y: y0, w: W - 2 * M, h: H - 8 - y0 }); // below the card, on the ground
+    const x0 = Math.max(pb.x1, L.bodyX + L.bodyW + L.over) + 10;
+    regions.push({ x: x0, y: L.TOP, w: W - 8 - x0, h: H - 8 - L.TOP }); // beside the card (where the rod box was)
+    const gx = 10;
+    let best = null;
+    // wide screens: beside the card, where the rod box was (the ground band in front would hide the door)
+    const order = L.wide ? [[regions[1]], regions] : [regions];
+    for (const set of order) {
+      if (best && best.u >= 12) break;
+      best = null;
+      for (const R of set) {
+        if (R.w < N * 6 || R.h < 24) continue;
+        for (let c = 1; c <= F; c++) {
+          const rows = Math.ceil(F / c);
+          const u = Math.min((R.w - (c - 1) * gx) / (c * N), R.h / rows / 1.9, 30);
+          if (u <= 0) continue;
+          if (!best || u > best.u + 0.5 || (u > best.u - 0.5 && rows < best.rows)) best = { R, c, rows, u };
+        }
+      }
+    }
+    if (!best) { // no free ground (tiny screen): a thin row along the bottom edge
+      const R = { x: M, y: H - 40, w: W - 2 * M, h: 32 };
+      best = { R, c: F, rows: 1, u: Math.max(3, (R.w - (F - 1) * 4) / (F * N)) };
+    }
+    const { R, c, rows, u } = best;
+    const P = Math.min(R.h / rows, u * 2.6 + 18);
+    const cfs = clamp(u * 0.6, 11, 16);
+    const chips = P >= u * 1.45 + cfs * 1.3;
+    const top = R.y + R.h - rows * P;
+    const list = [];
+    for (let i = 0; i < F; i++) {
+      const r = Math.floor(i / c), k = i - r * c, nr = Math.min(c, F - r * c);
+      const rowW = nr * N * u + (nr - 1) * gx;
+      const x = R.x + (R.w - rowW) / 2 + k * (N * u + gx) + (N * u) / 2;
+      const y = top + r * P + P - u / 2 - 3;
+      list.push({ x, y, jump: clamp(P - u * 1.5 - 4, 0, u * 0.9) });
+    }
+    return { u, gx, chips, cfs, list };
+  }
+
+  /**
+   * Finale: every floor's train (its own Rods, reparented — nothing new is built) hops out of the door in floor
+   * order and lines up on the ground: happy faces, a ♪ / ✨ puff and an `a+b` chip on landing, the twin floor
+   * spins, then a jumping wave runs along the line (lessMotion: one hop each, no spin, no wave loop).
+   * The floors keep a dashed ghost outline and their numerals. `animate` false = final state (after a relayout).
+   * Returns the ms until the last train has landed.
+   */
+  makeParade(animate) {
+    const L = this.L, less = reducedMotion();
+    this.clearParade();
+    const P = this.paradeL = this.add.container(0, 0).setDepth(950); // above the end panel's dim, clear of its card
+    const objs = this.floorObjs.slice().sort((p, q) => p.slot - q.slot);
+    const F = objs.length, N = this.n;
+    if (!F) return 0;
+    const sp = this.paradeSpots(F);
+    const s = sp.u / L.u, half = (N * L.u) / 2;
+    const d = this.doorInfo, door = { x: L.cx, y: d.y + d.h * 0.6 };
+    const sd = clamp((d.w * 0.9) / (N * L.u), 0.12, s); // squeezes through the doorway
+    const S = dur(F > 6 ? 120 : 150), T1 = dur(170), T2 = dur(430);
+    const last = animate ? (F - 1) * S + T1 + T2 : 0;
+    const waveGap = 90, cycle = Math.max(700, F * waveGap + 400);
+    const cheers = ['♪', '✨', '♫', '✨'];
+    objs.forEach((o, i) => {
+      const spot = sp.list[i], { a, b } = o.f, twin = a === b;
+      const tc = o.tc, wp = worldPos(tc);
+      const c = this.add.container(wp.x + half, wp.y);
+      P.add(c);
+      reparent(tc, c);
+      c.tc = tc;
+      c.eq = `${a}+${b}`;
+      tc.rods.forEach(r => r.mood('happy', 0));
+      const land = () => {
+        if (!c.active) return;
+        if (animate) {
+          fx.puff(this, spot.x, spot.y + sp.u / 2);
+          sfx.tick(3 + i);
+          const t = this.add.text(spot.x + (i % 2 ? 1 : -1) * (N * sp.u) * 0.3, spot.y - sp.u * 0.6, cheers[i % 4],
+            { fontSize: `${Math.round(clamp(sp.u * 0.9, 14, 26))}px`, color: '#f59e0b', padding: { x: 2, y: 4 } }).setOrigin(0.5);
+          P.add(t);
+          this.tweens.add({ targets: t, y: t.y - 28, alpha: { from: 1, to: 0 }, duration: 800, ease: 'Sine.easeOut', onComplete: () => t.destroy() });
+          if (twin && !less) this.tweens.add({ targets: c, angle: { from: 0, to: 360 }, duration: 520, ease: 'Cubic.easeInOut' });
+        }
+        if (sp.chips) {
+          const chip = this.add.text(0, (-sp.u * 0.95 - sp.cfs * 0.75) / s, c.eq,
+            textStyle(sp.cfs, twin ? '#a16207' : '#1f2937', { resolution: DPR, backgroundColor: '#ffffffe6', padding: { x: 5, y: 2 } }))
+            .setOrigin(0.5).setScale(1 / s);
+          c.add(chip);
+          chip.setAlpha(0);
+          this.tweens.add({ targets: chip, alpha: 1, duration: 180, delay: animate && twin && !less ? 520 : 0 });
+          this.tweens.add({ targets: chip, alpha: 0, duration: 300, delay: 1900, onComplete: () => chip.destroy() });
+        }
+      };
+      // the jumping wave: one shared cycle, each train a beat after its left / upper neighbour
+      if (spot.jump > 1) {
+        this.tweens.add({
+          targets: c, y: spot.y - spot.jump, duration: 200, yoyo: true, ease: 'Quad.easeOut',
+          delay: last + 150 + i * waveGap, repeat: less ? 0 : -1, repeatDelay: cycle - 400,
+        });
+      }
+      if (!animate) { c.setPosition(spot.x, spot.y).setScale(s); this.drawFloorBg(o, 'ghost'); land(); return; }
+      // out through the door: shrink into the doorway, then a parabolic hop out to the spot
+      const t0 = i * S;
+      c.arcT = 0;
+      this.tweens.add({
+        targets: c, x: door.x, y: door.y, scale: sd, delay: t0, duration: T1, ease: 'Quad.easeIn',
+        onStart: () => { this.drawFloorBg(o, 'ghost'); sfx.boing(Math.min(a, b)); },
+      });
+      const hH = (less ? 0.4 : 1) * clamp(Math.abs(spot.y - door.y) * 0.4 + 40, 50, 160);
+      this.tweens.add({
+        targets: c, arcT: 1, delay: t0 + T1, duration: T2, ease: 'Linear',
+        onUpdate: () => {
+          const t = c.arcT;
+          c.setPosition(door.x + (spot.x - door.x) * t, door.y + (spot.y - door.y) * t - 4 * hH * t * (1 - t));
+          c.setScale(sd + (s - sd) * Math.min(1, t * 1.6));
+        },
+        onComplete: land,
+      });
     });
-    this.tweens.add({ targets: c, angle: { from: -25, to: 0 }, duration: dur(480), ease: 'Quad.easeOut' });
+    if (animate) this.time.delayedCall(last + 60, () => { if (P.active) sfx.toot(); });
+    return last;
   }
 
   // ---------------------------------------------------------------- end panel
+  /** Where the end panel sits (card size PW × PH at scale k, centre cx, cy; screen box x0..x1, y0..y1). */
+  panelBox(hasSticker) {
+    const W = this.scale.width, H = this.scale.height;
+    const PW = 400, PH = hasSticker ? 460 : 410;
+    const k = Math.min(1, (W - 24) / PW, (H - 24) / PH);
+    const h = PH * k;
+    // tall screens: sit high so the parade stays visible on the ground below the card
+    const cy = W < H ? clamp((H - h) * 0.2, 12, 70) + h / 2 : clamp(H / 2, h / 2 + 12, H - h / 2 - 12);
+    const cx = W / 2;
+    return { PW, PH, k, cx, cy, x0: cx - (PW * k) / 2, x1: cx + (PW * k) / 2, y0: cy - h / 2, y1: cy + h / 2 };
+  }
+
   /** Same end panel as the levels: stars drop one by one; Replay / Map. `instant` redraws the final state (after a resize). */
   showEndPanel(stars, result, instant = false) {
     this.phase = 'end';
@@ -1024,10 +1157,7 @@ export class HouseScene extends Phaser.Scene {
     if (!instant) { dim.setAlpha(0); this.tweens.add({ targets: dim, alpha: 1, duration: 200 }); }
 
     const hasSticker = !!(result && result.sticker);
-    const PW = 400, PH = hasSticker ? 460 : 410;
-    const k = Math.min(1, (W - 24) / PW, (H - 24) / PH);
-    // tall screens: sit a little high so the waving buddy stays visible below the card
-    const cx = W / 2, cy = clamp(H / 2 - (W < H ? H * 0.06 : 0), (PH * k) / 2 + 12, H - (PH * k) / 2 - 12);
+    const { PW, PH, k, cx, cy } = this.panelBox(hasSticker);
     const card = this.add.container(cx, cy);
     const g = this.add.graphics();
     drawPanel(g, PW, PH, th.accent);
@@ -1050,7 +1180,7 @@ export class HouseScene extends Phaser.Scene {
 
     const replay = pillButton(this, '🔁 再玩', 'Replay', { stroke: th.accent }, () => this.leave('House', { w: this.w }));
     const map = pillButton(this, '🗺 地圖', 'Map', { fill: 0xf97316, ink: '#ffffff', stroke: 0xffffff },
-      () => this.goMap({ key: levelKey(this.w, 'boss'), stars, ...(result || {}) }));
+      () => this.goMap({ key: levelKey(this.w, 'boss'), stars, prev: this.prevBest || 0, ...(result || {}) }));
     replay.setPosition(-(replay.pw + 12) / 2, PH / 2 - 56);
     map.setPosition((map.pw + 12) / 2, PH / 2 - 56);
     card.add([replay, map]);

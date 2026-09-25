@@ -51,11 +51,14 @@
  *   board.frames keeps the logical parts (litA + litB = n); the merged look is stored separately so a
  *   relayout mid-celebration redraws it.
  */
-import { RODS, makeTenMove } from '../../bonds-logic.js?v=202609251311';
-import { FONT, UI } from '../theme.js?v=202609251311';
-import { fx } from '../fx.js?v=202609251311';
-import { sfx } from '../sfx.js?v=202609251311';
-import { Rod, DPR, dur, tweenP, sleep, worldPos, reparent, darker, drawSquares } from './Rod.js?v=202609251311';
+import { RODS, makeTenMove } from '../../bonds-logic.js?v=202609251524';
+import { FONT, UI } from '../theme.js?v=202609251524';
+import { fx } from '../fx.js?v=202609251524';
+import { sfx } from '../sfx.js?v=202609251524';
+import { Rod, DPR, dur, tweenP, sleep, worldPos, reparent, darker, drawSquares } from './Rod.js?v=202609251524';
+
+/** How long the completed make-ten picture stays on screen in levels and the 💡 hint (ms). */
+export const MAKE_TEN_HOLD = 2000;
 
 const GO = Phaser.GameObjects;
 const clamp = Phaser.Math.Clamp;
@@ -1104,7 +1107,8 @@ export class Board extends Phaser.GameObjects.Container {
       if (!ok()) return;
       this._setEq(this._eqSum(10, n - 10));
     }
-    await sleep(s, this._ms(120, 60));
+    // levels: hold the finished "10 + (n−10) = n" picture so children can take it in (owner: ≥ 2 s; not shortened by less-motion)
+    await sleep(s, this.fast ? this._ms(120, 60) : MAKE_TEN_HOLD);
   }
 
   // ------------------------------------------------------------------ make-ten hint
@@ -1183,7 +1187,7 @@ export class Board extends Phaser.GameObjects.Container {
       { k: 'chip', v: 10, len: 10 }, { k: 'op', v: '+' },
       { k: 'chip', v: q.n - 10, len: smaller, hex: colorOf(from) }, { k: 'op', v: '=' }, { k: 'num', v: q.n },
     ]);
-    await sleep(s, 1350);
+    await sleep(s, MAKE_TEN_HOLD);
     if (!ok()) return;
     // ease everything back
     s.tweens.add({ targets: tens, alpha: 0, duration: dur(200) });

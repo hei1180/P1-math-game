@@ -16,8 +16,8 @@ export const RODS = {
 for (const r of Object.values(RODS)) r.hex = parseInt(r.css.slice(1), 16);
 
 export const WORLDS = [
-  { w: 1, key: 'w1', min: 2, max: 5, zh: '草地', en: 'Meadow', boss: [5], sticker: 5 },
-  { w: 2, key: 'w2', min: 6, max: 10, zh: '海邊', en: 'Beach', boss: [6, 7, 8, 9, 10], sticker: 10 },
+  { w: 1, key: 'w1', min: 2, max: 9, zh: '草地', en: 'Meadow', boss: [5, 6, 7, 8, 9], sticker: 5 },
+  { w: 2, key: 'w2', min: 10, max: 10, zh: '海邊', en: 'Beach', boss: [10], sticker: 10 },
   { w: 3, key: 'w3', min: 11, max: 13, zh: '森林', en: 'Forest', boss: [11, 12, 13], sticker: 9 },
   { w: 4, key: 'w4', min: 14, max: 18, zh: '雪山', en: 'Snow peak', boss: [14, 15], sticker: 8 },
 ];
@@ -30,8 +30,9 @@ function shuffle(arr, rng) {
   return arr;
 }
 
-/** Valid values for part a so that a and n − a are both 1..10. */
-export function partRange(n) { return { lo: Math.max(1, n - 10), hi: Math.min(10, n - 1) }; }
+/** Valid values for part a so that a and n − a are both single-digit (1..9). P1 teaches single-digit bonds only. */
+export const MAX_PART = 9;
+export function partRange(n) { return { lo: Math.max(1, n - MAX_PART), hi: Math.min(MAX_PART, n - 1) }; }
 
 function pickNA(w, rng, prev) {
   const wd = world(w);
@@ -45,7 +46,7 @@ function pickNA(w, rng, prev) {
 }
 
 /** 5 unique sorted rods containing `answer`; distractors answer±1, ±2 first, then random. */
-export function trayFor(answer, rng, { size = 5, max = 10 } = {}) {
+export function trayFor(answer, rng, { size = 5, max = MAX_PART } = {}) {
   const set = new Set([answer]);
   const near = [answer - 1, answer + 1, answer - 2, answer + 2].filter(v => v >= 1 && v <= max);
   for (const v of near) if (set.size < size) set.add(v);

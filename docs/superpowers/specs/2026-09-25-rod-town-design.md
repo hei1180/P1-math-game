@@ -93,12 +93,14 @@ Text is bilingual: large Traditional Chinese, small English under it.
 
 ## §2 Progression, Rush, teacher, data
 
+Owner rules 2026-09-25: every part is single-digit (1-9) — P1 teaches single-digit combinations only, so 18 is only 9 + 9 and a 10-rod is never an answer (it appears only as the result of make-ten). The completed make-ten picture holds ≥ 2 s in levels and in the 💡 hint (Rush keeps its fast version).
+
 ### Worlds
 
 | World | Key | Numbers | Theme |
 |---|---|---|---|
-| 1 | w1 | 2-5 | 草地 Meadow |
-| 2 | w2 | 6-10 | 海邊 Beach |
+| 1 | w1 | 2-9 | 草地 Meadow |
+| 2 | w2 | 10 | 海邊 Beach |
 | 3 | w3 | 11-13 | 森林 Forest |
 | 4 | w4 | 14-18 | 雪山 Snow peak |
 

@@ -3,14 +3,14 @@
 // combo badge that grows and shakes, marquee lights that speed up at combo 3/4/5, fever rainbow rail +
 // cool rods + zoom pulses, last-5-seconds red vignette with clock ticks.
 // Start data: { w }. Test hook: scene.__test = { answer(), play(correct), step(), state() }.
-import { genRush } from '../../bonds-logic.js?v=202609250809';
-import { FONT, WORLD_THEME } from '../theme.js?v=202609250809';
-import { fx } from '../fx.js?v=202609250809';
-import { sfx } from '../sfx.js?v=202609250809';
-import { Board } from '../ui/Board.js?v=202609250809';
-import { Tray } from '../ui/Tray.js?v=202609250809';
-import { DPR, worldPos, reducedMotion } from '../ui/Rod.js?v=202609250809';
-import { domLeft, backButton, makeBubble } from '../ui/Chrome.js?v=202609250809';
+import { genRush } from '../../bonds-logic.js?v=202609251311';
+import { FONT, WORLD_THEME } from '../theme.js?v=202609251311';
+import { fx } from '../fx.js?v=202609251311';
+import { sfx } from '../sfx.js?v=202609251311';
+import { Board } from '../ui/Board.js?v=202609251311';
+import { Tray } from '../ui/Tray.js?v=202609251311';
+import { DPR, worldPos, reducedMotion } from '../ui/Rod.js?v=202609251311';
+import { domLeft, backButton, makeBubble } from '../ui/Chrome.js?v=202609251311';
 
 const BUILD_PTS = 10, BREAK_PTS = 15;
 const LIGHT_PERIOD = [900, 900, 900, 480, 300, 150]; // ms per chase step by combo (index = min(combo, 5))

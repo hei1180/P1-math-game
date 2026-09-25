@@ -1,10 +1,10 @@
 // Rod Town adventure map 冒險地圖: four stacked worlds (W1 at the bottom) joined by one winding railway
 // through 28 stations, fog over locked worlds, the player's train, streak flame and the sticker book.
-import { WORLDS, RODS, LEVEL_COUNT, levelKey, isWorldOpen, isLevelOpen, isRushOpen } from '../../bonds-logic.js?v=202609250809';
-import { UI, WORLD_THEME, textStyle } from '../theme.js?v=202609250809';
-import { fx } from '../fx.js?v=202609250809';
-import { sfx } from '../sfx.js?v=202609250809';
-import { domLeft, roundButton } from '../ui/Chrome.js?v=202609250809';
+import { WORLDS, RODS, LEVEL_COUNT, levelKey, isWorldOpen, isLevelOpen, isRushOpen } from '../../bonds-logic.js?v=202609251311';
+import { UI, WORLD_THEME, textStyle } from '../theme.js?v=202609251311';
+import { fx } from '../fx.js?v=202609251311';
+import { sfx } from '../sfx.js?v=202609251311';
+import { domLeft, roundButton } from '../ui/Chrome.js?v=202609251311';
 
 const PER_WORLD = LEVEL_COUNT + 1; // levels 1..6 + boss house
 // Horizontal position (0..1 of the track span) of level 1..6 and the boss in each world. Each world's
@@ -44,7 +44,7 @@ function setSF(obj, f) { if (obj.setScrollFactor) obj.setScrollFactor(f); if (ob
 
 // ---- sticker rods: real Rod buddies when bonds/ui/Rod.js exists, a plain coloured bar otherwise ----
 let rodModule = null;
-const loadRod = () => (rodModule = rodModule || import('../ui/Rod.js?v=202609250809').catch(() => null));
+const loadRod = () => (rodModule = rodModule || import('../ui/Rod.js?v=202609251311').catch(() => null));
 function makeStickerRod(scene, x, y, len, unit) {
   const holder = scene.add.container(x, y);
   const fallback = () => { // same look as Rod: one square tall, joined squares, a face on the right end, no number

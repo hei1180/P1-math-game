@@ -20,12 +20,12 @@
  * Test hook: scene.__test = { n, floors, phase (getters), remaining(), pick(len), mistakes(),
  *            bench(), tapBench(), pile(), layout(), parade() }
  */
-import { WORLDS, RODS, houseFor, splitsOf, starsFor, levelKey } from '../../bonds-logic.js?v=202609251810';
-import { UI, WORLD_THEME, textStyle } from '../theme.js?v=202609251810';
-import { fx } from '../fx.js?v=202609251810';
-import { sfx } from '../sfx.js?v=202609251810';
-import { Rod, DPR, dur, sleep, tweenP, reparent, worldPos, reducedMotion, darker } from '../ui/Rod.js?v=202609251810';
-import { T, domLeft, backButton, makeBubble, pillButton, drawStarSlot, drawPanel, dropStar, newBestBadge, shineStars } from '../ui/Chrome.js?v=202609251810';
+import { WORLDS, RODS, houseFor, splitsOf, starsFor, levelKey } from '../../bonds-logic.js?v=202609252041';
+import { UI, WORLD_THEME, textStyle } from '../theme.js?v=202609252041';
+import { fx } from '../fx.js?v=202609252041';
+import { sfx } from '../sfx.js?v=202609252041';
+import { Rod, DPR, dur, sleep, tweenP, reparent, worldPos, reducedMotion, darker } from '../ui/Rod.js?v=202609252041';
+import { T, domLeft, backButton, makeBubble, pillButton, drawStarSlot, drawPanel, dropStar, newBestBadge, shineStars } from '../ui/Chrome.js?v=202609252041';
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 const TOP0 = 66; // below the back button and the DOM mute/admin cluster
@@ -142,6 +142,7 @@ export class HouseScene extends Phaser.Scene {
     this.locked = false; // second rod in flight: the workbench is being judged
     this.press = null;
     this.mistakes = 0;
+    this.startedAt = Date.now(); // for the attempt log's durationSec
     this.phase = 'play'; // 'play' → 'win' (celebration) → 'end' (panel)
     this.leaving = false;
     this.gen = 0; // bumped by every rebuild; async steps drop out when it changes
@@ -915,7 +916,7 @@ export class HouseScene extends Phaser.Scene {
     const pr = this.bridge.progress;
     this.prevBest = (pr && pr.levels && pr.levels[key]) || 0; // best before this run: the map animates a medal upgrade
     const saving = Promise.resolve()
-      .then(() => this.bridge.complete(key, stars))
+      .then(() => this.bridge.complete(key, stars, { mistakes: this.mistakes, durationSec: Math.round((Date.now() - this.startedAt) / 1000) }))
       .catch(e => { console.warn('house complete', e); return { newBest: false, sticker: null }; });
 
     await sleep(this, 300);

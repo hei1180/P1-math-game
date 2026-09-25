@@ -36,7 +36,7 @@ export class RushScene extends Phaser.Scene {
 
     this.bg = this.add.graphics().setDepth(-10);
     this.lights = this.add.container(0, 0).setDepth(-5);
-    this.board = new Board(this);
+    this.board = new Board(this, { fast: true }); // short merge sequence (≈ 0.8-1 s) keeps the rush flowing
     this.tray = new Tray(this);
     this.tray.setEnabled(false);
     this.tray.on('choose', rod => this.onChoose(rod));

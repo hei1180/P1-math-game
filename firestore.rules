@@ -1,4 +1,6 @@
 rules_version = '2';
+// BEFORE PUBLISHING: replace TEACHER_EMAIL@example.com below with the teacher's real Google account email.
+// Do not commit the real address to this public repo.
 
 // Firestore security rules for the P1 maths game site (Firebase project p1-maths).
 //

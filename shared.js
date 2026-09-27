@@ -3,8 +3,8 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
 import { getFirestore, collection, doc, getDoc, setDoc, getDocs, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
-import { DEFAULT_TROPHY, TROPHY_ICON, TROPHY_LABEL, trophyFor, validateCutoffs } from './trophy.js?v=202609252041';
-import { gameOf, modeLabel } from './labels.js?v=202609252041';
+import { DEFAULT_TROPHY, TROPHY_ICON, TROPHY_LABEL, trophyFor, validateCutoffs } from './trophy.js?v=202609271152';
+import { gameOf, modeLabel } from './labels.js?v=202609271152';
 
 export { TROPHY_ICON, TROPHY_LABEL };
 
@@ -24,7 +24,15 @@ export const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
 
 export const TEACHER_PIN = '1128';
-export const TEACHER_EMAILS = ['TEACHER_EMAIL@example.com'];
+/** SHA-256 of each teacher's lower-case email. The address itself is never stored in this public repo. */
+export const TEACHER_EMAIL_HASHES = ['852963690b9bd30bbef93e579151028d4f027e008ff1233c27ff8dd9b5ee6d22'];
+/** True when `email` belongs to a teacher (compares SHA-256 fingerprints). */
+export async function isTeacherEmail(email) {
+  if (!email || !crypto.subtle) return false;
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(email.trim().toLowerCase()));
+  const hex = [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+  return TEACHER_EMAIL_HASHES.includes(hex);
+}
 export const NUM_KEYS = ['num1', 'num2', 'num3', 'num4'];
 const defaultNumUnlock = () => Object.fromEntries(NUM_KEYS.map(k => [k, false]));
 export const BONDS_KEYS = ['w1', 'w2', 'w3', 'w4'];

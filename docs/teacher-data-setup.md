@@ -1,7 +1,10 @@
 # 老師資料設定指南 / Teacher data setup guide
 
-給 **TEACHER_EMAIL@example.com** 的一次性設定步驟，不需要懂程式。
-One-time setup for **TEACHER_EMAIL@example.com**. No coding knowledge needed — just careful copy-and-paste.
+> **在規則裡填上你的電郵 / Put your email into the rules:** `firestore.rules` 內寫的是 `TEACHER_EMAIL@example.com`。貼到 Firebase 前，把它改成你登入用的 Google 電郵（只在 Firebase 主控台內修改，不要改 GitHub 上的檔案）。
+> The file contains `TEACHER_EMAIL@example.com`. Before publishing in the Firebase console, replace it with your Google sign-in email — edit it only inside the console, never in the public GitHub file.
+
+給 **（老師帳戶 / the teacher account）** 的一次性設定步驟，不需要懂程式。
+One-time setup for **（老師帳戶 / the teacher account）**. No coding knowledge needed — just careful copy-and-paste.
 
 做完 A 和 B 之後，遊戲就會：把每一次遊戲記錄存入 Firestore（給儀表板用），
 同時也存一份到你自己的 Google 試算表（方便你隨時打開看、篩選、存檔）。
@@ -47,11 +50,11 @@ account can change settings or read every student's raw attempt records.
   Students: can still play and see leaderboards, but cannot read or edit
   anyone else's scores, and cannot read the raw "attempts" records (those are
   teacher-only).
-- 老師（⚙️ 面板）：只有用 **TEACHER_EMAIL@example.com** 這個 Google 帳戶登入時，
+- 老師（⚙️ 面板）：只有用 **（老師帳戶 / the teacher account）** 這個 Google 帳戶登入時，
   「Save Global Settings」才會真正存進資料庫；用其他帳戶登入會被拒絕（畫面
   上會顯示「Saved locally only」）。
   Teacher (⚙️ panel): "Save Global Settings" only actually saves when you are
-  signed in as **TEACHER_EMAIL@example.com**. Any other account gets rejected (the
+  signed in as **（老師帳戶 / the teacher account）**. Any other account gets rejected (the
   screen will say "Saved locally only").
 - 排行榜 / 自己最高分：完全不受影響，一樣正常運作。
   Leaderboards and "my best score": unaffected, work exactly as before.
@@ -122,17 +125,17 @@ sign-in screen or an error), re-check the access setting in step B2.
 
 ### B3. 把網址貼到遊戲裡 / Paste the URL into the game
 
-1. 用 **TEACHER_EMAIL@example.com** 登入遊戲網站（例如 GitHub Pages 上的網址）。
+1. 用 **（老師帳戶 / the teacher account）** 登入遊戲網站（例如 GitHub Pages 上的網址）。
    Sign in to the game site (e.g. its GitHub Pages URL) as
-   **TEACHER_EMAIL@example.com**.
+   **（老師帳戶 / the teacher account）**.
 2. 按 ⚙️ → 輸入 PIN → 找到「Google Sheet link (Apps Script URL)」欄位，
    貼上剛剛複製的網址。
    Click ⚙️ → enter the PIN → find the "Google Sheet link (Apps Script URL)"
    field and paste the URL you copied.
 3. 按 **Save Global Settings**。看到「Settings saved globally.」就是成功了
-   （前提是你是用 TEACHER_EMAIL@example.com 登入 — 見 A 段落）。
+   （前提是你是用 （老師帳戶 / the teacher account） 登入 — 見 A 段落）。
    Click **Save Global Settings**. "Settings saved globally." means it
-   worked (this only succeeds when you're signed in as TEACHER_EMAIL@example.com — see
+   worked (this only succeeds when you're signed in as （老師帳戶 / the teacher account） — see
    section A).
 4. 之後玩一局任何遊戲，回去試算表的 **Attempts** 分頁，應該會多一行資料。
    Now play one round of any game, then check the **Attempts** tab in your
@@ -171,9 +174,9 @@ panel (after entering the PIN) via the "📊 Teacher dashboard" link.
 
 **怎麼用 / How to use it:**
 
-1. 用 **TEACHER_EMAIL@example.com** 登入（用其他帳戶登入會看到「此頁只限老師 /
+1. 用 **（老師帳戶 / the teacher account）** 登入（用其他帳戶登入會看到「此頁只限老師 /
    Teachers only」，不會顯示任何資料）。
-   Sign in as **TEACHER_EMAIL@example.com** (any other account sees "此頁只限老師 /
+   Sign in as **（老師帳戶 / the teacher account）** (any other account sees "此頁只限老師 /
    Teachers only" and no data at all).
 2. **Overview（總覽）**分頁：每個學生一行，包含最後遊玩時間、這段時間玩了
    幾次、各遊戲的最佳成績。
@@ -198,9 +201,9 @@ panel (after entering the PIN) via the "📊 Teacher dashboard" link.
 
 **「Saved locally only (offline).」或設定存不進去 / Settings won't save,
 or you see "Saved locally only (offline)."**
-檢查你是不是用 **TEACHER_EMAIL@example.com** 登入（不是其他 Google 帳戶），並確認
+檢查你是不是用 **（老師帳戶 / the teacher account）** 登入（不是其他 Google 帳戶），並確認
 段落 A 的保安規則已經 Publish 過。
-Check you're signed in as **TEACHER_EMAIL@example.com** (not another Google account),
+Check you're signed in as **（老師帳戶 / the teacher account）** (not another Google account),
 and that the security rules in section A were actually Published.
 
 **試算表一直沒有新的一行 / No new rows appear in the sheet**
@@ -209,10 +212,10 @@ and that the security rules in section A were actually Published.
   Open your Web app URL in a browser first and confirm you see `Rod Town
   sheet endpoint is working` (see B2). If not, redeploy.
 - 確認 ⚙️ 面板裡的「Google Sheet link」欄位有貼對網址，而且是用
-  TEACHER_EMAIL@example.com 登入按下 Save 的（不是用其他帳戶，否則存不進
+  （老師帳戶 / the teacher account） 登入按下 Save 的（不是用其他帳戶，否則存不進
   `settings/global`）。
   Confirm the "Google Sheet link" field in the ⚙️ panel has the right URL
-  pasted in, and that you clicked Save while signed in as TEACHER_EMAIL@example.com
+  pasted in, and that you clicked Save while signed in as （老師帳戶 / the teacher account）
   (any other account can't write to `settings/global`).
 - 改過 Code.gs 之後有沒有照 B2 最後一段「Redeploying」建立 **New version**？
   只存檔不會更新已部署的網址。
@@ -226,22 +229,22 @@ and that the security rules in section A were actually Published.
 
 **儀表板顯示「此頁只限老師 / Teachers only」/ Dashboard shows "Teachers
 only"**
-表示目前登入的帳戶不是 TEACHER_EMAIL@example.com。按頁面上的登出再用正確帳戶重新
+表示目前登入的帳戶不是 （老師帳戶 / the teacher account）。按頁面上的登出再用正確帳戶重新
 登入。如果你確定帳戶正確卻還是被拒絕，檢查段落 A 的規則裡
-`TEACHER_EMAIL@example.com` 有沒有打錯字，並重新 Publish。
-This means the signed-in account is not TEACHER_EMAIL@example.com. Sign out and sign
+`（老師帳戶 / the teacher account）` 有沒有打錯字，並重新 Publish。
+This means the signed-in account is not （老師帳戶 / the teacher account）. Sign out and sign
 back in with the correct account. If you're sure the account is right and
-it's still rejected, check for a typo in `TEACHER_EMAIL@example.com` inside the
+it's still rejected, check for a typo in `（老師帳戶 / the teacher account）` inside the
 section A rules and re-Publish.
 
 **用錯帳戶登入 Firebase 控制台或 Apps Script / Signed into the wrong Google
 account for Firebase console or Apps Script**
 Firebase 控制台的帳戶（用來編輯 Rules）跟遊戲的登入帳戶不用是同一個 —
 只要你能存取 p1-maths 這個 Firebase 專案即可。但 Apps Script 和「Google
-Sheet link」建議都用同一個 Google 帳戶（例如 TEACHER_EMAIL@example.com），比較不會
+Sheet link」建議都用同一個 Google 帳戶（例如 （老師帳戶 / the teacher account）），比較不會
 搞混誰擁有哪個試算表。
 The Google account you use for the Firebase console (to edit Rules) doesn't
 have to match the game's sign-in account — it just needs access to the
 p1-maths Firebase project. But for Apps Script and the sheet, it's simplest
-to use one consistent account (e.g. TEACHER_EMAIL@example.com) so it's always clear
+to use one consistent account (e.g. （老師帳戶 / the teacher account）) so it's always clear
 who owns which spreadsheet.

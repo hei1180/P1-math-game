@@ -1,6 +1,6 @@
 # Teacher data: attempt log, dashboard, Google Sheet, security rules — Design
 
-Date: 2026-09-25 · Status: approved in chat by owner (teacher `TEACHER_EMAIL@example.com`)
+Date: 2026-09-25 · Status: approved in chat by owner (teacher `the teacher account`)
 
 ## Problem
 Firestore data is hard to read: documents are keyed by opaque uids (`uid_easy`), Rod Town progress has no names, only best scores are kept (no history), three games use different mode codes across collections, and the database is in open test mode.
@@ -13,7 +13,7 @@ Firestore data is hard to read: documents are keyed by opaque uids (`uid_easy`),
 Out of scope: class grouping (not requested yet), migrating old data (old best-score docs stay and still drive leaderboards/unlocks).
 
 ## Constants
-- Teacher email: `TEACHER_EMAIL@example.com` — exported from `shared.js` as `TEACHER_EMAILS = ['TEACHER_EMAIL@example.com']`.
+- Teacher identity: `shared.js` exports `TEACHER_EMAIL_HASHES` (SHA-256 of the lower-case email) and `isTeacherEmail(email)`. The address itself is never committed to this public repo; `firestore.rules` holds a placeholder the teacher replaces inside the Firebase console.
 
 ## Data contract
 
@@ -55,7 +55,7 @@ Test mode never writes attempts (or sheet rows).
 - `bonds-progress.js saveProgress` writes `name`, `email` too.
 
 ## Dashboard `teacher.html`
-- Same look as the other pages (Tailwind, shared.css). Google login; if the email is not in `TEACHER_EMAILS` show "此頁只限老師 / Teachers only" and nothing else.
+- Same look as the other pages (Tailwind, shared.css). Google login; if `isTeacherEmail(email)` is false show "此頁只限老師 / Teachers only" and nothing else.
 - Loads: `attempts` in a date range (default last 30 days; `where('ts','>=',from)`, `orderBy('ts','desc')`), `bondsProgress` (all), `scores` (all).
 - Tabs:
   1. **Overview** — one row per student (name, email, last played, attempts in range, total minutes), then columns per game: Market best easy/medium/hard, Number Shop best Lv1-4, Rod Town: medals per world (count of 🥇🥈🥉 and levels cleared x/7), Rush best W1-4. Sortable columns, name search.
@@ -71,7 +71,7 @@ Test mode never writes attempts (or sheet rows).
 
 ## Security rules `firestore.rules`
 ```
-isTeacher: request.auth != null && request.auth.token.email in ['TEACHER_EMAIL@example.com'] && request.auth.token.email_verified
+isTeacher: request.auth != null && request.auth.token.email in ['the teacher account'] && request.auth.token.email_verified
 settings/{doc}: read if signed in; write if isTeacher
 scores/{id}: read if signed in; create/update if signed in && request.resource.data.uid == request.auth.uid && id.matches(request.auth.uid + '_.*'); delete if isTeacher
 bondsProgress/{uid}: read if signed in && (request.auth.uid == uid || isTeacher); write if request.auth.uid == uid

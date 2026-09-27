@@ -1,10 +1,10 @@
 // Shared runtime for both games. Loaded as <script type="module"> import.
 // DOM contract: see docs/superpowers/plans/2026-09-14-number-shop.md ("DOM contract").
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
-import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
+import { getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
 import { getFirestore, collection, doc, getDoc, setDoc, getDocs, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
-import { DEFAULT_TROPHY, TROPHY_ICON, TROPHY_LABEL, trophyFor, validateCutoffs } from './trophy.js?v=202609271152';
-import { gameOf, modeLabel } from './labels.js?v=202609271152';
+import { DEFAULT_TROPHY, TROPHY_ICON, TROPHY_LABEL, trophyFor, validateCutoffs } from './trophy.js?v=202609271202';
+import { gameOf, modeLabel } from './labels.js?v=202609271202';
 
 export { TROPHY_ICON, TROPHY_LABEL };
 
@@ -51,7 +51,31 @@ export function enterTestMode() {
   try { sessionStorage.setItem(TEST_KEY, '1'); } catch (e) { /* private mode: in-memory only */ }
   showTestBadge();
 }
-function showTestBadge() { document.querySelectorAll('.test-badge').forEach(b => b.classList.remove('hidden')); }
+/** Leave test mode on this tab and reload so every screen shows real locks and progress again. */
+export function exitTestMode() {
+  session.testMode = false;
+  try { sessionStorage.removeItem(TEST_KEY); } catch (e) { /* ignore */ }
+  location.reload();
+}
+/** Sign out of Google on this device (also leaves test mode), then reload to the login screen. */
+export async function signOutUser() {
+  try { sessionStorage.removeItem(TEST_KEY); } catch (e) { /* ignore */ }
+  try { await signOut(auth); } catch (e) { console.warn('sign out failed', e); }
+  location.reload();
+}
+/** Show every .test-badge and make it a tap-to-exit button. */
+function showTestBadge() {
+  document.querySelectorAll('.test-badge').forEach(b => {
+    b.classList.remove('hidden');
+    if (b.dataset.exitWired) return;
+    b.dataset.exitWired = '1';
+    b.setAttribute('role', 'button');
+    b.title = '離開測試模式 Exit test mode';
+    b.style.cursor = 'pointer';
+    b.insertAdjacentHTML('beforeend', ' <span style="opacity:.9;border-left:1px solid rgba(255,255,255,.5);padding-left:6px;margin-left:4px">✕ 離開 Exit</span>');
+    b.addEventListener('click', e => { e.stopPropagation(); exitTestMode(); });
+  });
+}
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -363,6 +387,15 @@ export function showRankPopup(score, onDone) {
 const TEACHER_MODAL_HTML = `
 <div id="adminModal" class="hidden absolute inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
   <div class="bg-white p-6 md:p-8 rounded-3xl w-full max-w-sm shadow-2xl max-h-[95dvh] overflow-y-auto">
+    <div id="accountBox" class="bg-sky-50 border-2 border-sky-200 rounded-xl p-3 mb-4 text-sm">
+      <div class="text-gray-500 font-bold">登入帳戶 Signed in as</div>
+      <div id="accountName" class="font-bold text-gray-800 truncate"></div>
+      <div id="accountEmail" class="text-gray-600 truncate"></div>
+      <div class="flex gap-2 mt-2">
+        <button id="signOutBtn" class="bubbly-btn bg-white text-sky-700 border-2 border-sky-300 px-3 py-1 rounded-lg font-bold">登出 Sign out</button>
+        <button id="exitTestBtn" class="hidden bubbly-btn bg-purple-500 text-white px-3 py-1 rounded-lg font-bold">🧪 離開測試 Exit test</button>
+      </div>
+    </div>
     <div id="pinView">
       <h2 class="text-2xl font-bold mb-4 text-center">Teacher Access</h2>
       <input type="password" id="pinInput" placeholder="Enter PIN" class="border-4 border-gray-300 p-2 rounded-xl w-full mb-4 text-center text-xl focus:border-blue-500 outline-none">
@@ -425,6 +458,15 @@ const TEACHER_MODAL_HTML = `
 /** Sheet link accepted by the teacher panel: empty (off) or an Apps Script web-app URL. */
 const isSheetUrl = u => u === '' || /^https:\/\/script\.google\.com\/\S+$/.test(u);
 
+/** Fill the ⚙️ panel's account box with who is signed in on this device. */
+function refreshAccountBox() {
+  const u = auth.currentUser;
+  $('accountName').textContent = u ? (u.displayName || player.name || '') : '未登入 Not signed in';
+  $('accountEmail').textContent = u ? (u.email || '') : '';
+  $('signOutBtn').classList.toggle('hidden', !u);
+  $('exitTestBtn').classList.toggle('hidden', !session.testMode);
+}
+
 /** Injects the modal into document.body and wires #adminBtn. onSaved() runs after a successful save. */
 export function mountTeacherModal(onSaved) {
   if ($('adminModal')) throw new Error('teacher modal already mounted');
@@ -464,5 +506,8 @@ export function mountTeacherModal(onSaved) {
     close(); onSaved();
   });
   $('testModeBtn').addEventListener('click', () => { enterTestMode(); close(); onSaved(); });
+  $('signOutBtn').addEventListener('click', signOutUser);
+  $('exitTestBtn').addEventListener('click', exitTestMode);
+  $('adminBtn').addEventListener('click', refreshAccountBox);
   if (session.testMode) showTestBadge();
 }

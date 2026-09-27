@@ -20,12 +20,12 @@
  * Test hook: scene.__test = { n, floors, phase (getters), remaining(), pick(len), mistakes(),
  *            bench(), tapBench(), pile(), layout(), parade() }
  */
-import { WORLDS, RODS, houseFor, splitsOf, starsFor, levelKey } from '../../bonds-logic.js?v=202609271152';
-import { UI, WORLD_THEME, textStyle } from '../theme.js?v=202609271152';
-import { fx } from '../fx.js?v=202609271152';
-import { sfx } from '../sfx.js?v=202609271152';
-import { Rod, DPR, dur, sleep, tweenP, reparent, worldPos, reducedMotion, darker } from '../ui/Rod.js?v=202609271152';
-import { T, domLeft, backButton, makeBubble, pillButton, drawStarSlot, drawPanel, dropStar, newBestBadge, shineStars } from '../ui/Chrome.js?v=202609271152';
+import { WORLDS, RODS, houseFor, splitsOf, starsFor, levelKey } from '../../bonds-logic.js?v=202609271202';
+import { UI, WORLD_THEME, textStyle } from '../theme.js?v=202609271202';
+import { fx } from '../fx.js?v=202609271202';
+import { sfx } from '../sfx.js?v=202609271202';
+import { Rod, DPR, dur, sleep, tweenP, reparent, worldPos, reducedMotion, darker } from '../ui/Rod.js?v=202609271202';
+import { T, domLeft, backButton, makeBubble, pillButton, drawStarSlot, drawPanel, dropStar, newBestBadge, shineStars } from '../ui/Chrome.js?v=202609271202';
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 const TOP0 = 66; // below the back button and the DOM mute/admin cluster

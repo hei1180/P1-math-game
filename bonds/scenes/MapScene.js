@@ -1,10 +1,10 @@
 // Rod Town adventure map 冒險地圖: four stacked worlds (W1 at the bottom) joined by one winding railway
 // through 28 stations, fog over locked worlds, the player's train, streak flame and the sticker book.
-import { WORLDS, RODS, LEVEL_COUNT, levelKey, isWorldOpen, isLevelOpen, isRushOpen } from '../../bonds-logic.js?v=202609271202';
-import { UI, WORLD_THEME, textStyle } from '../theme.js?v=202609271202';
-import { fx } from '../fx.js?v=202609271202';
-import { sfx } from '../sfx.js?v=202609271202';
-import { domLeft, roundButton, starPts } from '../ui/Chrome.js?v=202609271202';
+import { WORLDS, RODS, LEVEL_COUNT, levelKey, isWorldOpen, isLevelOpen, isRushOpen } from '../../bonds-logic.js?v=202609271224';
+import { UI, WORLD_THEME, textStyle } from '../theme.js?v=202609271224';
+import { fx } from '../fx.js?v=202609271224';
+import { sfx } from '../sfx.js?v=202609271224';
+import { domLeft, roundButton, starPts } from '../ui/Chrome.js?v=202609271224';
 
 const PER_WORLD = LEVEL_COUNT + 1; // levels 1..6 + boss house
 // Horizontal position (0..1 of the track span) of level 1..6 and the boss in each world. Each world's
@@ -50,7 +50,7 @@ function setSF(obj, f) { if (obj.setScrollFactor) obj.setScrollFactor(f); if (ob
 
 // ---- sticker rods: real Rod buddies when bonds/ui/Rod.js exists, a plain coloured bar otherwise ----
 let rodModule = null;
-const loadRod = () => (rodModule = rodModule || import('../ui/Rod.js?v=202609271202').catch(() => null));
+const loadRod = () => (rodModule = rodModule || import('../ui/Rod.js?v=202609271224').catch(() => null));
 function makeStickerRod(scene, x, y, len, unit) {
   const holder = scene.add.container(x, y);
   const fallback = () => { // same look as Rod: one square tall, joined squares, a face on the right end, no number
@@ -858,8 +858,8 @@ export class MapScene extends Phaser.Scene {
   buildHud() {
     const L = this.L;
     const hud = this.hud = this.add.container(0, 0).setDepth(100);
-    // The DOM leaderboard covers the whole game; stop the map underneath so its "back" button (go('Map')) starts it fresh.
-    hud.add(this.hudButton(34, 36, '🏆', () => { this.bridge.showLeaderboard(1); this.scene.stop(); }, () => sfx.tick(3)));
+    // The DOM leaderboard pops up over the blurred map; the map keeps running underneath.
+    hud.add(this.hudButton(34, 36, '🏆', () => this.bridge.showLeaderboard(1), () => sfx.tick(3)));
     const bookBtn = this.hudButton(96, 36, '📒', () => this.openBook(null));
     const got = [1, 2, 3, 4].filter(w => this.hasSticker(w)).length;
     if (got) {

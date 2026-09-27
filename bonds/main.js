@@ -1,17 +1,17 @@
 // Rod Town entry: DOM shell wiring, bridge to shared.js, Phaser boot.
 import { signIn, onUser, player, settings, session, enterTestMode, initAudio, engine, resetEngine, registerHit, endFever,
-         startTimer, stopTimer, saveScore, renderLeaderboard, showRankPopup, mountTeacherModal, sharedSound, logAttempt } from '../shared.js?v=202609271202';
-import { recordResult } from '../bonds-logic.js?v=202609271202';
-import { loadProgress, saveProgress, today } from '../bonds-progress.js?v=202609271202';
-import { sfx } from './sfx.js?v=202609271202';
-import { fx } from './fx.js?v=202609271202';
-import { scaleConfig, installHiDPI } from './hidpi.js?v=202609271202';
-import { BootScene } from './scenes/BootScene.js?v=202609271202';
-import { MapScene } from './scenes/MapScene.js?v=202609271202';
-import { LevelScene } from './scenes/LevelScene.js?v=202609271202';
-import { HouseScene } from './scenes/HouseScene.js?v=202609271202';
-import { RushScene } from './scenes/RushScene.js?v=202609271202';
-import { SandboxScene } from './scenes/SandboxScene.js?v=202609271202';
+         startTimer, stopTimer, saveScore, renderLeaderboard, showRankPopup, mountTeacherModal, sharedSound, logAttempt } from '../shared.js?v=202609271224';
+import { recordResult } from '../bonds-logic.js?v=202609271224';
+import { loadProgress, saveProgress, today } from '../bonds-progress.js?v=202609271224';
+import { sfx } from './sfx.js?v=202609271224';
+import { fx } from './fx.js?v=202609271224';
+import { scaleConfig, installHiDPI } from './hidpi.js?v=202609271224';
+import { BootScene } from './scenes/BootScene.js?v=202609271224';
+import { MapScene } from './scenes/MapScene.js?v=202609271224';
+import { LevelScene } from './scenes/LevelScene.js?v=202609271224';
+import { HouseScene } from './scenes/HouseScene.js?v=202609271224';
+import { RushScene } from './scenes/RushScene.js?v=202609271224';
+import { SandboxScene } from './scenes/SandboxScene.js?v=202609271224';
 
 const $ = id => document.getElementById(id);
 // Rush feedback comes from Rod Town's own synth (soft bonk, no buzzer) and obeys its 🔇 button,
@@ -91,7 +91,17 @@ $('muteBtn').textContent = sfx.muted ? '🔇' : '🔊';
 $('muteBtn').addEventListener('click', () => { sfx.muted = !sfx.muted; $('muteBtn').textContent = sfx.muted ? '🔇' : '🔊'; });
 document.addEventListener('pointerdown', () => sfx.unlock(), { once: false, passive: true });
 document.querySelectorAll('[data-lb]').forEach(b => b.addEventListener('click', () => renderLeaderboard(TABS, 'bonds' + b.dataset.lb)));
-$('lbBack').addEventListener('click', () => { $('leaderboardScreen').classList.add('hidden'); if (game) window.__rodTown.go('Map'); });
+// Leaderboard is a pop-up over the (blurred) game. Opened from the map, closing just reveals the map again;
+// opened after a Rush, closing goes back to the map.
+function closeLeaderboard() {
+  if ($('leaderboardScreen').classList.contains('hidden')) return;
+  $('leaderboardScreen').classList.add('hidden');
+  if (game && !game.scene.isActive('Map')) window.__rodTown.go('Map');
+}
+$('lbBack').addEventListener('click', closeLeaderboard);
+$('lbClose').addEventListener('click', closeLeaderboard);
+$('leaderboardScreen').addEventListener('click', e => { if (e.target === e.currentTarget) closeLeaderboard(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLeaderboard(); });
 mountTeacherModal(() => { if (game && game.scene.isActive('Map')) window.__rodTown.go('Map'); });
 
 const isLocal = ['localhost', '127.0.0.1'].includes(location.hostname);

@@ -26,7 +26,11 @@ function plate(shapes, thickness, size) {
   return geo;
 }
 
-/** Flat plastic tile from TILE_TEMPLATES, centred on the origin in a size × size box, top at y = thickness. */
+/**
+ * Flat plastic tile from TILE_TEMPLATES, centred on the origin in a size × size box, top at y = thickness.
+ * Turning: mesh.rotation.y = -rot * Math.PI / 180 turns it clockwise as seen from above (template y runs to world +z).
+ * userData: { templateId, size, thickness, top, points: [[x, z]...] | null (circle), radius (circle only, else null) }.
+ */
 export function makeTile(templateId, { color = toyColor(), size = 1, thickness = 0.12 } = {}) {
   const t = templateById(templateId);
   if (!t) throw new Error(`Unknown tile "${templateId}"`);
@@ -37,7 +41,13 @@ export function makeTile(templateId, { color = toyColor(), size = 1, thickness =
     return plate([sh], thickness, size);
   });
   const m = new THREE.Mesh(geo, std(color));
-  m.userData = { templateId, size, thickness };
+  const k = size / 2;
+  m.userData = {
+    templateId, size, thickness,
+    top: thickness,                                                 // height of the top face above the mesh origin
+    points: t.circle ? null : t.points.map(([x, y]) => [x * k, y * k]), // outline as [x, z] in mesh space (template y = world z)
+    radius: t.circle ? k : null,
+  };
   return m;
 }
 
@@ -159,12 +169,12 @@ export function makeOutline(puzzle, { cell = 1 } = {}) {
 const tube = (curve, segs, r) => new THREE.TubeGeometry(curve, segs, r, 10, false);
 const mesh = (geo, color, extra) => new THREE.Mesh(geo, std(color, extra));
 
-function wireParts(id) {
+function wireParts(id, color) {
   const parts = [];
   const add = (geo, color, extra) => parts.push(mesh(geo, color, extra));
   switch (id) {
     case 'ruler': {
-      add(new THREE.BoxGeometry(2, 0.26, 0.05), 0xfacc15);
+      add(new THREE.BoxGeometry(2, 0.26, 0.05), color);
       const ticks = [];
       for (let i = 0; i <= 20; i++) {
         const h = i % 5 === 0 ? 0.12 : 0.07, t = new THREE.BoxGeometry(0.02, h, 0.01);
@@ -174,11 +184,11 @@ function wireParts(id) {
       break;
     }
     case 'chopstick': {
-      const g = new THREE.CylinderGeometry(0.03, 0.065, 2, 12); g.rotateZ(Math.PI / 2); add(g, 0xc08a4b); // thick end on the right
+      const g = new THREE.CylinderGeometry(0.03, 0.065, 2, 12); g.rotateZ(Math.PI / 2); add(g, color); // thick end on the right
       break;
     }
     case 'pencil': {
-      const body = new THREE.CylinderGeometry(0.11, 0.11, 1.6, 6); body.rotateZ(Math.PI / 2); body.translate(-0.1, 0, 0); add(body, 0xfacc15);
+      const body = new THREE.CylinderGeometry(0.11, 0.11, 1.6, 6); body.rotateZ(Math.PI / 2); body.translate(-0.1, 0, 0); add(body, color);
       const wood = new THREE.ConeGeometry(0.11, 0.3, 6); wood.rotateZ(-Math.PI / 2); wood.translate(0.85, 0, 0); add(wood, 0xf3d9a8);
       const lead = new THREE.ConeGeometry(0.035, 0.1, 8); lead.rotateZ(-Math.PI / 2); lead.translate(1.0, 0, 0); add(lead, 0x1f2937);
       const band = new THREE.CylinderGeometry(0.115, 0.115, 0.1, 6); band.rotateZ(Math.PI / 2); band.translate(-0.95, 0, 0); add(band, 0x94a3b8, { metalness: 0.5 });
@@ -186,10 +196,10 @@ function wireParts(id) {
       break;
     }
     case 'stick': {
-      add(new THREE.BoxGeometry(2, 0.12, 0.12), 0xb7793c);
+      add(new THREE.BoxGeometry(2, 0.12, 0.12), color);
       break;
     }
-    case 'rainbow': {
+    case 'rainbow': { // keeps its stripes (the colour override does not apply)
       [[0.8, 0xef4444], [0.67, 0xfacc15], [0.54, 0x3b82f6]].forEach(([r, c]) => {
         const pts = Array.from({ length: 33 }, (_, i) => { const a = (i / 32) * Math.PI; return new THREE.Vector3(r * Math.cos(a), r * Math.sin(a) - 0.4, 0); });
         add(tube(new THREE.CatmullRomCurve3(pts), 48, 0.06), c);
@@ -200,7 +210,7 @@ function wireParts(id) {
       const c = new THREE.CatmullRomCurve3([[-1, -0.18], [-0.65, 0.22], [-0.25, -0.2], [0.15, 0.22], [0.55, -0.18], [0.85, 0.05]].map(([x, y]) => new THREE.Vector3(x, y, 0)));
       const h = c.getPoint(1), t = c.getPoint(0), hd = new THREE.SphereGeometry(0.15, 20, 14), tl = new THREE.SphereGeometry(0.09, 12, 10);
       hd.scale(1.15, 1, 1); hd.translate(h.x + 0.07, h.y + 0.02, 0); tl.translate(t.x, t.y, 0);
-      add(merge([tube(c, 80, 0.09), hd, tl]), 0x84cc16);
+      add(merge([tube(c, 80, 0.09), hd, tl]), color);
       const eyes = [], pupils = [];
       for (const dy of [0.07, -0.05]) {
         const e = new THREE.SphereGeometry(0.045, 12, 10); e.translate(h.x + 0.1, h.y + 0.02 + dy, 0.12); eyes.push(e);
@@ -209,10 +219,10 @@ function wireParts(id) {
       add(merge(eyes), 0xffffff); add(merge(pupils), 0x1f2937);
       break;
     }
-    case 'hose': {
+    case 'hose': { // a coiled garden hose (flat spiral) ending in a brass nozzle
       const pts = [], turns = 2.1;
       for (let i = 0; i <= 90; i++) { const t = i / 90, a = t * turns * Math.PI * 2, r = 0.18 + 0.38 * t; pts.push(new THREE.Vector3(r * Math.cos(a), r * Math.sin(a), 0)); }
-      add(tube(new THREE.CatmullRomCurve3(pts), 160, 0.07), 0x0ea5e9);
+      add(tube(new THREE.CatmullRomCurve3(pts), 160, 0.07), color);
       const e = pts[pts.length - 1], d = pts[pts.length - 1].clone().sub(pts[pts.length - 2]).normalize();
       const nz = new THREE.CylinderGeometry(0.09, 0.07, 0.22, 14);
       nz.rotateZ(-Math.atan2(d.x, d.y)); nz.translate(e.x + d.x * 0.1, e.y + d.y * 0.1, 0); add(nz, 0xfacc15, { metalness: 0.3 });
@@ -220,7 +230,7 @@ function wireParts(id) {
     }
     case 'wave': {
       const pts = Array.from({ length: 41 }, (_, i) => { const x = -1 + i * 0.05; return new THREE.Vector3(x, 0.25 * Math.sin(x * Math.PI * 2), 0); });
-      add(tube(new THREE.CatmullRomCurve3(pts), 120, 0.065), 0x06b6d4);
+      add(tube(new THREE.CatmullRomCurve3(pts), 120, 0.065), color);
       break;
     }
     default: throw new Error(`Unknown line "${id}"`);
@@ -241,19 +251,24 @@ function merge(geos) {
   return out;
 }
 
-/** B1 straight / curved thing from LINES, standing in the XY plane facing +z, about 2 wide. userData = { lineId, curved }. */
-export function makeWire(lineId) {
+/**
+ * B1 straight / curved thing from LINES, standing in the XY plane facing +z, about 2 wide. userData = { lineId, curved }.
+ * `color` (default: a random toy colour, never chosen by line type) paints the main body; small details (ruler ticks, pencil lead,
+ * snake eyes, hose nozzle) keep their own colours, and the rainbow keeps its stripes.
+ */
+export function makeWire(lineId, { color = toyColor() } = {}) {
   const info = LINES.find(l => l.id === lineId);
   if (!info) throw new Error(`Unknown line "${lineId}"`);
   const g = new THREE.Group();
-  for (const p of wireParts(lineId)) g.add(p);
+  for (const p of wireParts(lineId, color)) g.add(p);
   g.userData = { lineId, curved: info.curved };
   return g;
 }
 
 /** Straight laser beam between two points ([x,y,z] or Vector3). */
 export function makeLaser(a, b, { color = 0xef4444, radius = 0.035 } = {}) {
-  const A = v3(a), B = v3(b), len = Math.max(A.distanceTo(B), 1e-4);
+  const A = v3(a), B = v3(b), len = A.distanceTo(B);
+  if (len < 1e-6) { const h = new THREE.Mesh(new THREE.BufferGeometry(), std(color)); h.visible = false; return h; } // same point: nothing to draw
   const m = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, len, 10),
     std(color, { emissive: color, emissiveIntensity: 0.6, roughness: 0.3 }));
   m.position.copy(A).lerp(B, 0.5);
@@ -275,6 +290,9 @@ export function makeCurve(a, b, bend = 0.6, { color = 0xf97316, radius = 0.035 }
 /**
  * Upright wooden pegboard facing +z, centred on the origin, front face at z = 0. userData.pegs[x][y] is a Mesh (x, y as in PEG_GRID,
  * y down: peg [0][0] is top-left) whose position is where a rubber band should run (on the shaft, in the board's own frame).
+ * Pegs are small, so each carries an invisible hit sphere (r = 0.4 * spacing) as peg.userData.hit; userData.hits is the flat
+ * array of them. Register `board.userData.hits` as input.onTap targets: a tap resolves to the registered object (the hit sphere),
+ * whose userData.peg is [x, y] (and userData.mesh the peg). The spheres are not drawn but still count for raycasting.
  */
 export function makePegboard({ spacing = 1 } = {}) {
   const s = spacing, g = new THREE.Group(), half = (PEG_GRID - 1) / 2;
@@ -286,16 +304,20 @@ export function makePegboard({ spacing = 1 } = {}) {
     const l = new THREE.LatheGeometry(p, 16); l.rotateX(Math.PI / 2); l.translate(0, 0, -bandZ);
     return l;
   });
-  const pegs = [];
+  const hitGeo = cached(`peghit|${s}`, () => new THREE.SphereGeometry(0.4 * s, 8, 6));
+  const pegs = [], hits = [];
   for (let x = 0; x < PEG_GRID; x++) {
     pegs[x] = [];
     for (let y = 0; y < PEG_GRID; y++) {
       const m = mesh(geo, 0xf8fafc, { roughness: 0.35 });
-      m.position.set((x - half) * s, (half - y) * s, bandZ); m.userData = { peg: [x, y] };
-      g.add(m); pegs[x][y] = m;
+      m.position.set((x - half) * s, (half - y) * s, bandZ);
+      const hit = new THREE.Mesh(hitGeo, new THREE.MeshBasicMaterial({ visible: false }));
+      hit.name = 'pegHit'; hit.userData = { peg: [x, y], mesh: m };
+      m.add(hit); m.userData = { peg: [x, y], hit };
+      g.add(m); pegs[x][y] = m; hits.push(hit);
     }
   }
-  g.userData = { pegs, spacing: s, bandZ };
+  g.userData = { pegs, hits, spacing: s, bandZ };
   return g;
 }
 

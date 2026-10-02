@@ -103,24 +103,42 @@ function patch(id, pose) {
 }
 
 /**
- * Toy solid fitting a 1×1×1 box, origin = centre of its upright box. userData = { modelId, family, pose, restY, body, shadow }.
- * pose 'side' lays a cylinder on its curved side, or a cone on a line of its side (axis tilted so it rests naturally);
- * restY is the height of the origin above the floor when resting in that pose. A blob shadow sits on the floor under it
- * (shadow:false when the solid is lifted or simulated).
+ * Toy solid fitting a 1×1×1 box, origin = centre of its bounding box (in the pose it is in).
+ * pose 'side' lays a cylinder on its curved side, or a cone on a line of its side (axis tilted so it rests naturally).
+ * That pose is for scripted animation (A1 rolls and slides solids by tweening); physics is only for upright solids.
+ * A blob shadow sits on the floor under it (shadow:false when the solid is lifted or simulated).
+ * userData = {
+ *   modelId, family, pose, body, shadow,
+ *   restY    height of the origin above the floor when resting in this pose,
+ *   height   bounding height in this pose (= 2 * restY),
+ *   top      distance from the origin up to the top surface (= restY; what sits on it goes there),
+ *   axis     unit Vector3, group space: the symmetry / rolling axis (y upright; along the lying axis for 'side'; for a cone, apex end).
+ * }
  */
 export function makeSolid(modelId, { color = toyColor(), face = true, pose = 'upright', shadow = true } = {}) {
   const s = spec(modelId), family = familyOf(modelId);
-  if (!posesOf(modelId).includes(pose)) pose = 'upright';
+  if (!posesOf(modelId).includes(pose)) {
+    if (typeof location !== 'undefined' && /[?&]dev\b/.test(location.search)) console.warn(`makeSolid: pose "${pose}" is not allowed for ${modelId}; using upright`);
+    pose = 'upright';
+  }
   const group = new THREE.Group();
   const holder = new THREE.Group();
   group.add(holder);
   const body = new THREE.Mesh(s.geo, new THREE.MeshStandardMaterial({ color, roughness: 0.45, metalness: 0, flatShading: s.flat }));
   holder.add(body);
-  if (pose === 'side') holder.rotation.z = Math.PI / 2 + (s.tilt || 0);
+  const turn = pose === 'side' ? Math.PI / 2 + (s.tilt || 0) : 0;
+  holder.rotation.z = turn;
+  if (pose === 'side') { // keep the bounding box centred on the origin (a tilted cone's is not, by itself)
+    group.updateMatrixWorld(true);
+    const c = new THREE.Box3().setFromObject(body, true).getCenter(new THREE.Vector3());
+    holder.position.set(-c.x, -c.y, -c.z);
+  }
   if (face) addFace(group, family, patch(modelId, pose), holder);
   group.updateMatrixWorld(true);
   const restY = -new THREE.Box3().setFromObject(body, true).min.y;
-  group.userData = { ...group.userData, modelId, family, pose, restY, body };
+  const axis = new THREE.Vector3(0, 1, 0).applyAxisAngle(new THREE.Vector3(0, 0, 1), turn);
+  for (const k of ['x', 'y', 'z']) if (Math.abs(axis[k]) < 1e-9) axis[k] = 0;
+  group.userData = { ...group.userData, modelId, family, pose, restY, height: 2 * restY, top: restY, axis, body };
   if (shadow) {
     const sh = blobShadow(0.55); sh.position.y = -restY + 0.002; group.add(sh); group.userData.shadow = sh;
   }
@@ -129,6 +147,7 @@ export function makeSolid(modelId, { color = toyColor(), face = true, pose = 'up
 
 /**
  * Shape spec for the physics engine, in the solid's upright frame with the origin at its box centre.
+ * Physics is for upright solids only: the 'side' pose rotates an inner holder and has no matching shape (script it instead).
  * { type:'box', half } | { type:'sphere', r } | { type:'cylinder', rTop, rBottom, h } | { type:'convex', vertices, faces }
  * (a cone is a cylinder with a tiny rTop).
  */

@@ -5,9 +5,9 @@ import { Scene } from '../engine/scenes.js?v=0';
 import { MODEL_IDS, posesOf, TILE_TEMPLATES, PIECE_IDS, puzzleById, LINES } from '../../shapes-logic.js?v=0';
 import { SCENE, toyColor } from '../theme.js?v=0';
 import { makeSolid, setMood, blink } from '../models/solids.js?v=0';
+import { MOODS } from '../models/faces.js?v=0';
 import { makeTile, makePiece, makeOutline, makeWire, makePegboard, makeBand, makeLaser, makeCurve } from '../models/tiles.js?v=0';
 
-const MOODS = ['normal', 'happy', 'oops', 'dizzy'];
 const VIEWS = {
   all:    { pos: [0, 18.5, 10.4],   look: [0, 0, -1.2] },
   solids: { pos: [-1.5, 4, -1.8],   look: [-1.5, 0.4, -5.4] },
@@ -69,7 +69,7 @@ export class SandboxScene extends Scene {
     world.add(makeCurve([1.4, 0.08, 5], [3.4, 0.08, 5], 0.4));
 
     LINES.forEach((l, i) => {
-      const w = makeWire(l.id);
+      const w = makeWire(l.id, { color: toyColor(rng) });
       w.position.set(-7.7 + i * 2.2, 0.65, -7.8); world.add(w); parts.wires.push(w);
     });
 

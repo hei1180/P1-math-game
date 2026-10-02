@@ -26,6 +26,15 @@ function spiral(g, x, y, r) {
   }
   line(g, 2.2); g.stroke();
 }
+// ctx.roundRect is missing on Safari < 16 (older school iPads), so draw the rounded square by hand
+function rrect(g, x, y, w, h, r) {
+  g.beginPath();
+  g.moveTo(x + r, y); g.lineTo(x + w - r, y); g.arcTo(x + w, y, x + w, y + r, r);
+  g.lineTo(x + w, y + h - r); g.arcTo(x + w, y + h, x + w - r, y + h, r);
+  g.lineTo(x + r, y + h); g.arcTo(x, y + h, x, y + h - r, r);
+  g.lineTo(x, y + r); g.arcTo(x, y, x + r, y, r);
+  g.closePath();
+}
 function closedEye(g, x, y, r) { g.beginPath(); g.arc(x, y - r * 0.2, r, 0.18 * Math.PI, 0.82 * Math.PI); line(g, 3.4); g.stroke(); }
 function happyEye(g, x, y, r) { g.beginPath(); g.arc(x, y + r * 0.45, r, 1.15 * Math.PI, 1.85 * Math.PI); line(g, 3.4); g.stroke(); }
 
@@ -46,7 +55,7 @@ function eyes(g, family, L, R, y) {
       break;
     case 'prism':
       for (const x of [L, R]) {
-        g.beginPath(); g.roundRect(x - 11, y - 11, 22, 22, 4); g.fillStyle = WHITE; g.fill(); line(g, 2.6); g.stroke();
+        rrect(g, x - 11, y - 11, 22, 22, 4); g.fillStyle = WHITE; g.fill(); line(g, 2.6); g.stroke();
         g.fillStyle = INK; g.fillRect(x - 4.5, y - 4, 9, 9);
       }
       break;
@@ -99,7 +108,8 @@ function draw(g, family, mood, blink) {
 
 /** Shared texture for family + mood ('blink' = eyes shut). */
 export function faceTexture(family, mood = 'normal') {
-  const key = family + '|' + mood;
+  // happy, oops and dizzy faces ignore the family, so they share one texture each
+  const key = ['happy', 'oops', 'dizzy'].includes(mood) ? mood : family + '|' + mood;
   let t = cache.get(key);
   if (!t) {
     const c = document.createElement('canvas'); c.width = c.height = SIZE;

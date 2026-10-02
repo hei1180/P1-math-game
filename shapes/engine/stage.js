@@ -4,12 +4,15 @@ import { SCENE } from '../theme.js?v=0';
 import { tween, tickTweens, cancelTweens } from './tween.js?v=0';
 
 // Free GPU memory for an object tree (geometries, materials, textures).
+// Anything with userData.shared === true (cached by a model module) is left alone.
 export function disposeTree(root) {
+  const keep = x => x.userData && x.userData.shared;
   root.traverse(o => {
-    if (o.geometry) o.geometry.dispose();
+    if (o.geometry && !keep(o.geometry)) o.geometry.dispose();
     const mats = o.material ? (Array.isArray(o.material) ? o.material : [o.material]) : [];
     for (const m of mats) {
-      for (const k in m) if (m[k] && m[k].isTexture) m[k].dispose();
+      if (keep(m)) continue;
+      for (const k in m) if (m[k] && m[k].isTexture && !keep(m[k])) m[k].dispose();
       m.dispose();
     }
   });
@@ -22,7 +25,8 @@ function shadowTexture() {
   const g = c.getContext('2d'), grad = g.createRadialGradient(32, 32, 0, 32, 32, 32);
   grad.addColorStop(0, 'rgba(0,0,0,0.35)'); grad.addColorStop(1, 'rgba(0,0,0,0)');
   g.fillStyle = grad; g.fillRect(0, 0, 64, 64);
-  return (shadowTex = new THREE.CanvasTexture(c));
+  shadowTex = new THREE.CanvasTexture(c); shadowTex.userData.shared = true; // cached: never disposed
+  return shadowTex;
 }
 
 // Soft round shadow decal lying on the floor (y = 0.002).
@@ -38,7 +42,11 @@ export class Stage {
   static supported() {
     try {
       const c = document.createElement('canvas');
-      return !!(window.WebGLRenderingContext && (c.getContext('webgl2') || c.getContext('webgl')));
+      if (!window.WebGLRenderingContext) return false;
+      const gl = c.getContext('webgl2') || c.getContext('webgl');
+      if (!gl) return false;
+      const lose = gl.getExtension('WEBGL_lose_context'); if (lose) lose.loseContext(); // free the probe
+      return true;
     } catch (e) { return false; }
   }
 
@@ -64,8 +72,10 @@ export class Stage {
     this._view = { px: 0, py: 6, pz: 9, lx: 0, ly: 0, lz: 0 };
 
     this._resize();
-    this._ro = new ResizeObserver(() => this._resize());
+    this._ro = new ResizeObserver(() => this.resize());
     this._ro.observe(container);
+    this._vis = () => { if (!document.hidden) this.invalidate(); };
+    document.addEventListener('visibilitychange', this._vis);
     const loop = () => {
       this._raf = requestAnimationFrame(loop);
       const now = performance.now(), dt = Math.min((now - this._last) / 1000, 0.05);
@@ -83,10 +93,13 @@ export class Stage {
     this._dirty = true;
   }
 
+  // Re-measure the container and draw at once (no blank frame while resizing / rotating).
+  resize() { this._resize(); this._dirty = false; this.renderer.render(this.scene, this.camera); }
+
   _frame(dt) {
     const ran = tickTweens(dt);
     if (this._viewing) this._applyView();
-    for (const fn of [...this._updates]) fn(dt);
+    for (const fn of this._updates) { try { fn(dt); } catch (e) { console.error(e); } }
     if (ran || this._awake.size || this._dirty) { this._dirty = false; this.renderer.render(this.scene, this.camera); }
   }
 
@@ -123,7 +136,7 @@ export class Stage {
   }
 
   dispose() {
-    cancelAnimationFrame(this._raf); this._ro.disconnect();
+    cancelAnimationFrame(this._raf); this._ro.disconnect(); document.removeEventListener('visibilitychange', this._vis);
     this._updates.clear(); this._awake.clear();
     disposeTree(this.scene);
     this.renderer.dispose(); this.renderer.forceContextLoss();

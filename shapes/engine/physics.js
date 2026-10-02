@@ -15,7 +15,7 @@ export class Physics {
     this.world.defaultContactMaterial.friction = 0.4;
     this.world.defaultContactMaterial.restitution = 0.1;
     this.items = []; // { mesh, body }
-    this._off = null; this._acc = 0; this._time = 0; this._settlers = [];
+    this._off = null; this._wasMoving = false; this._acc = 0; this._time = 0; this._settlers = [];
   }
 
   _add(mesh, shape, mass) {
@@ -88,6 +88,8 @@ export class Physics {
     }
     const moving = this._moving();
     this.stage.awake('physics', moving);
+    if (this._wasMoving && !moving) this.stage.invalidate(); // draw the final resting pose
+    this._wasMoving = moving;
     if (this._settlers.length) {
       this._settlers = this._settlers.filter(s => {
         if (moving && this._time - s.t0 < s.max) return true;

@@ -1,5 +1,5 @@
 // Tiny synth for Robot Workshop. Call sfx.unlock() on the first user gesture.
-const AC = window.AudioContext || window.webkitAudioContext;
+const AC = typeof window !== 'undefined' && (window.AudioContext || window.webkitAudioContext);
 let ctx = null;
 const KEY = 'robot.muted';
 let muted = false;
@@ -27,9 +27,10 @@ function noise({ dur = 0.2, gain = 0.15, delay = 0, hp = 800, lp = 0 }) {
 }
 
 export const sfx = {
-  unlock() { if (!ctx && AC) ctx = new AC(); if (ctx && ctx.state === 'suspended') ctx.resume(); },
+  unlock() { if (!ctx && AC) ctx = new AC(); if (ctx && ctx.state !== 'running') ctx.resume().catch(() => {}); }, // also iOS 'interrupted'
   get muted() { return muted; },
-  set muted(v) { muted = !!v; try { localStorage.setItem(KEY, muted ? '1' : '0'); } catch (e) { /* ignore */ } },
+  set muted(v) { muted = !!v; try { localStorage.setItem(KEY, muted ? '1' : '0'); } catch (e) { /* ignore */ } if (muted && sfx.onMute) sfx.onMute(); },
+  onMute: null, // hook: voice.js stops speech here
   tick(i = 0) { tone({ type: 'triangle', f0: 600 + i * 45, dur: 0.05, gain: 0.12 }); },
   pop() { tone({ type: 'sine', f0: 400, f1: 900, dur: 0.07, gain: 0.18 }); },
   ding() { tone({ type: 'triangle', f0: 880, dur: 0.3, gain: 0.18 }); tone({ type: 'sine', f0: 1760, dur: 0.2, gain: 0.06 }); },

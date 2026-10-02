@@ -16,32 +16,36 @@ export class Scene {
 
 export class SceneManager {
   constructor(ctx) {
-    this.ctx = ctx; this.classes = {}; this.scene = null; this.key = null; this.busy = false;
+    this.ctx = ctx; this.classes = {}; this.scene = null; this.key = null; this.busy = false; this.pending = null;
     if (!ctx.go) ctx.go = (key, data) => this.go(key, data);
     ctx.stage.onUpdate(dt => { if (this.scene) this.scene.update(dt); });
   }
 
   register(key, SceneClass) { this.classes[key] = SceneClass; }
 
+  // Swap scenes. `busy` covers only exit + swap, so a scene may call go() from inside its own
+  // enter(). A go() that arrives mid-swap is remembered (latest wins) and used for the swap.
   async go(key, data) {
-    if (this.busy) return;
-    const Cls = this.classes[key];
-    if (!Cls) throw new Error(`Unknown scene "${key}"`);
+    if (!this.classes[key]) throw new Error(`Unknown scene "${key}"`);
+    if (this.busy) { this.pending = { key, data }; return; }
     const { stage, input, ui } = this.ctx;
+    let next, nextData;
     this.busy = true;
     try {
       const old = this.scene;
       this.scene = null;
       if (old) {
-        try { await old.exit(); } finally {
+        try { await old.exit(); } catch (e) { console.error(e); } finally {
           input.clear(); ui.clear(); cancelTweens();
           stage.scene.remove(old.root); disposeTree(old.root);
         }
       } else { input.clear(); ui.clear(); cancelTweens(); }
-      const next = new Cls(this.ctx);
-      this.key = key; stage.scene.add(next.root); stage.invalidate();
+      const req = this.pending || { key, data };
+      this.pending = null;
+      next = new this.classes[req.key](this.ctx); nextData = req.data;
+      this.key = req.key; stage.scene.add(next.root); stage.invalidate();
       this.scene = next;
-      await next.enter(data);
     } finally { this.busy = false; }
+    await next.enter(nextData);
   }
 }

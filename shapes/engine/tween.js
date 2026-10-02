@@ -18,29 +18,32 @@ export const ease = {
 let active = [];
 
 // Tween numeric props of target to `to`; start values are read on the first tick.
-export function tween(target, to, { ms = 300, ease: e = 'outCubic', delay = 0 } = {}) {
+export function tween(target, to, { ms = 300, ease: e = 'outCubic', delay = 0, idle = false } = {}) {
   if (motion.less) { ms *= 0.5; delay *= 0.5; if (e === 'outBack' || e === 'outBounce') e = 'outCubic'; }
   return new Promise(resolve => {
-    active.push({ target, to, ms: Math.max(1, ms), fn: ease[e] || ease.outCubic, wait: delay / 1000, t: 0, from: null, resolve });
+    active.push({ target, to, ms: Math.max(1, ms), fn: ease[e] || ease.outCubic, wait: delay / 1000, idle, t: 0, from: null, resolve });
   });
 }
 
-export function wait(ms) { return tween({}, {}, { ms, ease: 'linear' }); }
+// a pure timer: changes nothing, so it never asks for a render
+export function wait(ms) { return tween({}, {}, { ms, ease: 'linear', idle: true }); }
 
+// Returns true when a tween changed something this frame (so the stage should render).
 export function tickTweens(dt) {
   if (!active.length) return false;
+  let changed = false;
   const list = active; active = [];
   const keep = [];
   for (const a of list) {
     if (a.wait > 0) { a.wait -= dt; if (a.wait > 0) { keep.push(a); continue; } }
     if (!a.from) { a.from = {}; for (const k in a.to) a.from[k] = a.target[k]; }
-    a.t += dt * 1000;
+    a.t += dt * 1000; if (!a.idle) changed = true;
     const p = Math.min(1, a.t / a.ms), k = a.fn(p);
     for (const key in a.to) a.target[key] = a.from[key] + (a.to[key] - a.from[key]) * k;
     if (p >= 1) a.resolve(); else keep.push(a);
   }
   active = keep.concat(active); // tweens started inside resolve callbacks run next tick
-  return true;
+  return changed;
 }
 
 export function cancelTweens(target) {

@@ -160,7 +160,7 @@ const paintMute = () => {
 };
 paintMute();
 $('muteBtn').addEventListener('click', () => { sfx.muted = !sfx.muted; if (sfx.muted) voice.stop(); paintMute(); });
-document.addEventListener('pointerdown', () => sfx.unlock(), { passive: true });
+for (const ev of ['pointerdown', 'pointerup', 'click']) document.addEventListener(ev, () => sfx.unlock(), { passive: true }); // iOS only unlocks audio on up/click
 document.querySelectorAll('[data-lb]').forEach(b => b.addEventListener('click', () => renderLeaderboard(TABS, b.dataset.lb)));
 // Leaderboard is a pop-up over the (blurred) game. Opened from the Workshop, closing just reveals it again;
 // opened after a Rush, closing goes back to the Workshop.

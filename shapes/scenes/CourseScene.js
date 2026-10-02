@@ -2,10 +2,26 @@
 // genCourse -> setup -> playItem x N -> finish (stars, bridge.complete, new part, end panel, routing).
 // Subclasses only build their set (setup) and play one item (playItem / hint).
 //
-// IMPORTANT for subclasses: wrap every await in playItem() and hint() in `this.live(...)`
-// (e.g. `await this.live(tween(...))`, `const id = await this.live(this.ui.choices(...))`).
-// When the child leaves with the back button the manager cancels all tweens, which RESOLVES their promises;
-// live() makes sure nothing continues after that (no next item, no bridge.complete from a left course).
+// ---------------------------------------------------------------------------------------------
+// Subclass contract
+//  - Start data: { key } with the course key ('A1'...'B4'). The boss has no start data, so BossScene declares
+//    `static courseKey = 'boss'`. With neither a key nor a courseKey, enter() throws.
+//  - setup(): build the set. playItem(item, i): play one item and RETURN when it was answered right.
+//    Do not call right() or finish() yourself; the base does, after playItem returns.
+//  - For every wrong answer: `await this.wrong(item, picked, label)`. It is async because the 2nd wrong answer
+//    on the same item runs hint(item) inside it. Mistakes keep counting after a hint.
+//  - Wrap EVERY await inside playItem() and hint() in `this.live(...)` (tweens, ui.choices, waits, ...). Leaving
+//    with ⬅ cancels all tweens, which RESOLVES their promises; live() makes sure nothing continues after that
+//    (no next item, no bridge.complete from a course that was left).
+//  - Put every mesh and effect on this.root (never stage.scene) so it is disposed with the scene.
+//    Use this.confetti(...) and sparkle(this.stage, obj, this.root) from fx3d.js.
+//  - Input handlers registered through this.input are cleared by the manager when the scene is left.
+//  - If you override exit(), call `await super.exit()` (it re-enables the shared Input).
+//  - Progress dots: 'now' while an item is played, 'good' once solved. 'bad' is deliberately unused: mistakes
+//    show in the stars, not as red dots. this.index is the current item (0-based).
+//  - The base sets the camera to [0,5,8] looking at [0,0.5,0] before setup(); setup() may call stage.setView().
+//  - Boss: nothing may assume 5 items (genCourse gives B3 4, B4 2, boss 3).
+// ---------------------------------------------------------------------------------------------
 import * as THREE from 'three';
 import { Scene } from '../engine/scenes.js?v=0';
 import { tween, wait } from '../engine/tween.js?v=0';
@@ -17,12 +33,13 @@ import { genCourse, courseByKey, starsFor, nextCourse, isCourseOpen, isZoneClear
 const BOSS = { key: 'boss', zone: null, zh: '測試跑道', en: 'Test Track' };
 
 export class CourseScene extends Scene {
-  /**
-   * data.key = course key ('A1'...'B4', 'boss'). Without it the key is 'boss' (BossScene is started with no data).
-   * Scene key = course key, except the boss whose scene key is 'Boss'.
-   */
-  async enter(data) {
-    const key = (data && data.key) || 'boss';
+  /** Subclass sets this when the scene is started without data (BossScene: 'boss'). */
+  static courseKey = null;
+
+  /** Scene key = course key, except the boss whose scene key is 'Boss'. */
+  async enter({ key } = {}) {
+    key = key ?? this.constructor.courseKey;
+    if (!key) throw new Error('CourseScene: start data has no key and the class has no static courseKey');
     this.key = key;
     this.course = courseByKey(key) || BOSS;
     this.items = genCourse(key, this.bridge.rng);
@@ -47,16 +64,25 @@ export class CourseScene extends Scene {
       this.results[i] = 'now';
       this.ui.dots(this.results);
       await this.live(this.playItem(this.items[i], i));
+      await this.holdWhileLeaving();
       await this.live(this.right(this.items[i]));
     }
     await this.finish();
   }
 
+  /** Do not advance or finish behind the open leave card. */
+  async holdWhileLeaving() {
+    while (this.leaving) await this.live(wait(100));
+  }
+
+  /** Subclasses that override exit() must call `await super.exit()`. */
+  async exit() { this.input.enabled = true; }
+
   /** Floor and back wall shared by all courses. Subclasses add their own set to this.root in setup(). */
   buildRoom() {
     const floor = new THREE.Mesh(new THREE.BoxGeometry(14, 0.3, 9), new THREE.MeshLambertMaterial({ color: SCENE.floor }));
     floor.position.set(0, -0.15, 0);
-    const wall = new THREE.Mesh(new THREE.BoxGeometry(14, 5, 0.3), new THREE.MeshLambertMaterial({ color: 0xdbeafe }));
+    const wall = new THREE.Mesh(new THREE.BoxGeometry(14, 5, 0.3), new THREE.MeshLambertMaterial({ color: SCENE.wall }));
     wall.position.set(0, 2.5, -4.65);
     const bench = new THREE.Mesh(new THREE.BoxGeometry(14, 0.5, 0.35), new THREE.MeshLambertMaterial({ color: SCENE.bench }));
     bench.position.set(0, 0.25, -4.4);
@@ -95,20 +121,25 @@ export class CourseScene extends Scene {
     await this.live(wait(450));
   }
 
-  /** 3-D confetti burst at a world position (skipped with Less motion). */
+  /** 3-D confetti burst at world position (x, y, z), n bits (skipped with Less motion). Defaults: (0, 1.5, 0), 40. */
   confetti(x = 0, y = 1.5, z = 0, n = 40) {
     confetti(this.stage, new THREE.Vector3(x, y, z), n, this.root);
   }
 
   async finish() {
     const { key, bridge, ui } = this;
+    await this.holdWhileLeaving();
     ui.back(null); ui.hidePrompt(); ui.clearChoices();
     const stars = starsFor(this.mistakes);
     const durationSec = Math.round((performance.now() - this.t0) / 1000);
     let r = { newBest: false, part: null };
     try {
       r = await this.live(bridge.complete(key, stars, { mistakes: this.mistakes, durationSec, confusions: this.confusions }));
-    } catch (e) { console.error('complete failed', e); }
+    } catch (e) {
+      console.error('complete failed', e);
+      if (e instanceof TypeError || e instanceof ReferenceError) throw e; // a bug, not a save problem
+      ui.toast('未能儲存', 'Progress not saved', 2000);
+    }
 
     if (r.part) await this.live(this.flyPart(key));
     else if (stars >= 2) this.confetti(0, 1.5, 0, 50);
@@ -118,6 +149,7 @@ export class CourseScene extends Scene {
       partZh: r.part && PARTS[key] ? PARTS[key].zh : '',
     }));
 
+    // Leaving the scene: go() is intentionally not awaited (it would only resolve after the next scene's enter).
     const justDone = { key, stars, newBest: !!r.newBest, part: r.part || null };
     if (choice === 'retry') { this.go(key === 'boss' ? 'Boss' : key, key === 'boss' ? undefined : { key }); return; }
     if (choice === 'map') { this.go('Workshop', { justDone }); return; }
@@ -144,7 +176,7 @@ export class CourseScene extends Scene {
     try { sfx.star(2); } catch (e) { /* ignore */ }
     await this.live(tween(gem.scale, { x: 1, y: 1, z: 1 }, { ms: 400, ease: 'outBack' }));
     sparkle(this.stage, gem, this.root);
-    this.ui.toast('新零件！', `New part: ${PARTS[key].zh}`, 1400);
+    this.ui.toast('新零件！', `New part: ${PARTS[key].zh}`, 900);
     await this.live(tween(gem.position, { y: 2.6 }, { ms: 700, ease: 'inOutCubic' }));
     await this.live(tween(gem.scale, { x: 0.01, y: 0.01, z: 0.01 }, { ms: 250 }));
     this.root.remove(gem);
@@ -162,8 +194,8 @@ export class CourseScene extends Scene {
       zh: '離開這關？', en: 'Leave?', icon: '🚪',
       buttons: [{ id: 'leave', zh: '離開', en: 'Leave' }, { id: 'stay', zh: '繼續', en: 'Keep playing' }],
     });
-    this.input.enabled = was; // the Input object is shared by all scenes
+    this.input.enabled = was; // the Input object is shared by all scenes (exit() also re-enables it)
+    if (id === 'leave') { if (this.alive) this.go('Workshop'); return; } // stays "leaving" so the loop never advances
     this.leaving = false;
-    if (id === 'leave' && this.alive) this.go('Workshop');
   }
 }

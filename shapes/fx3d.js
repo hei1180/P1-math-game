@@ -1,6 +1,6 @@
 // Small 3-D effects: confetti, sparkle, dust puff. Each effect is a Group of cheap meshes that animates
-// from stage.onUpdate, keeps rendering awake while it runs, and removes + disposes itself at the end
-// (or as soon as its parent was removed, e.g. the scene was left).
+// from stage.onUpdate, keeps rendering awake while it runs, and removes + disposes itself at the end,
+// or as soon as it is no longer attached to stage.scene (e.g. its scene's root was removed because the scene was left).
 import * as THREE from 'three';
 import { TOY_COLORS } from './theme.js?v=0';
 import { motion } from './engine/tween.js?v=0';
@@ -8,12 +8,15 @@ import { disposeTree } from './engine/stage.js?v=0';
 
 let seq = 0;
 
+const attached = (stage, o) => { for (; o; o = o.parent) if (o === stage.scene) return true; return false; };
+
 /** Run `step(dt, t01)` for `life` seconds, then clean up. */
 function run(stage, group, parent, life, step) {
   const token = 'fx3d-' + (++seq);
   parent.add(group);
-  stage.awake(token, true);
   let t = 0, off = null;
+  if (!attached(stage, group)) { parent.remove(group); disposeTree(group); return; }
+  stage.awake(token, true);
   const done = () => {
     if (off) off();
     stage.awake(token, false);
@@ -22,7 +25,7 @@ function run(stage, group, parent, life, step) {
     stage.invalidate();
   };
   off = stage.onUpdate(dt => {
-    if (!group.parent) { done(); return; } // parent (the scene) was disposed
+    if (!attached(stage, group)) { done(); return; } // the scene was left
     t += dt;
     if (t >= life) { done(); return; }
     step(dt, t / life);

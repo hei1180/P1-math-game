@@ -8,6 +8,13 @@ export class Scene {
     this.ctx = ctx;
     ({ stage: this.stage, input: this.input, ui: this.ui, bridge: this.bridge, go: this.go } = ctx);
     this.root = new THREE.Group();
+    this.alive = true; // false once the manager starts leaving this scene
+  }
+  /** Await p, but never resume once this scene has been left (cancelTweens resolves pending tweens on exit). */
+  async live(p) {
+    const v = await p;
+    if (!this.alive) await new Promise(() => {});
+    return v;
   }
   async enter(data) {}
   update(dt) {}
@@ -34,6 +41,7 @@ export class SceneManager {
     try {
       const old = this.scene;
       this.scene = null;
+      if (old) old.alive = false;
       if (old) {
         try { await old.exit(); } catch (e) { console.error(e); } finally {
           input.clear(); ui.clear(); cancelTweens();

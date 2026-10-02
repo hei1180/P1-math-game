@@ -21,6 +21,7 @@ const tex = (key, w, h, draw) => memo('t:' + key, () => {
 });
 const mat = (key, params) => memo('m:' + key, () => new THREE.MeshStandardMaterial({ roughness: 0.65, metalness: 0, ...params }));
 const texMat = (key, t, params = {}) => mat(key, { map: t, ...params });
+// Not theme FONT: that stack leads with Latin handwriting fonts; the can label is canvas text and must resolve to a CJK face first.
 const FONT = '"PingFang TC","Microsoft JhengHei",system-ui,sans-serif';
 
 const mesh = (g, m) => new THREE.Mesh(g, m);
@@ -49,6 +50,13 @@ function polyGeo(faces, centre = [0, 0, 0]) {
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   g.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
   g.computeVertexNormals();
+  return g;
+}
+
+// Shift a group's children so its bounding box is centred on the origin.
+function recentre(g) {
+  const c = new THREE.Box3().setFromObject(g).getCenter(new THREE.Vector3());
+  g.children.forEach(o => o.position.sub(c));
   return g;
 }
 
@@ -155,7 +163,7 @@ const BUILD = {
     });
     const g = new THREE.Group();
     g.add(at(mesh(geo('hat', () => faceFront(new THREE.ConeGeometry(0.4, 0.86, 44))), [texMat('hat', t), mat('hat-base', { color: 0x9d174d })]), 0, -0.07, 0));
-    g.add(at(mesh(geo('hat-pom', () => new THREE.SphereGeometry(0.1, 16, 12)), mat('hat-pom', { color: 0xfde047, roughness: 0.95 })), 0, 0.42, 0));
+    g.add(at(mesh(geo('hat-pom', () => new THREE.SphereGeometry(0.1, 16, 12)), mat('hat-pom', { color: 0xfde047, roughness: 0.95 })), 0, 0.39, 0));
     return g;
   },
 
@@ -207,9 +215,9 @@ const BUILD = {
       s.computeVertexNormals(); return s;
     });
     for (const [x, z, ry, rz] of [[-0.04, 0.02, 0.12, 0.18], [0.07, -0.03, -0.35, -0.2], [0, 0.04, 1.4, 0.05]]) {
-      const m = at(mesh(sheetG, paper), x, 0.11 + 0.15, z); m.rotation.set(0, ry, rz); g.add(m);
+      const m = at(mesh(sheetG, paper), x, 0.09, z); m.rotation.set(0, ry, rz); g.add(m); // sheet foot sits in the slot, just under the lid
     }
-    return g;
+    return recentre(g);
   },
 
   tent() {
@@ -303,11 +311,15 @@ const BUILD = {
     });
     const tg = at(mesh(geo('tea-tag', () => new THREE.PlaneGeometry(0.13, 0.16)), mat('tea-tag', { map: tag, side: THREE.DoubleSide })), 0.08, y0 + Hh + 0.12, 0.0);
     tg.rotation.y = 0.4; g.add(tg);
-    return g;
+    return recentre(g);
   },
 };
 
-/** objectId -> Group fitting a 1x1x1 box (globe stand excepted), origin at the centre. */
+/**
+ * objectId -> Group fitting a 1x1x1 box (globe stand excepted), origin at the centre; userData = { objectId, family }.
+ * Geometries, materials and textures are SHARED between all objects of a kind (never disposed): a scene that wants to
+ * tint or fade one object must clone its material first. No shadow is added: the scene adds its own blobShadow.
+ */
 export function makeObject(objectId) {
   const spec = OBJECTS.find(o => o.id === objectId);
   if (!spec || !BUILD[objectId]) throw new Error('unknown object ' + objectId);

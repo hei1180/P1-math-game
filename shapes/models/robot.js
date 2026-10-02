@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import { PARTS, SLOTS, BASIC_PART, posesOf, familyOf, shuffle, TILE_TEMPLATES, templateById } from '../../shapes-logic.js?v=0';
 import { TOY_COLORS } from '../theme.js?v=0';
-import { tween, cancelTweens } from '../engine/tween.js?v=0';
+import { tween, cancelTweens, motion } from '../engine/tween.js?v=0';
 import { disposeTree } from '../engine/stage.js?v=0';
 import * as Solids from './solids.js?v=0';
 import * as Tiles from './tiles.js?v=0';
@@ -207,7 +207,14 @@ function buildBadge(id) {
   return g;
 }
 
-/** The child's robot. config = { wheels, head, arms, antenna, paint, badge } (missing slots use BASIC_PART). */
+/**
+ * The child's robot; origin on the floor between the wheels, facing +z. config = { wheels, head, arms, antenna, paint, badge }
+ * (missing or unknown slots use BASIC_PART). userData:
+ * - setPart(slot, partId): swaps one slot. The stage renders on demand, so the CALLER must call stage.invalidate() afterwards.
+ * - walkTo(x, z), dance(opts), wave(opts), hop(opts) -> Promise. opts.on(name) is optional and called for sound:
+ *   walkTo none; wave 'wave'; hop 'boing' at take-off and 'land'; dance 'beat' on each of its 5 steps.
+ * Shared materials: scenes must clone before tinting. No shadow is added (the scene adds its own blobShadow).
+ */
 export function makeRobot(config = {}) {
   const cfg = { ...BASIC_PART }; for (const s of SLOTS) if (config[s] && PART_INFO[config[s]]) cfg[s] = config[s];
   const root = new THREE.Group(), rig = new THREE.Group(), slots = {}, ref = { armL: null, armR: null, spins: [], pending: 0 };
@@ -245,23 +252,27 @@ export function makeRobot(config = {}) {
     moving = false; await bob; rig.position.y = 0;
   }
 
-  async function wave() {
+  async function wave({ on } = {}) {
+    if (on) on('wave');
     const a = ref.armR, up = 2.5;
     await T(a.rotation, { z: up }, 200, 'outBack');
     for (let i = 0; i < 3; i++) { await T(a.rotation, { z: up - 0.35 }, 110, 'inOutCubic'); await T(a.rotation, { z: up + 0.2 }, 110, 'inOutCubic'); }
     await T(a.rotation, { z: ARM_REST }, 200);
   }
 
-  async function hop() {
+  async function hop({ on } = {}) {
+    if (on) on('boing');
     await Promise.all([hopUp(0.5, 480), T(rig.scale, { x: 0.94, y: 1.1, z: 0.94 }, 160)]);
+    if (on) on('land');
     await T(rig.scale, { x: 1.1, y: 0.88, z: 1.1 }, 70);
     await T(rig.scale, { x: 1, y: 1, z: 1 }, 110, 'outBack');
   }
 
-  async function dance() {
+  async function dance({ on } = {}) {
     const L = ref.armL, Rr = ref.armR;
     for (let i = 0; i < 5; i++) {
       const k = i % 2 ? 1 : -1;
+      if (on) on('beat');
       await Promise.all([
         T(rig.rotation, { y: k * 0.45, z: -k * 0.07 }, 260, 'inOutCubic'),
         hopUp(0.16, 260),
@@ -290,15 +301,22 @@ const SIGN = () => tex('sign', 128, 128, (g, w) => {
   g.fillStyle = '#1f2937'; g.font = 'bold 96px system-ui,sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('?', w / 2, w / 2 + 6);
 });
 
-/** Direction of the main cylinder / cone axis inside a freshly made solid (null when it cannot be told). */
+/**
+ * Direction of a lying cylinder / cone's axis in the solid's group space (null when it cannot be told).
+ * Prefers solid.userData.axis, then the geometry of solid.userData.body, then any cylinder / cone mesh,
+ * then the bounding box (the longer horizontal side).
+ */
 function axisOf(solid) {
+  if (solid.userData.axis && solid.userData.axis.isVector3) return solid.userData.axis.clone();
   solid.updateMatrixWorld(true);
-  let dir = null;
-  solid.traverse(o => {
-    if (dir || !o.isMesh) return;
-    if (o.geometry.type === 'CylinderGeometry' || o.geometry.type === 'ConeGeometry') dir = new THREE.Vector3(0, 1, 0).transformDirection(o.matrixWorld);
-  });
-  return dir;
+  const axial = o => o && o.isMesh && (o.geometry.type === 'CylinderGeometry' || o.geometry.type === 'ConeGeometry');
+  const dirOf = o => new THREE.Vector3(0, 1, 0).transformDirection(o.matrixWorld);
+  if (axial(solid.userData.body)) return dirOf(solid.userData.body);
+  let found = null;
+  solid.traverse(o => { if (!found && axial(o)) found = dirOf(o); });
+  if (found) return found;
+  const b = new THREE.Box3().setFromObject(solid), sx = b.max.x - b.min.x, sz = b.max.z - b.min.z;
+  return Math.abs(sx - sz) > 0.05 ? new THREE.Vector3(sx > sz ? 1 : 0, 0, sx > sz ? 0 : 1) : null;
 }
 
 const box3 = o => { o.updateMatrixWorld(true); return new THREE.Box3().setFromObject(o); };
@@ -313,8 +331,11 @@ function normalise(o, size) {
 
 /**
  * Boss robot: wheels (x2, lying on their side when the solid can), body, head, and a window tile on the body.
- * It faces the camera (+z) and drives to the right (+x). userData.drive(fail) plays the scripted run for a checkBuild
- * fail code (null = success, the robot drives off to the right). Optional: { rng } for the colours.
+ * Origin on the floor at its centre; it faces the camera (+z) and drives to the right (+x).
+ * Optional: { rng } picks the four part colours (never from the shape type).
+ * userData: { drive(fail, { sign, on }) -> Promise, reset() } (see drive() below for the events and end positions).
+ * No shadows: the solids are made with shadow:false and the scene adds one blobShadow under the robot root (not the rig,
+ * which flips and hops). Shared materials: scenes must clone before tinting.
  */
 export function makeBuildRobot(build, { rng = Math.random } = {}) {
   const cols = shuffle(TOY_COLORS, rng);
@@ -322,10 +343,10 @@ export function makeBuildRobot(build, { rng = Math.random } = {}) {
   root.add(rig); rig.add(stack);
 
   // --- wheels: two, at the front and the back, axle along z so the camera sees the discs
-  const wheelFam = familyOf(build.wheels), wheelPose = posesOf(build.wheels).includes('side') ? 'side' : 'upright';
+  const wheelPose = posesOf(build.wheels).includes('side') ? 'side' : 'upright';
   const wheelMounts = [], wheelSpins = [];
   for (const s of [-1, 1]) {
-    const solid = Solids.makeSolid(build.wheels, { color: cols[0], face: false, pose: wheelPose });
+    const solid = Solids.makeSolid(build.wheels, { color: cols[0], face: false, pose: wheelPose, shadow: false });
     const ax = axisOf(solid), fix = new THREE.Group();
     fix.add(solid);
     if (wheelPose === 'side' && ax && Math.abs(ax.x) > Math.abs(ax.z)) fix.rotation.y = Math.PI / 2; // turn the axis to z
@@ -340,12 +361,12 @@ export function makeBuildRobot(build, { rng = Math.random } = {}) {
 
   // --- body
   const bodyFam = familyOf(build.body);
-  const bodyG = new THREE.Group(); bodyG.add(Solids.makeSolid(build.body, { color: cols[1], face: false }));
+  const bodyG = new THREE.Group(); bodyG.add(Solids.makeSolid(build.body, { color: cols[1], face: false, shadow: false }));
   stack.add(bodyG); { const b = box3(bodyG); bodyG.position.y = 0.65 - b.min.y; }
   const bodyBox = box3(bodyG), bodyH = bodyBox.max.y - bodyBox.min.y;
 
   // --- head
-  const headG = new THREE.Group(); headG.add(Solids.makeSolid(build.head, { color: cols[2], face: true }));
+  const headG = new THREE.Group(); headG.add(Solids.makeSolid(build.head, { color: cols[2], face: true, shadow: false }));
   headG.scale.setScalar(0.74); stack.add(headG);
   { const b = box3(headG); headG.position.y = bodyBox.max.y - b.min.y; }
   const headBox = box3(headG), headR = (headBox.max.x - headBox.min.x) / 2, headSphere = familyOf(build.head) === 'sphere';
@@ -395,8 +416,8 @@ export function makeBuildRobot(build, { rng = Math.random } = {}) {
   const parts = [rig, headG, bodyG, win.m, win.tilt, arm, ...wheelMounts, ...wheelSpins];
   const homes = parts.map(o => [o, o.position.clone(), o.rotation.clone(), o.scale.clone()]);
   const extras = new Set();
-  let current = 0, started = false;
-  function reset() {
+  let current = 0, start = null;
+  function resetParts() {
     for (const [o, p, r, s] of homes) { cancelTweens(o.position); cancelTweens(o.rotation); cancelTweens(o.scale); o.position.copy(p); o.rotation.copy(r); o.scale.copy(s); }
     cancelTweens(root.position); cancelTweens(root.rotation);
     root.rotation.set(0, 0, 0);
@@ -405,48 +426,67 @@ export function makeBuildRobot(build, { rng = Math.random } = {}) {
   }
   const run = async (id, steps) => { for (const s of steps) { if (id !== current) return false; await s(); } return id === current; };
 
+  /**
+   * Scripted test drive for a checkBuild fail code (null = success). Resolves when the script has finished (< 2.5 s,
+   * halved under motion.less); the robot then stands upright (waving just ended), except null.
+   * - drive(null): the robot drives off to the right and is left about 9 units to the right of its start (x + 9).
+   *   Call userData.reset() (or reposition it) before driving it again.
+   * - drive(fail): the robot ends within about 1.5 units of its start. Parts it lost (head, window) stay where they landed
+   *   until the next drive() or reset().
+   * - opts.sign (Object3D, optional): shown on the sign in 'head-wrong' (the head that was needed). Default: a "?".
+   *   Not disposed by the robot.
+   * - opts.on(name) (optional) is called at step boundaries so a scene can play sounds. Events per drive:
+   *     null: go, finish
+   *     wheels-flat: clunk, clunk, oops, land, wave, finish
+   *     wheels-sphere: go, oops, land, wave, finish
+   *     wheels-cone: go, oops, wave, finish
+   *     body-top: go, oops (head starts to slide), land (head lands), wave, finish
+   *     head-rolls: go, oops, land (head hits the floor), wave, finish
+   *     head-wrong: go, land (stops at the sign), oops (scratches head), wave, finish
+   *     panel: go, clunk (window rattles), oops (pops out), land (window lands), wave, finish
+   */
   function drive(fail = null, opts = {}) {
-    const id = ++current; reset();
-    const x0 = root.position.x, z0 = root.position.z;
+    const id = ++current; resetParts();
+    const x0 = root.position.x, z0 = root.position.z; start = root.position.clone();
+    const E = name => () => { if (opts.on) opts.on(name); };
     const pxz = (x, z) => ({ x, z });
     const steps = [];
     const fin = async () => { root.rotation.set(0, 0, 0); rig.rotation.set(0, 0, 0); rig.position.y = cY; mood('normal'); };
+    const ending = [fin, E('wave'), wave];
 
     if (fail === null) {
-      steps.push(() => { mood('happy'); return par([T(root.position, { x: x0 + 9 }, 1700, 'inOutCubic'), rollBy(9, 1700, 'inOutCubic'), hopY(0.07, 300).then(() => hopY(0.07, 300)).then(() => hopY(0.07, 300))]); });
+      steps.push(E('go'), () => { mood('happy'); return par([T(root.position, { x: x0 + 9 }, 1700, 'inOutCubic'), rollBy(9, 1700, 'inOutCubic'), hopY(0.07, 300).then(() => hopY(0.07, 300)).then(() => hopY(0.07, 300))]); });
     } else if (fail === 'wheels-flat') {
-      for (const k of [1, 2]) steps.push(() => par([T(root.position, { x: x0 + 0.3 * k }, 230, 'linear'), hopY(0.14, 230), rollBy(0.15, 230)]));
-      steps.push(() => { mood('oops'); return par([T(root.position, { x: x0 + 1.1 }, 380), T(rig.rotation, { z: -Math.PI }, 380), hopY(0.5, 380)]); });
+      for (const k of [1, 2]) steps.push(() => par([T(root.position, { x: x0 + 0.3 * k }, 230, 'linear'), hopY(0.14, 230), rollBy(0.15, 230)]), E('clunk'));
+      steps.push(E('oops'), () => { mood('oops'); return par([T(root.position, { x: x0 + 1.1 }, 380), T(rig.rotation, { z: -Math.PI }, 380), hopY(0.5, 380)]); });
       steps.push(() => par([spin(-7, 280), T(rig.rotation, { x: 0.1 }, 140).then(() => T(rig.rotation, { x: -0.1 }, 140))]));
       steps.push(() => { mood('normal'); return par([T(root.position, { x: x0 + 1.0 }, 320), T(rig.rotation, { z: -2 * Math.PI, x: 0 }, 320), hopY(0.45, 320)]); });
-      steps.push(() => squash(100), fin, wave);
+      steps.push(E('land'), () => squash(100));
     } else if (fail === 'wheels-sphere') {
-      steps.push(() => par([T(root.position, { x: x0 + 0.4 }, 220, 'linear'), rollBy(0.4, 220)]));
-      steps.push(() => { mood('oops'); return par([T(root.position, pxz(x0 + 0.75, z0 + 1.1), 420, 'inOutCubic'), T(root.rotation, { y: -0.35 }, 420), spin(-5, 420)]); });
+      steps.push(E('go'), () => par([T(root.position, { x: x0 + 0.4 }, 220, 'linear'), rollBy(0.4, 220)]));
+      steps.push(E('oops'), () => { mood('oops'); return par([T(root.position, pxz(x0 + 0.75, z0 + 1.1), 420, 'inOutCubic'), T(root.rotation, { y: -0.35 }, 420), spin(-5, 420)]); });
       steps.push(() => par([T(rig.rotation, { x: 0.5 }, 200), T(rig.position, { y: cY - 0.12 }, 200)]));
       steps.push(() => T(rig.rotation, { x: -0.3 }, 110, 'inOutCubic').then(() => T(rig.rotation, { x: 0.25 }, 110, 'inOutCubic')).then(() => T(rig.rotation, { x: 0 }, 110, 'inOutCubic')));
-      steps.push(() => { mood('normal'); return par([T(root.position, pxz(x0 + 0.2, z0), 420, 'inOutCubic'), T(root.rotation, { y: 0 }, 420, 'inOutCubic'), T(rig.position, { y: cY }, 420), spin(2, 420)]); });
-      steps.push(fin, wave);
+      steps.push(() => { mood('normal'); return par([T(root.position, pxz(x0 + 0.2, z0), 420, 'inOutCubic'), T(root.rotation, { y: 0 }, 420, 'inOutCubic'), T(rig.position, { y: cY }, 420), spin(2, 420)]); }, E('land'));
     } else if (fail === 'wheels-cone') {
+      const turns = motion.less ? 2 : 4; // half-turns of pi: two circles, or one under less motion
       const Rr = 0.62, circle = { _a: 0, get a() { return this._a; }, set a(v) { this._a = v; root.position.x = x0 + Rr * Math.sin(v); root.position.z = z0 - Rr + Rr * Math.cos(v); root.rotation.y = v; } };
-      steps.push(() => par([T(circle, { a: Math.PI * 4 }, 1150, 'inOutCubic'), spin(-14, 1150, 'inOutCubic')]));
-      steps.push(() => { root.rotation.y = 0; root.position.set(x0, root.position.y, z0); mood('dizzy'); return par([T(headG.rotation, { y: Math.PI * 2 }, 420, 'outCubic'), T(rig.rotation, { z: 0.1 }, 140).then(() => T(rig.rotation, { z: -0.1 }, 140)).then(() => T(rig.rotation, { z: 0 }, 140))]); });
-      steps.push(() => { headG.rotation.y = 0; return Promise.resolve(); }, fin, wave);
+      steps.push(E('go'), () => par([T(circle, { a: Math.PI * turns }, 1150, 'inOutCubic'), spin(-14, 1150, 'inOutCubic')]));
+      steps.push(E('oops'), () => { root.rotation.y = 0; root.position.set(x0, root.position.y, z0); mood('dizzy'); return par([T(headG.rotation, { y: Math.PI * 2 }, 420, 'outCubic'), T(rig.rotation, { z: 0.1 }, 140).then(() => T(rig.rotation, { z: -0.1 }, 140)).then(() => T(rig.rotation, { z: 0 }, 140))]); });
+      steps.push(() => { headG.rotation.y = 0; return Promise.resolve(); });
     } else if (fail === 'body-top') {
-      const dx = -(bodyBox.max.x + headR * 0.9) + 0.0, hb = headBox.min.y, h0 = headG.position;
-      steps.push(() => par([T(root.position, { x: x0 + 0.5 }, 300, 'inOutCubic'), rollBy(0.5, 300, 'inOutCubic')]));
-      steps.push(() => { mood('oops'); return T(headG.rotation, { z: -0.3 }, 140); });
-      steps.push(() => par([T(headG.position, { x: h0.x + dx }, 520, 'outCubic'), T(headG.position, { y: h0.y - hb }, 520, 'outBounce'), T(headG.rotation, { z: headSphere ? -dx / headR : 0 }, 520, 'outCubic')]));
+      const dx = -(bodyBox.max.x + headR * 0.9), hb = headBox.min.y, h0 = headG.position;
+      steps.push(E('go'), () => par([T(root.position, { x: x0 + 0.5 }, 300, 'inOutCubic'), rollBy(0.5, 300, 'inOutCubic')]));
+      steps.push(E('oops'), () => { mood('oops'); return T(headG.rotation, { z: -0.3 }, 140); });
+      steps.push(() => par([T(headG.position, { x: h0.x + dx }, 520, 'outCubic'), T(headG.position, { y: h0.y - hb }, 520, 'outBounce'), T(headG.rotation, { z: headSphere ? -dx / headR : 0 }, 520, 'outCubic')]), E('land'));
       steps.push(() => T(rig.rotation, { z: 0.1 }, 90).then(() => T(rig.rotation, { z: -0.1 }, 90)).then(() => T(rig.rotation, { z: 0 }, 90)));
-      steps.push(fin, wave);
     } else if (fail === 'head-rolls') {
       const dx = -(bodyBox.max.x + headR * 0.9), hb = headBox.min.y, h0 = headG.position;
-      steps.push(() => par([T(root.position, { x: x0 + 0.55 }, 280, 'inOutCubic'), rollBy(0.55, 280, 'inOutCubic')]));
+      steps.push(E('go'), () => par([T(root.position, { x: x0 + 0.55 }, 280, 'inOutCubic'), rollBy(0.55, 280, 'inOutCubic')]));
       steps.push(() => T(headG.position, { x: h0.x + 0.07 }, 80).then(() => T(headG.position, { x: h0.x - 0.07 }, 80)));
-      steps.push(() => { mood('oops'); return par([T(headG.position, { x: h0.x + dx }, 380, 'outCubic'), T(headG.position, { y: h0.y - hb }, 380, 'outBounce'), T(headG.rotation, { z: -dx / headR }, 380, 'outCubic')]); });
+      steps.push(E('oops'), () => { mood('oops'); return par([T(headG.position, { x: h0.x + dx }, 380, 'outCubic'), T(headG.position, { y: h0.y - hb }, 380, 'outBounce'), T(headG.rotation, { z: -dx / headR }, 380, 'outCubic')]); }, E('land'));
       steps.push(() => par([T(headG.position, { x: h0.x + dx - 1.7, z: 0.35 }, 560, 'outCubic'), T(headG.rotation, { z: -(dx - 1.7) / headR }, 560, 'outCubic')]));
       steps.push(() => T(rig.rotation, { z: 0.1 }, 90).then(() => T(rig.rotation, { z: -0.1 }, 90)));
-      steps.push(fin, wave);
     } else if (fail === 'head-wrong') {
       const sign = new THREE.Group(); sign.userData.own = false; extras.add(sign);
       sign.add(at(mesh(geo('sign-post', () => new THREE.CylinderGeometry(0.03, 0.03, 0.9, 8)), M.metal()), 0, 0.45, 0));
@@ -454,28 +494,34 @@ export function makeBuildRobot(build, { rng = Math.random } = {}) {
       if (opts.sign && opts.sign.isObject3D) { normalise(opts.sign, 0.5); opts.sign.position.set(0, 1.0, 0.04); sign.add(opts.sign); }
       sign.position.set(1.45, 0, -0.55); sign.scale.setScalar(0.001); root.add(sign); // child of root; slid back so it stays put in the world
       const hx = headG.position.x;
-      steps.push(() => par([T(root.position, { x: x0 + 0.85 }, 520, 'inOutCubic'), T(sign.position, { x: 0.6 }, 520, 'inOutCubic'), rollBy(0.85, 520, 'inOutCubic'), T(sign.scale, { x: 1, y: 1, z: 1 }, 300, 'outBack')]));
-      steps.push(() => T(rig.rotation, { z: -0.06 }, 70).then(() => T(rig.rotation, { z: 0 }, 70)));
-      steps.push(() => { mood('oops'); return par([T(headG.rotation, { z: -0.28 }, 150), T(headG.position, { x: hx + 0.1 }, 150), T(arm.rotation, { z: 2.9 }, 200, 'outBack')]); });
+      steps.push(E('go'), () => par([T(root.position, { x: x0 + 0.85 }, 520, 'inOutCubic'), T(sign.position, { x: 0.6 }, 520, 'inOutCubic'), rollBy(0.85, 520, 'inOutCubic'), T(sign.scale, { x: 1, y: 1, z: 1 }, 300, 'outBack')]));
+      steps.push(E('land'), () => T(rig.rotation, { z: -0.06 }, 70).then(() => T(rig.rotation, { z: 0 }, 70)));
+      steps.push(E('oops'), () => { mood('oops'); return par([T(headG.rotation, { z: -0.28 }, 150), T(headG.position, { x: hx + 0.1 }, 150), T(arm.rotation, { z: 2.9 }, 200, 'outBack')]); });
       steps.push(async () => { for (let i = 0; i < 3; i++) { await T(arm.rotation, { z: 2.65 }, 80, 'inOutCubic'); await T(arm.rotation, { z: 3.0 }, 80, 'inOutCubic'); } });
       steps.push(() => par([T(headG.rotation, { z: 0 }, 140), T(headG.position, { x: hx }, 140), T(arm.rotation, { z: ARM0 }, 140)]));
-      steps.push(fin, wave);
     } else if (fail === 'panel') {
       const holes = TILE_TEMPLATES.filter(t => !t.circle && t.id !== build.panel && t.sides !== templateById(build.panel).sides);
       const hole = mountAt(), ht = Tiles.makeTile((holes.find(t => t.sides === 6) || holes[0]).id, { color: 0x1e293b, size: 1, thickness: 0.02 });
       normalise(ht, winSize * 1.3); hole.tilt.add(ht); hole.m.userData.own = true; hole.m.position.addScaledVector(N, 0.01); stack.add(hole.m); extras.add(hole.m);
       const wp = win.m.position, floorY = 0.07;
-      steps.push(() => par([T(root.position, { x: x0 + 0.6 }, 350, 'inOutCubic'), rollBy(0.6, 350, 'inOutCubic')]));
-      steps.push(async () => { for (let i = 0; i < 3; i++) { await T(win.tilt.rotation, { y: 0.28 }, 35); await T(win.tilt.rotation, { y: -0.28 }, 35); } await T(win.tilt.rotation, { y: 0 }, 20); });
-      steps.push(() => { mood('oops'); return par([T(win.m.position, { x: wp.x + 0.3, y: wp.y + 0.75, z: wp.z + 1.0 }, 420, 'outCubic'), T(win.tilt.rotation, { y: Math.PI * 4 }, 420), T(win.tilt.rotation, { x: 0 }, 420)]); });
-      steps.push(() => T(win.m.position, { x: wp.x + 0.45, y: floorY, z: wp.z + 1.35 }, 280, 'outBounce'));
-      steps.push(fin, wave);
+      steps.push(E('go'), () => par([T(root.position, { x: x0 + 0.6 }, 350, 'inOutCubic'), rollBy(0.6, 350, 'inOutCubic')]));
+      if (!motion.less) steps.push(E('clunk'), async () => { for (let i = 0; i < 3; i++) { await T(win.tilt.rotation, { y: 0.28 }, 35); await T(win.tilt.rotation, { y: -0.28 }, 35); } await T(win.tilt.rotation, { y: 0 }, 20); });
+      steps.push(E('oops'), () => { mood('oops'); return par([T(win.m.position, { x: wp.x + 0.3, y: wp.y + 0.75, z: wp.z + 1.0 }, 420, 'outCubic'), T(win.tilt.rotation, { y: Math.PI * 4 }, 420), T(win.tilt.rotation, { x: 0 }, 420)]); });
+      steps.push(() => T(win.m.position, { x: wp.x + 0.45, y: floorY, z: wp.z + 1.35 }, 280, 'outBounce'), E('land'));
     } else {
-      steps.push(fin, wave);
+      throw new Error('unknown drive code ' + fail);
     }
-    return run(id, steps).then(ok => { if (ok) { fin(); } return ok; });
+    if (fail !== null) steps.push(...ending);
+    return run(id, steps).then(ok => { if (ok) { if (fail !== null) fin(); E('finish')(); } return ok; });
   }
 
-  root.userData = { buildRobot: true, build: { ...build }, drive };
+  /** Back to the home pose: parts, window, head and sign reset, and the robot returns to where the last drive() started. */
+  function reset() {
+    current += 1; resetParts();
+    if (start) root.position.copy(start);
+    rig.rotation.set(0, 0, 0); rig.position.y = cY;
+  }
+
+  root.userData = { buildRobot: true, build: { ...build }, drive, reset };
   return root;
 }

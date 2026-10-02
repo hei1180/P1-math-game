@@ -23,7 +23,7 @@
 <script type="module">
 import * as THREE from 'three';
 import { Stage, disposeTree, blobShadow } from '../engine/stage.js?v=0';
-import { tween, wait, motion } from '../engine/tween.js?v=0';
+import { wait, motion } from '../engine/tween.js?v=0';
 import { SCENE } from '../theme.js?v=0';
 import { OBJECTS, FAMILY, SLOTS, PARTS, BASIC_PART, checkBuild, WHEEL_CHOICES, BODY_CHOICES, HEAD_CHOICES, TILE_TEMPLATES } from '../../shapes-logic.js?v=0';
 import { makeObject } from '../models/objects.js?v=0';
@@ -159,11 +159,11 @@ async function testDrives() {
   for (const [k, b] of Object.entries(BUILDS)) {
     const fail = k === 'success' ? null : k;
     const got = checkBuild(JOB, b).fail;
-    spawn(b); const r = boss; r.userData.drive; // eslint-disable-line
-    const res = await pump(r.userData.drive(fail));
+    const events = []; spawn(b); const r = boss;
+    const res = await pump(r.userData.drive(fail, { on: e => events.push(e) }));
     const p = r.position, ok = Number.isFinite(p.x + p.y + p.z);
     const rig = r.children[0];
-    out.push({ case: k, checkBuild: got, matches: got === fail, done: res.done, ms: Math.round(res.ms), pos: [p.x, p.y, p.z].map(v => +v.toFixed(2)), rigRot: [rig.rotation.x, rig.rotation.y, rig.rotation.z].map(v => +v.toFixed(2)), finite: ok });
+    out.push({ case: k, checkBuild: got, matches: got === fail, events: events.join(','), done: res.done, ms: Math.round(res.ms), pos: [p.x, p.y, p.z].map(v => +v.toFixed(2)), rigRot: [rig.rotation.x, rig.rotation.y, rig.rotation.z].map(v => +v.toFixed(2)), finite: ok });
   }
   log(JSON.stringify(out, null, 1)); return out;
 }

@@ -67,7 +67,7 @@ Prompts are short, shown with icons, and **read aloud** (speechSynthesis, `zh-HK
 | **A3 摸摸袋 Mystery bag** | A shape hides in a bag; clues appear one by one (icon + voice): "我會滾", "我有尖頂", "我全部面都是平的", "我有圓形的面". Child picks one of 5 friends. | 5 bags | right family. Using fewer clues adds a sparkle (cosmetic only, not stars) |
 | **A4 生活中的立體 Everyday solids** | A 3-D everyday object appears; child can spin it with a finger, then drops it into one of 5 family bins. | 5 objects from a pool of 12 | right family |
 
-Everyday object pool (built from primitives, no photos): drink can, drum, ball, globe, party hat, traffic cone, dice, tissue box, tent, cheese wedge (triangular prism), pyramid paperweight, pencil-box.
+Everyday object pool (built from primitives, no photos): drink can, drum, ball, globe, party hat, traffic cone, dice, tissue box, tent, pencil box, pyramid paperweight, pyramid tea bag.
 
 ### Zone B — 平面工作枱 (1S2)
 
@@ -76,7 +76,7 @@ Everyday object pool (built from primitives, no photos): drink can, drum, ball, 
 | **B1 直線曲線 Straight or curved** | Sort wires into 直線 / 曲線 bins; then a dot task: tap two points to shoot a straight laser, and answer "有幾多條直線可以連接這兩點？" (1 條 / 很多條), followed by a demo of many curves through the same points. | 3 sorts + 2 dot tasks | sort right; 1 條 |
 | **B2 吃板機 Panel Muncher** | A machine has slots 3 / 4 / 5 / 6 sides / 圓形. Feed each tile to the right slot. | 5 tiles: regular, irregular, dented, turned | slot = number of sides (circle = 圓形) |
 | **B3 釘板 Pegboard** | Tap pegs to stretch a rubber band. Target: "砌一個五邊形" or open "任何四邊形". | 4 targets | shape closes, doesn't cross itself, and has the target number of sides (straight runs through extra pegs count as one side) |
-| **B4 拼砌 Silhouette** | Fill a robot-panel outline with tiles: drag, tap ⟳ to turn 45°, tiles snap to a grid. | 2 puzzles, 3–5 tiles each | every cell covered, no overlap. A wrong drop (doesn't fit) is a mistake |
+| **B4 拼砌 Silhouette** | Fill an outline (house, robot face, rocket, boat) with tiles: drag, tap ⟳ to turn 90°, tiles snap to a grid of quarter-triangles. | 2 puzzles, 3–5 tiles each | every cell covered, no overlap. A wrong drop (doesn't fit) is a mistake |
 
 ### Boss — 測試跑道 Test Track (mixed)
 
@@ -131,7 +131,7 @@ New **Robot Workshop** row: Zone A ☐, Zone B ☐, Rush time (s) default 60, Ga
 ### Firestore rules (added to `firestore.rules`, teacher email stays a placeholder)
 
 - `shapesProgress/{uid}`: read/write own; teacher read.
-- `robotGallery/{uid}`: read by signed-in users when `hidden == false`, teacher reads all; create/update own only, with schema validation (allowed keys, `creations.size() <= 6`, `playerName == request.auth.token.name`, the owner cannot change `hidden`); teacher may update `hidden` only.
+- `robotGallery/{uid}`: read by signed-in users when `hidden == false`, teacher reads all; create/update own only, with schema validation (allowed keys, `creations.size() <= 6`, `playerName` a string ≤ 100 chars, the owner cannot change `hidden`); teacher may update `hidden` only.
 
 ## §3 Architecture
 
@@ -144,7 +144,7 @@ New **Robot Workshop** row: Zone A ☐, Zone B ☐, Rush time (s) default 60, Ga
 ### Libraries
 
 - `three` (pinned, ES module) and `cannon-es` (pinned) from **jsDelivr** via an import map. ~200 KB gzipped together. cannon-es loads only when a physics scene starts.
-- Correctness never depends on the simulation: **answers are graded by the logic table**; physics is the show. Where a simulation could misbehave (a cube wobbling to a roll), the scene uses a scripted animation instead.
+- Correctness never depends on the simulation: **answers are graded by the logic table**; physics is the show. A1 rolling and the boss drive are scripted animations (always look right); physics is used for A2 stacking and toppling.
 
 ### Files
 

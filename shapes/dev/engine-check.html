@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Robot Workshop engine check</title>
+<script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.min.js", "cannon-es": "https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js" } }</script>
+<style>
+  body { margin: 0; font: 16px system-ui, sans-serif; background: #fffbeb; color: #1f2937; }
+  #stage { position: relative; width: 100%; height: 60vh; min-height: 320px; touch-action: none; }
+  #bar { padding: 8px; display: flex; flex-wrap: wrap; gap: 6px; }
+  button { min-height: 48px; min-width: 48px; padding: 0 12px; font: inherit; border: 2px solid #1f2937; border-radius: 10px; background: #fff; }
+  #log { padding: 0 8px 8px; white-space: pre-wrap; font: 13px monospace; }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<div id="bar"></div>
+<div id="log"></div>
+<script type="module">
+import * as THREE from 'three';
+import { Stage, disposeTree, blobShadow } from '../engine/stage.js?v=0';
+import { tween, wait, motion } from '../engine/tween.js?v=0';
+import { Input } from '../engine/input.js?v=0';
+import { Scene, SceneManager } from '../engine/scenes.js?v=0';
+import { createPhysics } from '../engine/physics.js?v=0';
+import { voice } from '../engine/voice.js?v=0';
+import { sfx } from '../sfx.js?v=0';
+import { SCENE, toyColor } from '../theme.js?v=0';
+
+const log = m => { document.getElementById('log').textContent = m; };
+if (!Stage.supported()) { log('No WebGL'); throw new Error('No WebGL'); }
+
+const stage = new Stage(document.getElementById('stage'));
+const input = new Input(stage);
+stage.setView([0, 5, 9], [0, 0.8, 0]);
+
+const floor = new THREE.Mesh(new THREE.BoxGeometry(14, 0.2, 8), new THREE.MeshStandardMaterial({ color: SCENE.floor }));
+floor.position.y = -0.1; stage.scene.add(floor);
+const mat = c => new THREE.MeshStandardMaterial({ color: c });
+
+// spinning box: tap changes colour, one finger turns it
+const box = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat(toyColor()));
+box.position.set(-3, 1, 0); stage.scene.add(box);
+(async () => { for (;;) { await tween(box.rotation, { y: box.rotation.y + Math.PI * 2 }, { ms: 3000, ease: 'linear' }); } })();
+
+// draggable sphere with a blob shadow
+const ball = new THREE.Mesh(new THREE.SphereGeometry(0.5, 24, 16), mat(0x3b82f6));
+ball.position.set(0, 0.5, 2); stage.scene.add(ball);
+const sh = blobShadow(0.6); sh.position.set(0, 0.002, 2); stage.scene.add(sh);
+// a scene switch clears Input, so the page's own handlers are bound again in each scene's enter()
+function bind() {
+  input.onTap([box], b => { b.material.color.setHex(toyColor()); sfx.pop(); log('tap box'); });
+  input.drag(ball, {
+    lift: 0.3,
+    onMove: (o, p) => { sh.position.set(p.x, 0.002, p.z); },
+    onEnd: async (o, p) => { o.position.y = 0.5; log(`dropped at ${p.x.toFixed(2)}, ${p.z.toFixed(2)}`); sfx.clunk(); },
+  });
+}
+
+// physics: three boxes fall onto the ground, plus a sphere
+const physics = await createPhysics(stage);
+physics.addGround({ y: 0 });
+const falling = [];
+function drop() {
+  falling.forEach(m => { stage.scene.remove(m.mesh); physics.remove(m.body); disposeTree(m.mesh); });
+  falling.length = 0;
+  for (let i = 0; i < 3; i++) {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat(toyColor()));
+    m.position.set(3 + (i - 1) * 0.3, 1 + i * 1.6, 0); m.rotation.set(0.3 * i, 0.5 * i, 0.2);
+    stage.scene.add(m);
+    falling.push({ mesh: m, body: physics.addBox(m, { size: [1, 1, 1], mass: 1 }) });
+  }
+  const s = new THREE.Mesh(new THREE.SphereGeometry(0.5, 20, 14), mat(0xec4899));
+  s.position.set(3.2, 6.5, 0.2); stage.scene.add(s);
+  falling.push({ mesh: s, body: physics.addSolid(s, { type: 'sphere', r: 0.5 }) });
+  physics.start();
+  physics.settle().then(() => log('physics settled'));
+}
+drop();
+
+// scene manager with two tiny scenes
+const ui = { clear() {} };
+const scenes = new SceneManager({ stage, input, ui, bridge: {} });
+class Cube extends Scene {
+  async enter(d) {
+    bind();
+    const m = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 0.8), mat(d.color)); m.position.set(d.x, 3, 0);
+    this.root.add(m); this.m = m; this.n = 0;
+    input.spin(m, { speed: 0.02 });
+    await tween(m.scale, { x: 1.3, y: 1.3, z: 1.3 }, { ms: 300, ease: 'outBack' });
+  }
+  update(dt) { this.n += dt; this.m.position.y = 3 + Math.sin(this.n * 2) * 0.2; }
+}
+scenes.register('S1', Cube); scenes.register('S2', Cube);
+const goto = (k, d) => scenes.go(k, d);
+goto('S1', { color: 0xf97316, x: -1 });
+stage.awake('demo', true);
+
+// buttons
+const bar = document.getElementById('bar');
+const add = (t, f) => { const b = document.createElement('button'); b.textContent = t; b.onclick = () => { sfx.unlock(); f(); }; bar.appendChild(b); };
+for (const k of ['tick', 'pop', 'ding', 'bonk', 'clunk', 'boing', 'spring', 'whoosh', 'roll', 'star', 'fanfare', 'zap', 'crash', 'munch']) add(k, () => sfx[k](k === 'roll' ? 800 : 1));
+add('say', () => voice.say('你好，我係波波').then(() => log('speech done / skipped')));
+add('mute', () => { sfx.muted = !sfx.muted; log('muted=' + sfx.muted); });
+add('drop boxes', drop);
+add('less motion', () => { motion.less = !motion.less; log('motion.less=' + motion.less); });
+add('camera', () => { stage.setView([6, 3, 6], [0, 1, 0], 600).then(() => stage.setView([0, 5, 9], [0, 0.8, 0], 600)); });
+add('scene S2', () => goto('S2', { color: 0x06b6d4, x: 1 }));
+add('scene S1', () => goto('S1', { color: 0xf97316, x: -1 }));
+window.dev = { goto, THREE, stage, input, tween, wait, motion, physics, scenes, sfx, voice, box, ball, falling };
+log('ready — voice.available=' + voice.available);
+</script>
+</body>
+</html>

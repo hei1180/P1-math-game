@@ -38,9 +38,10 @@ export async function saveGalleryEntry(uid, entry) {
   if (!uid) return;
   try {
     const ref = doc(db, 'robotGallery', uid);
-    let existing = null;
-    try { const snap = await getDoc(ref); if (snap.exists()) existing = snap.data(); } catch (e) { /* offline: treat as new */ }
-    const hidden = existing?.hidden ?? false;
+    let snap;
+    try { snap = await getDoc(ref); }
+    catch (e) { console.warn('gallery entry unreadable, not saved (could un-hide a hidden entry)', e); return; }
+    const hidden = snap.exists() ? snap.data().hidden === true : false; // only a missing doc counts as new
     if (!validateGalleryEntry({ ...entry, hidden })) { console.warn('gallery entry invalid, not saved'); return; }
     await setDoc(ref, { ...entry, hidden, updatedAt: serverTimestamp() });
   } catch (e) { console.warn('gallery save failed', e); }

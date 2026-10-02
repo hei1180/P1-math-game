@@ -1,7 +1,7 @@
 // Robot Workshop entry: DOM shell wiring, bridge to shared.js, three.js boot.
 import { signIn, onUser, player, settings, session, enterTestMode, initAudio, engine, resetEngine, registerHit, endFever,
          startTimer, stopTimer, saveScore, renderLeaderboard, showRankPopup, mountTeacherModal, sharedSound, logAttempt, isTeacherEmail } from '../shared.js?v=0';
-import { recordResult, ZONES, lcg, SLOTS } from '../shapes-logic.js?v=0';
+import { recordResult, validateGalleryEntry, ZONES, lcg, SLOTS } from '../shapes-logic.js?v=0';
 import { loadProgress, saveProgress, loadGallery, saveGalleryEntry, setGalleryHidden } from '../shapes-progress.js?v=0';
 import { sfx } from './sfx.js?v=0';
 import { voice } from './engine/voice.js?v=0';
@@ -19,7 +19,8 @@ sharedSound.on = false;
 
 // ---- dev mode: localhost / private LAN, only with ?dev ----
 const host = location.hostname;
-const isDevHost = ['localhost', '127.0.0.1'].includes(host) || /^(192\.168\.|10\.)/.test(host) || /^172\.(1[6-9]|2\d|3[01])\./.test(host);
+const isDevHost = ['localhost', '127.0.0.1'].includes(host) || /^192\.168\.\d+\.\d+$/.test(host) || /^10\.\d+\.\d+\.\d+$/.test(host)
+  || /^172\.(1[6-9]|2\d|3[01])\.\d+\.\d+$/.test(host);
 const DEV = isDevHost && params.has('dev');
 if (DEV && params.has('nowebgl')) HTMLCanvasElement.prototype.getContext = () => null; // check the no-WebGL message
 
@@ -62,14 +63,19 @@ const bridge = {
     this.progress = { ...this.progress, robot: { ...robot } };
     if (session.testMode) return;
     await saveProgress(player.uid, this.progress);
-    await this.gallery.publish();
+    await bridge.gallery.publish();
   },
   /** Keep at most 6 creations (the oldest goes first). */
   async saveCreation(c) {
+    // An invalid creation would make every later gallery publish fail validation, so refuse it here.
+    if (!validateGalleryEntry({ playerName: '', robot: robotForGallery(this.progress.robot), creations: [c], hidden: false })) {
+      console.warn('creation invalid, not saved', c);
+      return;
+    }
     this.progress = { ...this.progress, creations: [...this.progress.creations, c].slice(-6) };
     if (session.testMode) return;
     await saveProgress(player.uid, this.progress);
-    await this.gallery.publish();
+    await bridge.gallery.publish();
   },
 
   rushStart(zone, onTimeUp) {
@@ -97,14 +103,15 @@ const bridge = {
     isTeacher: false,
     get enabled() { return settings.shapesGallery !== false; },
     /** Visible entries (all entries for the teacher). [] when the gallery is off or offline. */
-    async load() { return this.enabled ? loadGallery({ teacher: this.isTeacher }) : []; },
+    async load() { return bridge.gallery.enabled ? loadGallery({ teacher: bridge.gallery.isTeacher }) : []; },
     /** Write this player's robot and creations to the gallery (never in test mode or when signed out). */
     async publish() {
-      if (!this.enabled || session.testMode || !player.uid) return;
+      if (!bridge.gallery.enabled || session.testMode || !player.uid) return;
       const p = bridge.progress;
       await saveGalleryEntry(player.uid, { playerName: player.name, robot: robotForGallery(p.robot), creations: p.creations });
     },
-    async setHidden(uid, hidden) { return this.isTeacher ? setGalleryHidden(uid, hidden) : false; },
+    /** Teacher only, and never in dev / test mode (nothing is written then). */
+    async setHidden(uid, hidden) { return bridge.gallery.isTeacher && !session.testMode && !DEV ? setGalleryHidden(uid, hidden) : false; },
   },
 };
 
@@ -129,19 +136,28 @@ function startGame() {
   if (!Stage.supported()) { showNoWebgl(); return; }
   $('loginScreen').classList.add('hidden');
   $('gameScreen').classList.remove('hidden');
-  stage = new Stage($('stage'));
-  input = new Input(stage);
-  ui.mount($('ui'));
-  const ctx = { stage, input, ui, bridge, go: goTo };
-  scenes = new SceneManager(ctx);
-  for (const [key, cls] of Object.entries(SCENES)) scenes.register(key, cls);
+  try {
+    stage = new Stage($('stage'));
+    input = new Input(stage);
+    ui.mount($('ui'));
+    scenes = new SceneManager({ stage, input, ui, bridge, go: goTo });
+    for (const [key, cls] of Object.entries(SCENES)) scenes.register(key, cls);
+  } catch (e) {
+    console.error('boot failed', e);
+    stage = null; scenes = null;
+    showNoWebgl();
+    return;
+  }
   window.__robot = { stage, scenes, bridge, go: goTo };
-  scenes.go('Boot');
+  scenes.go('Boot').catch(console.error);
 }
 
 // ---- DOM wiring ----
 $('loginBtn').addEventListener('click', signIn);
-const paintMute = () => { $('muteBtn').textContent = sfx.muted ? '🔇' : '🔊'; };
+const paintMute = () => {
+  $('muteBtn').textContent = sfx.muted ? '🔇' : '🔊';
+  $('muteBtn').setAttribute('aria-label', sfx.muted ? '開聲音 Sound on' : '關聲音 Sound off');
+};
 paintMute();
 $('muteBtn').addEventListener('click', () => { sfx.muted = !sfx.muted; if (sfx.muted) voice.stop(); paintMute(); });
 document.addEventListener('pointerdown', () => sfx.unlock(), { passive: true });

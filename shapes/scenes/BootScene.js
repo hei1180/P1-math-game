@@ -5,7 +5,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 // Shows a little robot while fonts load (max 1 s), then opens the Workshop (or the dev ?scene= target).
 export class BootScene extends Scene {
   async enter() {
-    const { ui, bridge, go } = this.ctx;
+    const { bridge, go } = this.ctx;
     const box = document.createElement('div');
     box.className = 'absolute inset-0 flex flex-col items-center justify-center bg-sky-100';
     const bot = document.createElement('div');

@@ -83,7 +83,7 @@ export const ui = {
 
   /** Answer buttons. Resolves with the tapped id; the buttons stay until clearChoices(). */
   choices(items, { columns } = {}) {
-    const sig = items.map(c => c.id).join('|');
+    const sig = JSON.stringify([columns || 0, items.map(c => [c.id, c.zh, c.en || '', c.icon || ''])]);
     return new Promise(resolve => {
       if (S.choices && S.ch && S.ch.sig === sig) { S.ch.resolve = resolve; return; } // same buttons: just listen again
       const n = items.length;
@@ -121,17 +121,17 @@ export const ui = {
   mark(id, good) {
     const b = S.ch && S.ch.buttons.get(id);
     if (!b) return;
-    const on = good ? 'bg-green-300' : 'bg-red-300';
-    const border = good ? 'border-green-600' : 'border-red-600';
+    const reset = () => {
+      b.classList.remove('bg-green-300', 'border-green-600', 'bg-red-300', 'border-red-600', 'animate-shake');
+      b.classList.add('bg-white', 'border-emerald-300');
+    };
+    clearTimeout(b._flash); // re-marking restarts the flash instead of stacking classes
+    reset();
     b.classList.remove('bg-white', 'border-emerald-300');
-    b.classList.add(on, border);
+    b.classList.add(good ? 'bg-green-300' : 'bg-red-300', good ? 'border-green-600' : 'border-red-600');
     if (!good && !motion.less) b.classList.add('animate-shake');
     const gen = S.gen;
-    setTimeout(() => {
-      if (gen !== S.gen) return;
-      b.classList.remove(on, border, 'animate-shake');
-      b.classList.add('bg-white', 'border-emerald-300');
-    }, 700);
+    b._flash = setTimeout(() => { if (gen === S.gen) reset(); }, 700);
   },
   clearChoices() { drop('choices'); S.ch = null; },
 

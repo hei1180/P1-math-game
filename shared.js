@@ -286,7 +286,7 @@ export async function logAttempt(fields) {
     };
     for (const k of ATTEMPT_NUMBERS) row[k] = Number.isFinite(fields[k]) ? fields[k] : null;
     if (Array.isArray(fields.confusions) && fields.confusions.length) {
-      row.confusions = fields.confusions.slice(0, 5).map(c => ({ item: String(c.item).slice(0, 30), picked: String(c.picked).slice(0, 30) }));
+      row.confusions = fields.confusions.filter(c => c && c.item != null && c.picked != null).slice(0, 5).map(c => ({ item: String(c.item).slice(0, 30), picked: String(c.picked).slice(0, 30) }));
     }
     row.ts = serverTimestamp();
     row.day = localDay();

@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Robot Workshop models check</title>
+<script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.min.js", "cannon-es": "https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js" } }</script>
+<style>
+  body { margin: 0; font: 16px system-ui, sans-serif; background: #fffbeb; color: #1f2937; }
+  #stage { position: relative; width: 100%; height: 62vh; min-height: 320px; touch-action: none; overflow: hidden; }
+  .lab { position: absolute; transform: translate(-50%, 0); font: 600 12px system-ui, sans-serif; color: #1f2937; background: rgba(255,255,255,.8); border-radius: 6px; padding: 1px 6px; pointer-events: none; white-space: nowrap; }
+  #bar { padding: 8px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  button, select { min-height: 48px; min-width: 48px; padding: 0 12px; font: inherit; border: 2px solid #1f2937; border-radius: 10px; background: #fff; }
+  button.on { background: #fde047; }
+  #log { padding: 0 8px 8px; white-space: pre-wrap; font: 13px monospace; }
+  .sep { width: 12px; }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<div id="bar"></div>
+<div id="log"></div>
+<script type="module">
+import * as THREE from 'three';
+import { Stage, disposeTree, blobShadow } from '../engine/stage.js?v=0';
+import { tween, wait, motion } from '../engine/tween.js?v=0';
+import { SCENE } from '../theme.js?v=0';
+import { OBJECTS, FAMILY, SLOTS, PARTS, BASIC_PART, checkBuild, WHEEL_CHOICES, BODY_CHOICES, HEAD_CHOICES, TILE_TEMPLATES } from '../../shapes-logic.js?v=0';
+import { makeObject } from '../models/objects.js?v=0';
+import { makeRobot, makeBuildRobot, PART_INFO } from '../models/robot.js?v=0';
+
+const logEl = document.getElementById('log');
+const log = m => { logEl.textContent = m; };
+if (!Stage.supported()) { log('No WebGL'); throw new Error('No WebGL'); }
+
+const stage = new Stage(document.getElementById('stage'));
+const floor = new THREE.Mesh(new THREE.BoxGeometry(24, 0.2, 14), new THREE.MeshStandardMaterial({ color: SCENE.floor }));
+floor.position.y = -0.1; stage.scene.add(floor);
+
+// ---------- 1. objects grid ----------
+const objectsG = new THREE.Group(); stage.scene.add(objectsG);
+const labels = [];
+const COLS = 4, GAP = 1.75;
+OBJECTS.forEach((o, i) => {
+  const col = i % COLS, row = Math.floor(i / COLS);
+  const m = makeObject(o.id);
+  const x = (col - (COLS - 1) / 2) * GAP, z = (row - 1) * 2.1;
+  m.position.set(x, 0.5, z); m.rotation.y = -0.35;
+  const sh = blobShadow(0.55); sh.position.set(x, 0.002, z);
+  objectsG.add(m, sh);
+  const d = document.createElement('div'); d.className = 'lab'; d.textContent = `${o.zh} · ${FAMILY[o.family].zh}`;
+  document.getElementById('stage').appendChild(d); labels.push({ d, obj: m, dy: -0.62 });
+});
+stage.onUpdate(() => { for (const l of labels) { const v = new THREE.Vector3(); l.obj.getWorldPosition(v); v.y += l.dy; const p = stage.toScreen(v); l.d.style.left = p.x + 'px'; l.d.style.top = p.y + 'px'; l.d.style.display = objectsG.visible ? '' : 'none'; } });
+
+// ---------- 2. child's robot ----------
+const robotG = new THREE.Group(); stage.scene.add(robotG);
+const cfg = { ...BASIC_PART };
+const robot = makeRobot(cfg); robotG.add(robot);
+const options = {}; for (const s of SLOTS) options[s] = [BASIC_PART[s], ...Object.values(PARTS).filter(p => p.slot === s).map(p => p.id)];
+const shadow = blobShadow(0.7); robotG.add(shadow);
+stage.onUpdate(() => { shadow.position.set(robot.position.x, 0.002, robot.position.z); });
+function setPart(slot, id) { cfg[slot] = id; robot.userData.setPart(slot, id); stage.invalidate(); refreshBtns(); }
+
+// ---------- 3. boss build robot ----------
+const bossG = new THREE.Group(); stage.scene.add(bossG);
+const JOB = { panel: 5, head: { fact: 'apex', value: true } };
+const BUILDS = {
+  success: { wheels: 'cylinder', body: 'cuboid', head: 'cone', panel: 'pent-reg' },
+  'wheels-flat': { wheels: 'cube', body: 'cuboid', head: 'cone', panel: 'pent-reg' },
+  'wheels-sphere': { wheels: 'sphere', body: 'cuboid', head: 'cone', panel: 'pent-reg' },
+  'wheels-cone': { wheels: 'cone', body: 'cuboid', head: 'cone', panel: 'pent-reg' },
+  'body-top': { wheels: 'cylinder', body: 'sqPyramid', head: 'cone', panel: 'pent-reg' },
+  'head-rolls': { wheels: 'cylinder', body: 'cuboid', head: 'sphere', panel: 'pent-reg' },
+  'head-wrong': { wheels: 'cylinder', body: 'cuboid', head: 'cube', panel: 'pent-reg' },
+  panel: { wheels: 'cylinder', body: 'cuboid', head: 'cone', panel: 'tri-eq' },
+};
+const FAILS = Object.keys(BUILDS).map(k => (k === 'success' ? null : k));
+const START_X = -3.2;
+let boss = null;
+const bossShadow = blobShadow(0.8); bossG.add(bossShadow);
+stage.onUpdate(() => { if (boss) bossShadow.position.set(boss.position.x, 0.002, boss.position.z); bossShadow.visible = !!boss; });
+const track = new THREE.Mesh(new THREE.BoxGeometry(12, 0.02, 1.4), new THREE.MeshStandardMaterial({ color: 0x64748b })); track.position.set(1.5, 0.01, 0); bossG.add(track);
+function spawn(build) {
+  if (boss) { bossG.remove(boss); disposeTree(boss); }
+  boss = makeBuildRobot(build); boss.position.set(START_X, 0, 0); bossG.add(boss); stage.invalidate();
+  return boss;
+}
+const bossBuild = { ...BUILDS.success };
+
+// ---------- showcase (view=all): objects plus a fully dressed robot and a boss robot ----------
+const showG = new THREE.Group(); stage.scene.add(showG);
+{
+  const full = makeRobot({ wheels: 'wheels-star', head: 'head-tv', arms: 'arms-spring', antenna: 'antenna-zigzag', paint: 'paint-rainbow', badge: 'badge-gold' });
+  full.position.set(-4.4, 0, 0.9); full.rotation.y = 0.55; full.scale.setScalar(1.05);
+  const dome = makeRobot({ wheels: 'wheels-flower', head: 'head-dome', arms: 'arms-claw' });
+  dome.position.set(4.4, 0, 0.9); dome.rotation.y = -0.55; dome.scale.setScalar(1.05);
+  showG.add(full, dome);
+}
+// ---------- views ----------
+const VIEWS = {
+  all: { pos: [0, 5.0, 8.0], look: [0, 0.4, 0.3], show: [objectsG, showG] },
+  objects: { pos: [0, 6.2, 8.6], look: [0, 0.2, 0], show: [objectsG] },
+  robot: { pos: [0, 2.2, 6], look: [0, 1.05, 0], show: [robotG] },
+  boss: { pos: [0, 2.8, 9], look: [0.6, 0.8, 0], show: [bossG] },
+};
+function view(name) {
+  const v = VIEWS[name];
+  for (const g of [objectsG, robotG, bossG, showG]) g.visible = v.show.includes(g);
+  stage.setView(v.pos, v.look); stage.invalidate();
+  document.querySelectorAll('[data-view]').forEach(b => b.classList.toggle('on', b.dataset.view === name));
+}
+
+// ---------- buttons ----------
+const bar = document.getElementById('bar');
+const add = (t, f, extra = {}) => { const b = document.createElement('button'); b.textContent = t; b.onclick = f; Object.assign(b.dataset, extra); bar.appendChild(b); return b; };
+const sep = () => { const s = document.createElement('span'); s.className = 'sep'; bar.appendChild(s); };
+for (const n of Object.keys(VIEWS)) add('view: ' + n, () => view(n), { view: n });
+sep();
+const slotBtns = {};
+for (const s of SLOTS) slotBtns[s] = add(s, () => { const o = options[s]; setPart(s, o[(o.indexOf(cfg[s]) + 1) % o.length]); }, { robot: 1 });
+function refreshBtns() { for (const s of SLOTS) slotBtns[s].textContent = `${s}: ${cfg[s]}`; }
+refreshBtns();
+add('walk', async () => { const x = robot.position.x > 0 ? -2.2 : 2.2; await robot.userData.walkTo(x, 0.6); await robot.userData.walkTo(x * 0.5, 0); }, { robot: 1 });
+add('dance', () => robot.userData.dance().then(() => log('dance done')), { robot: 1 });
+add('wave', () => robot.userData.wave().then(() => log('wave done')), { robot: 1 });
+add('hop', () => robot.userData.hop().then(() => log('hop done')), { robot: 1 });
+add('cycle all parts', () => cycleAll(), { robot: 1 });
+sep();
+const sel = (label, key, opts) => {
+  const s = document.createElement('select'); s.title = label;
+  opts.forEach(o => { const e = document.createElement('option'); e.value = o; e.textContent = label + ': ' + o; s.appendChild(e); });
+  s.value = bossBuild[key]; s.onchange = () => { bossBuild[key] = s.value; spawn(bossBuild); }; bar.appendChild(s);
+};
+sel('wheels', 'wheels', WHEEL_CHOICES); sel('body', 'body', BODY_CHOICES); sel('head', 'head', HEAD_CHOICES); sel('panel', 'panel', TILE_TEMPLATES.map(t => t.id));
+for (const [k, b] of Object.entries(BUILDS)) {
+  add('drive ' + k, async () => {
+    view('boss'); Object.assign(bossBuild, b); spawn(b);
+    const t0 = performance.now(); await boss.userData.drive(k === 'success' ? null : k); log(`${k} done in ${Math.round(performance.now() - t0)} ms (real time)`);
+  });
+}
+add('less motion', () => { motion.less = !motion.less; log('motion.less=' + motion.less); });
+
+// ---------- automated checks (used from the console; they advance frames by hand so a hidden pane works) ----------
+function pump(p, maxMs = 8000) {
+  return new Promise(resolve => {
+    let done = false, t = 0; p.then(() => { done = true; });
+    (function loop() { if (done || t > maxMs) return resolve({ done, ms: t }); stage.step(16.7); t += 16.7; setTimeout(loop, 0); })();
+  });
+}
+async function cycleAll() {
+  const applied = [];
+  for (const s of SLOTS) for (const id of options[s]) { setPart(s, id); await pump(wait(60)); applied.push(`${s}:${id}`); }
+  for (const s of SLOTS) setPart(s, BASIC_PART[s]);
+  log('cycled ' + applied.length + ' parts'); return applied;
+}
+async function testDrives() {
+  view('boss'); const out = [];
+  for (const [k, b] of Object.entries(BUILDS)) {
+    const fail = k === 'success' ? null : k;
+    const got = checkBuild(JOB, b).fail;
+    spawn(b); const r = boss; r.userData.drive; // eslint-disable-line
+    const res = await pump(r.userData.drive(fail));
+    const p = r.position, ok = Number.isFinite(p.x + p.y + p.z);
+    const rig = r.children[0];
+    out.push({ case: k, checkBuild: got, matches: got === fail, done: res.done, ms: Math.round(res.ms), pos: [p.x, p.y, p.z].map(v => +v.toFixed(2)), rigRot: [rig.rotation.x, rig.rotation.y, rig.rotation.z].map(v => +v.toFixed(2)), finite: ok });
+  }
+  log(JSON.stringify(out, null, 1)); return out;
+}
+window.dev = { motion, THREE, stage, view, robot, setPart, cycleAll, testDrives, spawn, pump, labels, objectsG, PART_INFO, OBJECTS, makeObject, makeBuildRobot, get boss() { return boss; } };
+view(new URLSearchParams(location.search).get('view') || 'objects');
+log('ready');
+</script>
+</body>
+</html>

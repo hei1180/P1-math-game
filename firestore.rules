@@ -8,7 +8,7 @@ rules_version = '2';
 // Rules tab -> paste this whole file -> Publish. See docs/teacher-data-setup.md
 // for a teacher-friendly walkthrough.
 //
-// Collections used by the app today: settings, scores, bondsProgress, attempts.
+// Collections used by the app today: settings, scores, bondsProgress, shapesProgress, robotGallery, attempts.
 // Everything else is denied by default.
 
 service cloud.firestore {
@@ -106,6 +106,47 @@ service cloud.firestore {
       allow write: if isSignedIn() && request.auth.uid == uid;
     }
 
+    // ---- shapesProgress/{uid} --------------------------------------------------
+    // Robot Workshop's twin of bondsProgress: one doc per player (scenes
+    // cleared, stars, parts earned). A player reads/writes only their own doc;
+    // the teacher may also read any doc for the dashboard, never write one.
+    // The shape comes from shapes-progress.js and may keep changing, so it is
+    // not field-validated here beyond the ownership check.
+    match /shapesProgress/{uid} {
+      allow read: if isSignedIn() && (request.auth.uid == uid || isTeacher());
+      allow write: if isSignedIn() && request.auth.uid == uid;
+    }
+
+    // ---- robotGallery/{uid} ----------------------------------------------------
+    // The class gallery: one doc per player holding their robot and up to six
+    // creations. Any signed-in player may read the ones that are not hidden
+    // (their own and the teacher's reads always work). A player may create or
+    // edit only their OWN doc, and can never change its "hidden" flag - that
+    // flag is the teacher's moderation switch: the teacher may flip "hidden"
+    // (and nothing else) on any doc, and only the teacher may delete.
+    match /robotGallery/{uid} {
+      allow read: if isSignedIn() && (resource.data.hidden == false || request.auth.uid == uid || isTeacher());
+      allow create: if isSignedIn() && request.auth.uid == uid
+        && validGallery(request.resource.data) && request.resource.data.hidden == false;
+      allow update: if isSignedIn() && (
+          (request.auth.uid == uid && validGallery(request.resource.data)
+            && request.resource.data.hidden == resource.data.hidden)
+        || (isTeacher() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['hidden'])
+            && request.resource.data.hidden is bool));
+      allow delete: if isTeacher();
+    }
+
+    // Field checks for a gallery doc: only these keys, a bounded name, a small
+    // robot map and at most six creations, so nobody can stuff a huge payload
+    // into the shared gallery.
+    function validGallery(d) {
+      return d.keys().hasOnly(['playerName', 'robot', 'creations', 'hidden', 'updatedAt'])
+        && d.playerName is string && d.playerName.size() <= 100
+        && d.robot is map && d.robot.size() <= 10
+        && d.creations is list && d.creations.size() <= 6
+        && d.hidden is bool;
+    }
+
     // ---- attempts/{autoId} -----------------------------------------------------
     // One document per finished game (the readable history the old
     // best-score-only data couldn't give). Students can only ever CREATE
@@ -131,7 +172,7 @@ service cloud.firestore {
     function validAttempt(d) {
       return d.keys().hasAll(['uid', 'game', 'mode', 'kind'])
         && d.uid is string
-        && d.game is string && d.game in ['market', 'numbers', 'bonds']
+        && d.game is string && d.game in ['market', 'numbers', 'bonds', 'shapes']
         && d.mode is string && d.mode.size() <= 50
         && d.kind is string && d.kind in ['timed', 'level']
         && optionalString(d, 'name', 200)
@@ -143,6 +184,7 @@ service cloud.firestore {
         && optionalNumber(d, 'stars')
         && optionalNumber(d, 'mistakes')
         && optionalNumber(d, 'durationSec')
+        && (!('confusions' in d) || (d.confusions is list && d.confusions.size() <= 5))
         && (!('ts' in d) || d.ts is timestamp)
         && (!('day' in d) || (d.day is string && d.day.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')));
     }

@@ -38,8 +38,8 @@ Design rules that follow:
 
 One 3-D workshop floor with stations. The child's own robot walks to the station they pick (and walks on after **Next**), like the Rod Town train. Cleared stations show their medal (🥇 3★ 🥈 2★ 🥉 1★).
 
-- **Zone A 立體車房 Solid Garage** (1S1): courses A1–A4, then **Rush 3-D**.
-- **Zone B 平面工作枱 Panel Bench** (1S2): courses B1–B4, then **Rush 2-D**.
+- **Zone A 立體圖形區 Solid Garage** (1S1): courses A1–A4, then **Rush 3-D**.
+- **Zone B 平面圖形區 Panel Bench** (1S2): courses B1–B4, then **Rush 2-D**.
 - **Boss 測試跑道 Test Track**: opens when both zones are cleared; mixes both topics.
 - **Gallery 展覽廳** and **Free Build 自由創作** from the map.
 
@@ -58,25 +58,25 @@ A course is **5 items, about 1–2 minutes**. Mistakes don't end a course. Stars
 
 Prompts are short, shown with icons, and **read aloud** (speechSynthesis, `zh-HK` voice, 🔈 button to replay; silent fallback if no voice).
 
-### Zone A — 立體車房 (1S1)
+### Zone A — 立體圖形區 (1S1)
 
 | Course | Play | Item | Correct when |
 |---|---|---|---|
-| **A1 會滾嗎？ Roll or not** | A solid sits at the top of a ramp. Child taps 會滾 / 不會滾, then watches. | 5 solids/orientations, at least 2 of each answer | answer = logic table: sphere rolls; cylinder and cone roll on their curved side, not on a flat face; prism and pyramid don't |
+| **A1 滾動測試 Roll or not** | A solid sits at the top of a ramp. Child taps 會滾 / 不會滾, then watches. | 5 solids/orientations, at least 2 of each answer | answer = logic table: sphere rolls; cylinder and cone roll on their curved side, not on a flat face; prism and pyramid don't |
 | **A2 疊高塔 Stack** | Build a tower to the target height from a tray of 3 solids; a bad pick topples (funny). | 5 placements over 2 towers; solids placed upright | piece can go on top only if the tower's top is flat; sphere, cone and pyramid can only be the last piece |
-| **A3 摸摸袋 Mystery bag** | A shape hides in a bag; clues appear one by one (icon + voice): "我會滾", "我有尖頂", "我全部面都是平的", "我有圓形的面". Child picks one of 5 friends. | 5 bags | right family. Using fewer clues adds a sparkle (cosmetic only, not stars) |
-| **A4 生活中的立體 Everyday solids** | A 3-D everyday object appears; child can spin it with a finger, then drops it into one of 5 family bins. | 5 objects from a pool of 12 | right family |
+| **A3 神秘袋 Mystery bag** | A shape hides in a bag; clues appear one by one (icon + voice): "我會滾", "我有尖頂", "我所有的面都是平的", "我有圓形的面". Child picks one of 5 friends. | 5 bags | right family. Using fewer clues adds a sparkle (cosmetic only, not stars) |
+| **A4 身邊的立體 Everyday solids** | A 3-D everyday object appears; child can spin it with a finger, then drops it into one of 5 family bins. | 5 objects from a pool of 12 | right family |
 
 Everyday object pool (built from primitives, no photos): drink can, drum, ball, globe, party hat, traffic cone, dice, tissue box, tent, pencil box, pyramid paperweight, pyramid tea bag.
 
-### Zone B — 平面工作枱 (1S2)
+### Zone B — 平面圖形區 (1S2)
 
 | Course | Play | Item | Correct when |
 |---|---|---|---|
-| **B1 直線曲線 Straight or curved** | Sort wires into 直線 / 曲線 bins; then a dot task: tap two points to shoot a straight laser, and answer "有幾多條直線可以連接這兩點？" (1 條 / 很多條), followed by a demo of many curves through the same points. | 3 sorts + 2 dot tasks | sort right; 1 條 |
-| **B2 吃板機 Panel Muncher** | A machine has slots 3 / 4 / 5 / 6 sides / 圓形. Feed each tile to the right slot. | 5 tiles: regular, irregular, dented, turned | slot = number of sides (circle = 圓形) |
-| **B3 釘板 Pegboard** | Tap pegs to stretch a rubber band. Target: "砌一個五邊形" or open "任何四邊形". | 4 targets | shape closes, doesn't cross itself, and has the target number of sides (straight runs through extra pegs count as one side) |
-| **B4 拼砌 Silhouette** | Fill an outline (house, robot face, rocket, boat) with tiles: drag, tap ⟳ to turn 90°, tiles snap to a grid of quarter-triangles. | 2 puzzles, 3–5 tiles each | every cell covered, no overlap. A wrong drop (doesn't fit) is a mistake |
+| **B1 直線和曲線 Straight or curved** | Sort wires into 直線 / 曲線 bins; then a dot task: tap two points to shoot a straight laser, and answer "可以畫多少條直線連接這兩點？" (1 條 / 很多條), followed by a demo of many curves through the same points. | 3 sorts + 2 dot tasks | sort right; 1 條 |
+| **B2 圖形大胃王 Panel Muncher** | A machine has slots 3 / 4 / 5 / 6 sides / 圓形. Feed each tile to the right slot. | 5 tiles: regular, irregular, dented, turned | slot = number of sides (circle = 圓形) |
+| **B3 釘板圍圖形 Pegboard** | Tap pegs to stretch a rubber band. Target: "圍出一個五邊形" or open "任何四邊形". | 4 targets | shape closes, doesn't cross itself, and has the target number of sides (straight runs through extra pegs count as one side) |
+| **B4 拼砌圖形 Silhouette** | Fill an outline (house, robot face, rocket, boat) with tiles: drag, tap ⟳ to turn 90°, tiles snap to a grid of quarter-triangles. | 2 puzzles, 3–5 tiles each | every cell covered, no overlap. A wrong drop (doesn't fit) is a mistake |
 
 ### Boss — 測試跑道 Test Track (mixed)
 

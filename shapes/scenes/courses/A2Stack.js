@@ -2,7 +2,12 @@
 // Grading is shapes-logic canPlace(piece, topModel, isLast). Physics only shows the result:
 //  - a right piece is set down on the tower with a short bounce and then becomes a static body, so a right answer can never
 //    make a tower fall;
-//  - a wrong piece is dropped on the tower as a dynamic body, rolls / topples off with a crash and flies back to the tray.
+//  - a ball (round bottom) is dropped on the tower as a dynamic body, rolls off with a crash and flies back to the tray;
+//  - a pointy piece picked before the last floor DOES sit on the tower (scripted, no physics): then a see-through block
+//    tries to land on the point and slides off, the scene says how many floors the tower still needs, and the piece
+//    goes back to the tray.
+// Every tower needs a known number of floors (base + its items). Ghost floors on the tower and a floor panel in the
+// overlay show it all the time: done floors, the floor being built now, and the roof (屋頂, the last floor).
 import * as THREE from 'three';
 import { CourseScene } from '../CourseScene.js?v=202610051406';
 import { FAMILY, familyOf, canPlace, topIsFlat, bottomIsFlat } from '../../../shapes-logic.js?v=202610051406';
@@ -22,6 +27,9 @@ const TRAY = { y: TABLE_Y + 0.08, z: 1.05, xs: [-1.3, 0, 1.3] };
 const BASE_SCALE = 1.2;                  // the cuboid base is a bit bigger than the pieces
 const HOVER = 0.45;                      // pieces hover this far above the tower before they drop
 const NOMINAL = 0.9;                     // nominal piece height, for the target flags
+const GHOST = { w: 1.0, d: 0.75 };      // see-through floor slots on the tower
+const SAY_MORE = ['還要再疊高，選一個頂部平平的立體', 'Keep building up: pick one with a flat top'];
+const SAY_LAST = ['最後一層，放在最頂！尖頂的也可以', 'Last floor! A pointy one is fine too'];
 const DRAG_PLANE = new THREE.Plane(new THREE.Vector3(0, 0, 1), -(TRAY.z + 0.15));
 
 export class A2Stack extends CourseScene {
@@ -31,6 +39,8 @@ export class A2Stack extends CourseScene {
     const { stage } = this;
     const R = this.root;
     this.busy = false; this.waiter = null; this.active = null; this.tray = []; this.lastWrong = null;
+    // floors per tower: the cuboid base + one floor per item of that tower (tower 1: 3, tower 2: 4 with today's generator)
+    this.floors = TOWER_X.map((_, i) => 1 + this.items.filter(it => it.tower === i).length);
 
     // ---- the table, the tray ----
     const wood = new THREE.MeshLambertMaterial({ color: SCENE.bench }), dark = new THREE.MeshLambertMaterial({ color: 0x8b5a2b });
@@ -70,7 +80,7 @@ export class A2Stack extends CourseScene {
       const pad = new THREE.Mesh(new THREE.CylinderGeometry(0.95, 0.95, 0.02, 32), new THREE.MeshLambertMaterial({ color: 0xfde68a }));
       pad.position.set(x, TABLE_Y + 0.01, TOWER_Z);
       R.add(pad);
-      const pieces = i === 0 ? 2 : 3;
+      const pieces = this.floors[i] - 1;
       const flagY = TABLE_Y + h + pieces * NOMINAL;
       const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, flagY - TABLE_Y, 8), new THREE.MeshLambertMaterial({ color: 0x64748b }));
       pole.position.set(x + 0.8, TABLE_Y + (flagY - TABLE_Y) / 2, TOWER_Z - 0.55);
@@ -80,20 +90,20 @@ export class A2Stack extends CourseScene {
       flag.add(cloth);
       flag.position.set(x + 0.8, flagY - 0.18, TOWER_Z - 0.55);
       R.add(pole, flag);
-      return { x, base, flag, topY: TABLE_Y + h, topModel: 'cuboid', pieces: [], dir: i === 0 ? -1 : 1, done: false };
+      const ghosts = new THREE.Group();
+      R.add(ghosts);
+      return { i, x, base, flag, ghosts, floors: this.floors[i], topY: TABLE_Y + h, topModel: 'cuboid', pieces: [], dir: i === 0 ? -1 : 1, done: false };
     });
 
-    // ---- the pointer: a gold arrow over the tower being built ----
-    this.arrow = new THREE.Mesh(new THREE.ConeGeometry(0.3, 0.65, 16), new THREE.MeshLambertMaterial({ color: 0xfacc15, emissive: 0x7a5c00 }));
-    this.arrow.rotation.x = Math.PI;
-    this.arrow.visible = false;
-    R.add(this.arrow);
-    this.bobT = 0;
-    this.offBob = stage.onUpdate(dt => {
-      if (!this.arrow.visible || motion.less || !this.target) return;
-      this.bobT += dt;
-      this.arrow.position.y = this.arrowY + Math.sin(this.bobT * 4) * 0.08;
+    // the floor slot being built now pulses
+    this.pulseT = 0;
+    this.offPulse = stage.onUpdate(dt => {
+      const g = this.nowGhost;
+      if (!g || !g.visible || motion.less) return;
+      this.pulseT += dt;
+      g.userData.fill.material.opacity = 0.38 + Math.sin(this.pulseT * 5) * 0.18;
     });
+    this.makePanel();
 
     ph.start();
     this.fitView();
@@ -112,12 +122,14 @@ export class A2Stack extends CourseScene {
     const dist = Math.max(4.45 / tanH, 2.55 / tanV) + 0.4;
     const look = [0, 1.8, 0.2], dir = new THREE.Vector3(0, 0.5, 0.86).normalize();
     stage.setView([look[0], look[1] + dir.y * dist, look[2] + dir.z * dist], look);
+    this.placePanel();
   }
 
   async exit() {
     if (this.offResize) this.offResize();
-    if (this.offBob) this.offBob();
-    this.stage.awake('a2-bob', false);
+    if (this.offPulse) this.offPulse();
+    this.stage.awake('a2-pulse', false);
+    if (this.panel) { this.panel.remove(); this.panel = null; }
     if (this.physics) this.physics.dispose();
     this.waiter = null; this.tray = [];
     await super.exit();
@@ -129,10 +141,10 @@ export class A2Stack extends CourseScene {
     const { ui } = this;
     const T = this.towers[item.tower];
     this.target = T;
-    this.showArrow(T);
+    if (!T.pieces.length) await this.live(this.startTower(T));
+    this.showGhosts(T);
     await this.live(this.fillTray(item.tray));
-    if (item.isLast) ui.prompt('最後一層，放在最頂！', 'The last one goes on the very top!');
-    else ui.prompt('哪一個可以疊在上面？', 'Which can go on top?');
+    ui.prompt(...(item.isLast ? SAY_LAST : SAY_MORE));
 
     for (;;) {
       const mesh = await this.live(this.pick());
@@ -140,7 +152,7 @@ export class A2Stack extends CourseScene {
       const model = mesh.userData.modelId;
       // grading (shapes-logic only)
       const ok = canPlace(model, T.topModel, item.isLast);
-      this.arrow.visible = false;
+      this.hideGhosts(T);
       await this.live(this.flyAbove(mesh, T));
       if (ok) {
         await this.live(this.setDown(mesh, T, model));
@@ -148,24 +160,57 @@ export class A2Stack extends CourseScene {
         this.active = null;
         break;
       }
-      const reason = !bottomIsFlat(model) ? '底部是圓的' : '頂部是尖的';
-      this.lastWrong = reason;
-      await this.live(this.topple(mesh, T));
-      await this.live(this.sendBack(mesh));
+      const label = FAMILY[familyOf(model)].zh;
+      if (!bottomIsFlat(model)) {
+        // a ball: the funny roll-off, then the reason
+        this.lastWrong = '底部是圓的';
+        await this.live(this.topple(mesh, T));
+        const zh = '球的底部是圓的，放不穩', en = 'A ball is round underneath, so it will not stay';
+        this.ui.toast(zh, en, 2600);
+        await this.live(Promise.all([voice.say(zh), this.sendBack(mesh)]));
+      } else if (topIsFlat(T.topModel)) {
+        // a pointy piece before the last floor: it sits, but nothing can go on it
+        this.lastWrong = '尖頂太早';
+        await this.live(this.pointyTooEarly(mesh, T));
+      } else {
+        // (cannot happen with genCourse: a pointy piece only ever goes on as the last floor) the top below is pointy
+        this.lastWrong = '頂部是尖的';
+        await this.live(this.topple(mesh, T));
+        this.ui.toast('尖頂上面不可以再疊東西了', 'Nothing can go on a pointy top', 2400);
+        await this.live(this.sendBack(mesh));
+      }
       this.active = null;
       this.busy = false;
-      this.showArrow(T);
-      await this.wrong(item, reason, FAMILY[familyOf(model)].zh);
+      this.showGhosts(T);
+      await this.wrong(item, this.lastWrong, label);
     }
 
     // the leftovers go away; the tower stays
-    this.hideArrow();
     if (item.isLast) {
       T.done = true;
+      this.hideGhosts(T);
+      this.updatePanel(T);
       await this.live(this.finishTower(T));
     }
     await this.live(this.clearTray());
     this.busy = false;
+  }
+
+  /** A new tower: the floor slots appear one by one while they are counted, and the number of floors is said. */
+  async startTower(T) {
+    this.buildGhosts(T);
+    this.updatePanel(T);
+    const kids = T.ghosts.children.slice();
+    for (const g of kids) { g.visible = false; g.scale.setScalar(0.01); }
+    const zh = `這座塔要疊 ${T.floors} 層`, en = `This tower needs ${T.floors} floors`;
+    this.ui.toast(zh, en, 2600);
+    const said = voice.say(zh);
+    for (let k = 0; k < kids.length; k++) {
+      kids[k].visible = true;
+      try { sfx.tick(); } catch (e) { /* ignore */ }
+      await this.live(tween(kids[k].scale, { x: 1, y: 1, z: 1 }, { ms: 260, ease: 'outBack' }));
+    }
+    await this.live(Promise.all([said, wait(900)]));
   }
 
   // ---------------------------------------------------------------- tray
@@ -284,7 +329,64 @@ export class A2Stack extends CourseScene {
     T.topY = y + mesh.userData.top;
     T.topModel = model;
     T.pieces.push(mesh);
+    this.buildGhosts(T);
+    this.hideGhosts(T);
+    this.updatePanel(T);
     this.stage.invalidate();
+  }
+
+  /**
+   * A pointy piece picked before the last floor. It sits on the tower without wobbling (no physics); a see-through block
+   * then tries to land on the point and slides off. The scene says how many floors are still missing; the piece goes back.
+   */
+  async pointyTooEarly(mesh, T) {
+    const r = mesh.userData.restY, y = T.topY + r;
+    await this.live(tween(mesh.position, { y }, { ms: 340, ease: 'outCubic' }));
+    mesh.position.set(T.x, y, TOWER_Z);
+    sfx.clunk();
+    puff(this.stage, new THREE.Vector3(T.x, T.topY, TOWER_Z), this.root);
+    this.updatePanel(T, { pointy: true });
+    this.stage.invalidate();
+    await this.live(wait(motion.less ? 250 : 450));
+
+    // the see-through block tries to go on the point
+    const apex = y + mesh.userData.top, bh = 0.6;
+    const block = new THREE.Group();
+    const fill = new THREE.Mesh(new THREE.BoxGeometry(0.85, bh, 0.6), new THREE.MeshBasicMaterial({ color: 0x93c5fd, transparent: true, opacity: 0.65, depthWrite: false }));
+    const edges = new THREE.LineSegments(new THREE.EdgesGeometry(fill.geometry), new THREE.LineBasicMaterial({ color: 0x1d4ed8, transparent: true, opacity: 0.9 }));
+    block.add(fill, edges);
+    block.position.set(T.x, apex + bh / 2 + 1.2, TOWER_Z);
+    this.root.add(block);
+    const sit = apex + bh / 2;
+    await this.live(tween(block.position, { y: sit }, { ms: 380, ease: 'inOutCubic' }));
+    sfx.bonk();
+    setMood(mesh, 'oops');
+    if (!motion.less) {
+      // it teeters on the point ...
+      for (const a of [0.12, -0.1, 0.06]) await this.live(tween(block.rotation, { z: a }, { ms: 140, ease: 'inOutCubic' }));
+    }
+    // ... and tips over and slides off the side
+    const d = T.dir;
+    sfx.whoosh();
+    await this.live(Promise.all([
+      tween(block.rotation, { z: motion.less ? 0 : d * 1.1 }, { ms: 520, ease: 'inOutCubic' }),
+      tween(block.position, { x: T.x + d * 1.0, y: sit - 0.9 }, { ms: 520, ease: 'inOutCubic' }),
+      tween(fill.material, { opacity: 0 }, { ms: 520, ease: 'inOutCubic' }),
+      tween(edges.material, { opacity: 0 }, { ms: 520, ease: 'inOutCubic' }),
+    ]));
+    this.root.remove(block); disposeTree(block);
+    this.stage.invalidate();
+
+    const short = T.floors - (T.pieces.length + 2); // floors still missing with the pointy piece on top (>= 1 here)
+    // short lines on screen (toast + prompt bar), the whole sentence spoken
+    const zh1 = '尖頂上面不可以再疊東西了', en1 = 'Nothing can go on a pointy top';
+    const zh2 = `這座塔要疊 ${T.floors} 層，還差 ${short} 層`, en2 = `This tower needs ${T.floors} floors: ${short} more to go`;
+    this.ui.toast(zh1, en1, 2000); // the toast covers the prompt bar: keep it short so the floor line shows after it
+    this.ui.prompt(zh2, en2, { speak: false });
+    await this.live(Promise.all([voice.say(`${zh1}。${zh2}`), wait(3200)]));
+    await this.live(this.sendBack(mesh));
+    this.updatePanel(T);
+    this.ui.prompt(...SAY_MORE, { speak: false }); // a pointy piece is only ever too early on a floor that is not the last
   }
 
   /** Wrong answer: let go over the tower as a dynamic body; it rolls or tumbles off. */
@@ -315,20 +417,133 @@ export class A2Stack extends CourseScene {
     setMood(mesh, 'normal');
   }
 
-  // ---------------------------------------------------------------- arrow, flags
+  // ---------------------------------------------------------------- floor slots on the tower
 
-  showArrow(T) {
-    this.arrowY = T.topY + 0.8;
-    this.arrow.position.set(T.x, this.arrowY, TOWER_Z);
-    this.arrow.visible = true;
-    if (!motion.less) this.stage.awake('a2-bob', true);
+  /** See-through slots for the floors still to build, from the current top up to the roof. */
+  buildGhosts(T) {
+    for (const g of T.ghosts.children.slice()) { T.ghosts.remove(g); disposeTree(g); }
+    this.nowGhost = null;
+    const built = 1 + T.pieces.length;
+    for (let k = built; k < T.floors; k++) {
+      const now = k === built, roof = k === T.floors - 1;
+      const g = new THREE.Group();
+      const h = NOMINAL * 0.9;
+      const fill = new THREE.Mesh(new THREE.BoxGeometry(GHOST.w, h, GHOST.d),
+        new THREE.MeshBasicMaterial({ color: now ? 0xfacc15 : 0xffffff, transparent: true, opacity: now ? 0.4 : 0.22, depthWrite: false }));
+      const edges = new THREE.LineSegments(new THREE.EdgesGeometry(fill.geometry),
+        new THREE.LineBasicMaterial({ color: now ? 0xb45309 : 0x64748b, transparent: true, opacity: 0.85 }));
+      g.add(fill, edges);
+      g.userData.fill = fill;
+      g.position.set(T.x, T.topY + (k - built + 0.5) * NOMINAL, TOWER_Z);
+      if (roof) {
+        const tag = this.textSprite('🔺 屋頂');
+        tag.position.set(0, h / 2 + 0.3, 0);
+        g.add(tag);
+      }
+      T.ghosts.add(g);
+      if (now) this.nowGhost = g;
+    }
+  }
+
+  /** A small label that always faces the camera. */
+  textSprite(text) {
+    const c = document.createElement('canvas');
+    c.width = 256; c.height = 96;
+    const x = c.getContext('2d');
+    x.fillStyle = 'rgba(255,255,255,0.92)';
+    x.beginPath(); x.roundRect ? x.roundRect(6, 6, 244, 84, 40) : x.rect(6, 6, 244, 84); x.fill();
+    x.lineWidth = 6; x.strokeStyle = '#b45309'; x.stroke();
+    x.fillStyle = '#7c2d12'; x.font = 'bold 52px sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.fillText(text, 128, 52);
+    const tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true }));
+    sp.scale.set(0.95, 0.36, 1);
+    sp.renderOrder = 5;
+    return sp;
+  }
+
+  showGhosts(T) {
+    T.ghosts.visible = !T.done;
+    if (!motion.less && this.nowGhost) this.stage.awake('a2-pulse', true);
     this.stage.invalidate();
   }
 
-  hideArrow() {
-    this.arrow.visible = false;
-    this.stage.awake('a2-bob', false);
+  hideGhosts(T) {
+    T.ghosts.visible = false;
+    this.stage.awake('a2-pulse', false);
     this.stage.invalidate();
+  }
+
+  // ---------------------------------------------------------------- floor panel (overlay)
+
+  /** A DOM panel "這座塔要疊 N 層" with one box per floor; sits under the table (tall screens) or at the left (wide). */
+  makePanel() {
+    const host = document.getElementById('ui');
+    if (!host) return;
+    const p = document.createElement('div');
+    p.style.cssText = 'position:absolute;pointer-events:none;display:none;flex-direction:column;align-items:center;gap:4px;'
+      + 'background:rgba(255,255,255,0.92);border:4px solid #fcd34d;border-radius:18px;padding:6px 10px;box-shadow:0 4px 12px rgba(0,0,0,.15);'
+      + `font-family:${getComputedStyle(host).fontFamily};`;
+    host.appendChild(p);
+    this.panel = p;
+    this.placePanel();
+  }
+
+  /** Tall screens: centred under the table (there is room there). Wide screens: at the side of the tower being built. */
+  placePanel() {
+    const p = this.panel;
+    if (!p) return;
+    const { width: w, height: h } = this.stage;
+    const tall = h / w > 1.15;
+    const changed = tall !== this.panelTall;
+    this.panelTall = tall;
+    const right = !tall && this.panelState && this.panelState[0].i === 1;
+    p.style.left = p.style.right = p.style.top = p.style.bottom = p.style.transform = '';
+    if (tall) { p.style.left = '50%'; p.style.transform = 'translateX(-50%)'; p.style.bottom = 'max(12px, env(safe-area-inset-bottom))'; }
+    else { p.style[right ? 'right' : 'left'] = '8px'; p.style.top = '50%'; p.style.transform = 'translateY(-35%)'; }
+    if (changed && this.panelState) this.updatePanel(...this.panelState);
+  }
+
+  /** Redraw the panel for tower T. pointy: a pointy piece sits on the floor being built, so the floors above are blocked. */
+  updatePanel(T, { pointy = false } = {}) {
+    const p = this.panel;
+    if (!p) return;
+    this.panelState = [T, { pointy }];
+    const small = !this.panelTall && this.stage.height < 640;
+    const built = 1 + T.pieces.length, cell = small ? 30 : 40, fs = small ? 15 : 19;
+    p.replaceChildren();
+    const head = document.createElement('div');
+    head.textContent = `這座塔要疊 ${T.floors} 層`;
+    head.style.cssText = `font-weight:700;font-size:${fs + 1}px;color:#1f2937;white-space:nowrap;`;
+    const en = document.createElement('div');
+    en.textContent = `This tower needs ${T.floors} floors`;
+    en.style.cssText = `font-size:${small ? 11 : 13}px;color:#6b7280;margin-top:-4px;`;
+    p.append(head, en);
+    if (pointy) {
+      const miss = document.createElement('div');
+      miss.textContent = `還差 ${T.floors - built - 1} 層！`;
+      miss.style.cssText = `font-weight:700;font-size:${fs + 1}px;color:#dc2626;`;
+      p.append(miss);
+    }
+    for (let k = T.floors - 1; k >= 0; k--) {
+      const roof = k === T.floors - 1, done = k < built, now = !T.done && k === built;
+      const blocked = pointy && k > built;
+      const box = document.createElement('div');
+      let bg = '#f3f4f6', bd = '#9ca3af', fg = '#6b7280', txt = `第 ${k + 1} 層`;
+      if (k === 0) txt = '底座 1';
+      if (roof) txt = `🔺 屋頂 ${k + 1}`;
+      if (done) { bg = '#bbf7d0'; bd = '#16a34a'; fg = '#14532d'; txt = (k === 0 ? '底座 1' : `第 ${k + 1} 層`) + ' ✔'; if (roof) txt = `🔺 屋頂 ${k + 1} ✔`; }
+      if (now) { bg = pointy ? '#fecaca' : '#fef08a'; bd = pointy ? '#dc2626' : '#d97706'; fg = '#78350f'; txt = pointy ? `第 ${k + 1} 層 🔺` : (roof ? `🔺 屋頂 ${k + 1} ⬅` : `第 ${k + 1} 層 ⬅`); }
+      if (blocked) { bg = '#fee2e2'; bd = '#f87171'; fg = '#b91c1c'; txt = (roof ? `🔺 屋頂 ${k + 1}` : `第 ${k + 1} 層`) + ' ✖'; }
+      box.textContent = txt;
+      box.style.cssText = `min-width:${small ? 96 : 120}px;height:${cell}px;line-height:${cell - 6}px;text-align:center;font-weight:700;font-size:${fs}px;`
+        + `background:${bg};color:${fg};border:3px ${done || now ? 'solid' : 'dashed'} ${bd};border-radius:10px;white-space:nowrap;padding:0 8px;`;
+      if (now && !pointy && !motion.less) box.className = 'ui-pulse';
+      p.appendChild(box);
+    }
+    p.style.display = 'flex';
+    this.placePanel();
   }
 
   /** The tower is finished: the flag waves. */
@@ -342,11 +557,17 @@ export class A2Stack extends CourseScene {
 
   // ---------------------------------------------------------------- hint
 
-  /** 2nd wrong answer on this item: the flat tops glow, and the rule is said. */
+  /** 2nd wrong answer on this item: the flat tops glow, and the rule is said (with the floors still to build). */
   async hint(item) {
     const T = this.towers[item.tower];
+    const left = T.floors - (1 + T.pieces.length); // floors still to build, this one included
     let zh = '頂部要平平的，才可以疊上去', en = 'The top must be flat to stack on it';
-    if (this.lastWrong === '底部是圓的') { zh = '球的底部是圓的，疊不穩'; en = 'A ball is round underneath, so it cannot stay'; }
+    if (this.lastWrong === '尖頂太早') {
+      zh = `這座塔還要疊 ${left} 層，要選頂部平平的立體`; en = `${left} more floors to build: pick one with a flat top`;
+    } else if (this.lastWrong === '底部是圓的') {
+      if (item.isLast) { zh = '球的底部是圓的，放不穩。選一個底部平平的立體吧'; en = 'A ball is round underneath. Pick one with a flat bottom'; }
+      else { zh = `球的底部是圓的，放不穩。還要疊 ${left} 層，要選頂部平平的立體`; en = `A ball is round underneath. ${left} more floors: pick one with a flat top`; }
+    }
     const plates = [];
     const plate = (x, y, z, w, d) => {
       const m = new THREE.Mesh(new THREE.BoxGeometry(w, 0.05, d), new THREE.MeshBasicMaterial({ color: 0xfacc15, transparent: true, opacity: 0 }));
@@ -355,7 +576,7 @@ export class A2Stack extends CourseScene {
     };
     plate(T.x, T.topY, TOWER_Z, 1.0, 0.8);
     if (!item.isLast) for (const m of this.tray) if (topIsFlat(m.userData.modelId)) plate(m.position.x, m.position.y + m.userData.top, m.position.z, 0.8, 0.8);
-    this.ui.toast(zh, en, 3200);
+    this.ui.toast(zh, en, 3600);
     const pulses = (async () => {
       for (let k = 0; k < 3; k++) {
         await Promise.all(plates.map(p => tween(p.material, { opacity: 0.85 }, { ms: 260, ease: 'linear' })));

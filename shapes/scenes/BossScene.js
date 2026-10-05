@@ -109,6 +109,7 @@ export class BossScene extends CourseScene {
     this.buildRack();
     this.input.onTap(() => this.cells.map(c => c.group), cell => this.pick(this.cells.find(c => c.group === cell)));
     this.modeName = 'build';
+    this.applyLayout();
     this.setStatic(this.viewFor('build'), 0);
   }
 
@@ -179,7 +180,7 @@ export class BossScene extends CourseScene {
     ids.forEach((id, i) => {
       const cell = new THREE.Group(); cell.position.set(RACK.cell0 + i * RACK.pitch, row.y, RACK.z);
       const proxy = new THREE.Mesh(hitBox, hitMat); cell.add(proxy);
-      const marker = new THREE.Mesh(new THREE.CircleGeometry(0.58, 28), new THREE.MeshBasicMaterial({ color: 0x86efac }));
+      const marker = new THREE.Mesh(new THREE.CircleGeometry(0.44, 28), new THREE.MeshBasicMaterial({ color: 0x86efac }));
       marker.position.z = -0.32; marker.visible = false; cell.add(marker);
       const holder = new THREE.Group(); holder.scale.setScalar(ITEM); cell.add(holder);
       if (slot === 'panel') {
@@ -201,8 +202,11 @@ export class BossScene extends CourseScene {
     const d = Math.max(w / 2 / (t * asp), h / 2 / t);
     return { pos: [cx, cy + 0.5 + d * 0.1, d], look: [cx, cy, 0] };
   }
+  get portrait() { return this.stage.width / Math.max(1, this.stage.height) < 0.9; }
+  /** Tall screens (phones): the rack goes above the bay and the frame is tight, so shelf cells stay big enough to touch. */
+  applyLayout() { if (this.rack) this.rack.position.set(this.portrait ? -3 : 0, this.portrait ? 2.6 : 0, 0); }
   viewFor(mode) {
-    if (mode === 'build') return this.frame(-0.5, 2.7, 10.8, 8.2);
+    if (mode === 'build') return this.portrait ? this.frame(-2.05, 3.7, 6.6, 8.4) : this.frame(-0.5, 2.7, 10.8, 8.2);
     if (mode === 'trophy') return this.frame(0, 1.8, 9.6, 5.8);
     // 'follow': a window around the robot, kept ahead of it
     const x = this.robot ? Math.max(this.robot.position.x + 1.3, BAY_X + 1.3) : BAY_X + 1.3;
@@ -221,6 +225,7 @@ export class BossScene extends CourseScene {
     const key = this.stage.width + 'x' + this.stage.height;
     if (key !== this.sizeKey) {
       this.sizeKey = key;
+      this.applyLayout();
       if (this.camMode === 'static' && this.camTarget && this.modeName) this.setStatic(this.viewFor(this.modeName), 0);
     }
     if (this.camMode === 'follow' && this.cam) {
@@ -234,8 +239,8 @@ export class BossScene extends CourseScene {
       for (const g of this.glows) g.mesh.material.opacity = g.base * (0.6 + o);
       this.stage.invalidate();
     }
-    if (this.trophy) { this.trophy.rotation.y += dt * 0.9; this.stage.invalidate(); }
-    if (this.flag) this.flag.rotation.y = Math.sin(this.clock * 3) * 0.12;
+    if (this.trophy && !motion.less) { this.trophy.rotation.y += dt * 0.9; this.stage.invalidate(); }
+    if (this.flag && !motion.less) { this.flag.rotation.y = Math.sin(this.clock * 3) * 0.12; this.stage.invalidate(); }
   }
 
   async view(mode, ms = 650) {
@@ -263,14 +268,11 @@ export class BossScene extends CourseScene {
     this.stage.awake('boss-glow', true);
   }
 
-  /** Orange halo(s) around the part of the robot that failed. Works from the robot's fixed build order. */
+  /** Orange halo(s) around the part of the robot that failed (robot.userData.partNodes). */
   glowRobotPart(slot) {
     const r = this.robot; if (!r) return;
-    const stack = r.children[0] && r.children[0].children[0];
-    const kids = stack ? stack.children : [];
-    const nodes = kids.length >= 6
-      ? (slot === 'wheels' ? [kids[0], kids[1]] : slot === 'body' ? [kids[3]] : slot === 'head' ? [kids[4]] : [kids[5]])
-      : [r]; // robot layout changed: glow the whole robot rather than nothing
+    const pn = r.userData.partNodes && r.userData.partNodes[slot];
+    const nodes = pn ? [].concat(pn) : [r]; // no part nodes: glow the whole robot rather than nothing
     r.updateMatrixWorld(true);
     for (const n of nodes) {
       const b = new THREE.Box3().setFromObject(n), size = b.getSize(new THREE.Vector3()), c = b.getCenter(new THREE.Vector3());
@@ -313,6 +315,16 @@ export class BossScene extends CourseScene {
     try { sfx.pop(); } catch (e) { /* ignore */ }
     voice.say(slot === 'panel' ? ANSWER_TEXT[tileAnswer(templateById(id))].zh : FAMILY[familyOf(id)].zh);
     this.setRobot(true);
+    this.updateGo();
+  }
+
+  /** 出發 looks greyed out until all four rows are picked (tapping it early still gives the friendly toast). */
+  updateGo() {
+    const b = [...document.querySelectorAll('#ui button')].find(x => x.textContent.includes('出發'));
+    if (!b) return;
+    const ok = this.allPicked();
+    b.style.opacity = ok ? '' : '0.45'; b.style.filter = ok ? '' : 'grayscale(1)';
+    b.setAttribute('aria-disabled', ok ? 'false' : 'true');
   }
 
   allPicked() { return SLOT_ORDER.every(s => this.picked[s]); }
@@ -379,7 +391,9 @@ export class BossScene extends CourseScene {
       `Wheels that roll · ${CLUE_TEXT[job.head.fact][job.head.value].en} · ${ANSWER_TEXT[job.panel].en} window`, { speak: false });
     this.canPick = true;
     for (;;) {
-      await this.live(this.ui.choices([{ id: 'go', zh: '出發！', en: 'Go!', icon: '🚦' }]));
+      const goP = this.ui.choices([{ id: 'go', zh: '出發！', en: 'Go!', icon: '🚦' }]);
+      this.updateGo();
+      await this.live(goP);
       await this.holdWhileLeaving();
       if (this.busy) continue;
       if (!this.allPicked()) {
@@ -400,15 +414,18 @@ export class BossScene extends CourseScene {
       await this.view('build');
       this.glowRobotPart(this.fixSlot);
       this.busy = false; this.canPick = true;
-      await this.wrong(job, res.fail, 'job' + (i + 1));
+      await this.wrong(job, res.fail, this.build[FAIL_SLOT[res.fail]]); // item = the faulty part's model / tile id, picked = fail code
     }
   }
 
   /** The right choices in the faulty row glow (called by the base after the 2nd wrong drive on a job). */
   async hint(job) {
-    if (!this.fixSlot) return;
-    for (const c of this.rightChoices(this.fixSlot)) {
-      const disc = new THREE.Mesh(new THREE.CircleGeometry(0.66, 28), new THREE.MeshBasicMaterial({ color: 0xfde047, blending: THREE.AdditiveBlending }));
+    const r = checkBuild(job, this.build);                       // what failed, worked out again so the row is never empty
+    const slot = r.fail ? FAIL_SLOT[r.fail] : this.fixSlot;
+    if (!slot) return;
+    this.fixSlot = slot;
+    for (const c of this.rightChoices(slot)) {
+      const disc = new THREE.Mesh(new THREE.CircleGeometry(0.46, 28), new THREE.MeshBasicMaterial({ color: 0xfde047, blending: THREE.AdditiveBlending }));
       disc.position.set(0, 0, -0.2); c.group.add(disc); this.addGlow(disc, 'hint', 0.7);
     }
     this.ui.toast('試試發光的零件！', 'Try the glowing part!', 1600);
@@ -450,7 +467,8 @@ export class BossScene extends CourseScene {
   /** Crossing the finish: confetti, a happy hop and a spin. */
   async celebrate() {
     const r = this.robot, x = r.position.x;
-    this.confetti(x, 1.6, LANE_Z, 36);
+    this.confetti(x, 1.6, LANE_Z, 36); // (skipped with Less motion, which also drops the sparkle, hops and spin)
+    if (motion.less) { await this.live(wait(300)); return; }
     sparkle(this.stage, new THREE.Vector3(x, 1.4, LANE_Z), this.root);
     for (let k = 0; k < 2; k++) {
       await this.live(tween(r.position, { y: 0.4 }, { ms: 180, ease: 'outCubic' }));
@@ -481,19 +499,19 @@ export class BossScene extends CourseScene {
   async finish() {
     await this.holdWhileLeaving();
     this.ui.back(null); this.ui.hidePrompt(); this.ui.clearChoices();
-    this.clearGlows(); this.rack.visible = false; this.signs.visible = true;
+    this.clearGlows(); this.rack.visible = false; this.signs.visible = false; // the start / finish boards would cover the trophy
     this.canPick = false;
-    if (this.robot) { this.robot.userData.reset(); this.robot.position.set(2.4, 0, LANE_Z); this.robot.rotation.set(0, 0, 0); }
+    if (this.robot) { this.robot.userData.reset(); this.robot.position.set(2.6, 0, LANE_Z); this.robot.rotation.set(0, 0, 0); }
     await this.view('trophy', 700);
     const trophy = this.makeTrophy(); this.trophy = trophy.userData.top; // update() turns the cup (not the podium)
-    trophy.position.set(-2.4, 0, LANE_Z); trophy.scale.setScalar(0.01); this.root.add(trophy);
+    trophy.position.set(-0.9, 0, LANE_Z); trophy.scale.setScalar(0.01); this.root.add(trophy);
     this.stage.awake('boss-trophy', true);
     try { sfx.fanfare(); } catch (e) { /* ignore */ }
     this.ui.toast('測試冠軍！', 'Test Track Champion!', 2200);
     voice.say('測試冠軍！好叻呀！');
     const grow = tween(trophy.scale, { x: 1, y: 1, z: 1 }, { ms: 800, ease: 'outBack' });
-    sparkle(this.stage, new THREE.Vector3(-2.4, 1.6, LANE_Z), this.root);
     if (!motion.less) {
+      sparkle(this.stage, new THREE.Vector3(-0.9, 1.6, LANE_Z), this.root);
       // fireworks: three bursts of confetti in the sky, one after another
       this.confetti(-3.2, 3.2, 0, 40);
       this.live(wait(350)).then(() => this.confetti(0.2, 3.8, -0.5, 40));
@@ -501,7 +519,7 @@ export class BossScene extends CourseScene {
     }
     // the robot dances beside it
     const r = this.robot;
-    const dance = (async () => {
+    const dance = motion.less ? Promise.resolve() : (async () => {
       for (let k = 0; k < 3 && r; k++) {
         await this.live(tween(r.position, { y: 0.45 }, { ms: 200 }));
         await this.live(tween(r.position, { y: 0 }, { ms: 280, ease: 'outBounce' }));

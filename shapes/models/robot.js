@@ -522,6 +522,6 @@ export function makeBuildRobot(build, { rng = Math.random } = {}) {
     rig.rotation.set(0, 0, 0); rig.position.y = cY;
   }
 
-  root.userData = { buildRobot: true, build: { ...build }, drive, reset };
+  root.userData = { buildRobot: true, build: { ...build }, drive, reset, partNodes: { wheels: wheelMounts, body: bodyG, head: headG, panel: win.m } };
   return root;
 }

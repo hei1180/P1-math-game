@@ -24,8 +24,8 @@ import { FAMILIES, FAMILY, TILE_ANSWERS, ANSWER_TEXT, genRush3d, genRush2d, shuf
 
 // ---- layout (x right, y up) ----
 const BELT = { x0: -4.3, x1: 3.9, top: 3.3, h: 0.35 };       // belt: left end, right end (items fall off here), top surface height
-const BIN = { w: 1.2, h: 1.5, pitch: 1.35, y: 0, z: -0.8 };  // bins stand on the floor behind the item plane
-const CRATE = { x: 4.8, w: 1.3, h: 1.0 };
+const BIN = { w: 1.3, h: 1.5, pitch: 1.35, y: 0, z: -0.8 };  // bins stand on the floor behind the item plane
+const CRATE = { x: 3.95, w: 1.1, h: 1.0 };                    // under the belt end, right of the last bin
 const ITEM_S = 1.1;                                           // size of an item on the belt
 const ITEM_Y = BELT.top + ITEM_S / 2;                         // centre height of an item on the belt
 const MAX_ON_BELT = 3, GAP = 1.5, SPEED = 1.35, FEVER_SPEED = 2.0;
@@ -67,7 +67,7 @@ export class RushScene extends Scene {
     this.zone = zone === 'b' ? 'b' : 'a';
     this.items = [];            // { id, holder, data, x, state: 'belt' | 'held' | 'busy', off }
     this.nextId = 1; this.spawnT = 0.3; this.clock = 0; this.hue = 0; this.feverT = 0;
-    this.running = false; this.ended = false; this.rushOn = false;
+    this.running = false; this.ended = false; this.rushOn = false; this.timeIsUp = false; this.sel = null;
     this.lastAnswers = [];
     this.hover = null; this.sizeKey = '';
 
@@ -93,7 +93,7 @@ export class RushScene extends Scene {
 
   // ------------------------------------------------------------------ set
   buildRoom() {
-    const floor = new THREE.Mesh(new THREE.BoxGeometry(60, 0.3, 30), lam(SCENE.floor)); floor.position.set(0, -0.15, -4);
+    const floor = new THREE.Mesh(new THREE.BoxGeometry(60, 0.3, 60), lam(SCENE.floor)); floor.position.set(0, -0.15, 6);
     const wall = new THREE.Mesh(new THREE.BoxGeometry(60, 14, 0.3), lam(SCENE.wall)); wall.position.set(0, 7, -4.0);
     const bench = new THREE.Mesh(new THREE.BoxGeometry(60, 0.4, 0.4), lam(SCENE.bench)); bench.position.set(0, 0.2, -3.7);
     this.root.add(floor, wall, bench);
@@ -146,7 +146,7 @@ export class RushScene extends Scene {
     part(0.08, CRATE.h, 0.9, -CRATE.w / 2, CRATE.h / 2, 0);
     part(0.08, CRATE.h, 0.9, CRATE.w / 2, CRATE.h / 2, 0);
     part(CRATE.w, CRATE.h * 0.55, 0.08, 0, CRATE.h * 0.275, 0.41);
-    const lab = labelPlaque('等一下', 'Later', 1.0, 0.46); lab.position.set(0, 0.4, 0.47); g.add(lab);
+    const lab = labelPlaque('等一下', 'Later', 0.95, 0.44); lab.position.set(0, 0.4, 0.47); g.add(lab);
     this.root.add(g);
   }
 
@@ -158,7 +158,7 @@ export class RushScene extends Scene {
   // ------------------------------------------------------------------ camera
   viewArgs() {
     const asp = this.stage.width / Math.max(1, this.stage.height), t = Math.tan(THREE.MathUtils.degToRad(20));
-    const w = 10.6, h = 6.6, cx = 0.45, cy = 2.4;
+    const w = 9.4, h = 6.6, cx = 0.05, cy = 2.4;
     const d = Math.max(w / 2 / (t * asp), h / 2 / t);
     return [[cx, cy + 0.6 + d * 0.06, d], [cx, cy, 0]];
   }
@@ -173,8 +173,9 @@ export class RushScene extends Scene {
 
   async timeUp() {
     if (this.ended || !this.alive) return;
-    this.ended = true; this.running = false;
-    for (const it of this.items) if (it.state === 'held') it.state = 'busy';
+    this.ended = true; this.running = false; this.timeIsUp = true;
+    for (const it of this.items.filter(i => i.state === 'held')) this.retire(it); // nothing stays in a hand when time is up
+    this.setHover(null);
     this.hi.visible = false;
     this.ui.toast('時間到！', "Time's up!", 1800);
     try { sfx.fanfare(); } catch (e) { /* ignore */ }
@@ -186,7 +187,7 @@ export class RushScene extends Scene {
 
   /** ⬅: stop the timer and HUD without saving, back to the Workshop. */
   leave() {
-    if (!this.alive) return;
+    if (!this.alive || this.timeIsUp) return; // after 「時間到」 the score is going to be saved: ⬅ does nothing
     this.running = false; this.ended = true;
     if (this.rushOn) { this.rushOn = false; this.bridge.rushAbort(); }
     this.go('Workshop');
@@ -221,9 +222,10 @@ export class RushScene extends Scene {
     tween(holder.scale, { x: 1, y: 1, z: 1 }, { ms: 220, ease: 'outBack' });
     it.off = this.input.drag(holder, {
       plane: PLANE, lift: 0,
-      onStart: () => { if (it.state === 'belt' && !this.ended) { it.state = 'held'; try { sfx.tick(); } catch (e) { /* ignore */ } } },
+      onStart: o => { if (it.state === 'belt' && !this.ended) { it.state = 'held'; it.start = o.position.clone(); try { sfx.tick(); } catch (e) { /* ignore */ } } },
       onMove: (o, pt) => this.setHover(it.state === 'held' ? this.binAt(pt) : null),
-      onEnd: (o, pt, { cancelled } = {}) => this.dropped(it, pt, cancelled),
+      // not returned: Input awaits onEnd and would block every press until the animation finished
+      onEnd: (o, pt, ev) => { this.dropped(it, pt, !!(ev && ev.cancelled)); },
     });
     this.items.push(it);
     this.spawnT = this.bridge.rushState().isFever ? 1.0 : 1.4;
@@ -242,13 +244,16 @@ export class RushScene extends Scene {
     this.stage.invalidate();
   }
 
-  async dropped(it, pt, cancelled) {
+  dropped(it, pt, cancelled) {
     this.setHover(null);
     if (it.state !== 'held') return;
-    if (cancelled || this.ended || !this.alive) { this.backToBelt(it, it.holder.position.x); return; }
+    const h = it.holder;
+    if (cancelled || this.ended || !this.alive) { this.backToBelt(it, h.position.x); return; }
+    // a press without movement selects the item: the next bin tap sends this one (no sideways snap)
+    if (h.position.distanceTo(it.start) < 0.15) { it.state = 'belt'; h.position.copy(it.start); this.sel = it; this.stage.invalidate(); return; }
     const bin = this.binAt(pt);
-    if (bin) { await this.sendTo(it, bin); return; }
-    if (pt.y < DROP_BELOW && pt.x > BELT.x1 - 0.1) { await this.toCrate(it, false); return; } // dropped on the "later" crate
+    if (bin) { this.sendTo(it, bin); return; }
+    if (pt.y < DROP_BELOW && pt.x > BELT.x1 - 0.1) { this.toCrate(it, false); return; } // dropped on the "later" crate
     this.backToBelt(it, pt.x);
   }
 
@@ -261,6 +266,7 @@ export class RushScene extends Scene {
 
   /** The highlighted item: the one nearest the end of the belt. */
   front() {
+    if (this.sel && this.sel.state === 'belt' && this.items.includes(this.sel)) return this.sel; // chosen by a press on it
     let f = null;
     for (const it of this.items) if (it.state === 'belt' && (!f || it.x > f.x)) f = it;
     return f;
@@ -268,7 +274,7 @@ export class RushScene extends Scene {
 
   /** Tap on a bin: the front item flies in. (Public: also used to test.) */
   sendFront(bin) {
-    if (!this.running || this.ended) return null;
+    if (this.ended || !this.running) return null;
     const it = this.front();
     if (!it) return null;
     this.sendTo(it, bin);
@@ -277,6 +283,7 @@ export class RushScene extends Scene {
 
   retire(it) {
     if (it.off) { it.off(); it.off = null; }
+    if (this.sel === it) this.sel = null;
     this.items = this.items.filter(x => x !== it);
     this.root.remove(it.holder);
     disposeTree(it.holder);
@@ -284,17 +291,18 @@ export class RushScene extends Scene {
   }
 
   async sendTo(it, bin) {
-    it.state = 'busy';
+    if (this.ended || it.state === 'busy') return;
+    // grade at the moment of choice (the answer comes from shapes-logic's genRush3d / genRush2d); then animate
+    it.state = 'busy'; if (this.sel === it) this.sel = null;
     if (it.off) { it.off(); it.off = null; }
+    const right = it.answer === bin.answer;
+    const pts = this.bridge.rushHit(right, 10);
+    const fever = this.bridge.rushState().isFever;
     const h = it.holder, mouth = BIN.h + 0.35;
     await this.live(Promise.all([
       tween(h.position, { x: bin.x, y: mouth, z: 0 }, { ms: 300, ease: 'outCubic' }),
       tween(h.scale, { x: 0.6, y: 0.6, z: 0.6 }, { ms: 300, ease: 'outCubic' }),
     ]));
-    if (this.ended || !this.alive) { this.retire(it); return; }
-    const right = it.answer === bin.answer;                       // the answer comes from shapes-logic's genRush3d / genRush2d
-    const pts = this.bridge.rushHit(right, 10);
-    const fever = this.bridge.rushState().isFever;
     if (right) {
       try { sfx.munch(); sfx.ding(); } catch (e) { /* ignore */ }
       this.mood(bin, 'happy', 700);
@@ -325,7 +333,8 @@ export class RushScene extends Scene {
 
   /** Falls off the end of the belt (or dropped on the crate): into the "later" crate, no points either way. */
   async toCrate(it, fromBelt = true) {
-    it.state = 'busy';
+    if (it.state === 'busy') return;
+    it.state = 'busy'; if (this.sel === it) this.sel = null;
     if (it.off) { it.off(); it.off = null; }
     const h = it.holder;
     try { sfx.tick(); } catch (e) { /* ignore */ }

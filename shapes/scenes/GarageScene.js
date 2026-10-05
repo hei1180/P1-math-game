@@ -265,7 +265,7 @@ export class GarageScene extends Scene {
   lockedCaption(ids) {
     if (ids.every(id => this.owned.has(id))) return;
     const c = E('div', 'text-align:center;color:#92400e;line-height:1.15');
-    lines(c, '🔒 灰色的要完成課程才可得到', 'Grey ones: finish the course to get them', 'font-size:14px', 'font-size:10px;opacity:.75');
+    lines(c, '🔒 灰色的要完成關卡才可以得到', 'Grey ones: finish the course to get them', 'font-size:14px', 'font-size:10px;opacity:.75');
     this.bodyEl.appendChild(c);
   }
 

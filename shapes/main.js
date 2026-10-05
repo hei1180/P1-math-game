@@ -1,7 +1,7 @@
 // Robot Workshop entry: DOM shell wiring, bridge to shared.js, three.js boot.
 import { signIn, onUser, player, settings, session, enterTestMode, initAudio, engine, resetEngine, registerHit, endFever,
          startTimer, stopTimer, saveScore, renderLeaderboard, showRankPopup, mountTeacherModal, sharedSound, logAttempt, isTeacherEmail } from '../shared.js?v=202610051406';
-import { recordResult, validateGalleryEntry, ZONES, lcg, SLOTS } from '../shapes-logic.js?v=202610051406';
+import { recordResult, validateGalleryEntry, ZONES, lcg, SLOTS, BASIC_PART, markSeen } from '../shapes-logic.js?v=202610051406';
 import { loadProgress, saveProgress, loadGallery, saveGalleryEntry, setGalleryHidden } from '../shapes-progress.js?v=202610051406';
 import { sfx } from './sfx.js?v=202610051406';
 import { voice } from './engine/voice.js?v=202610051406';
@@ -32,7 +32,8 @@ const reduced = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: 
 Object.defineProperty(motion, 'less', { get: () => !!settings.lessMotion || reduced.matches, set: v => { settings.lessMotion = !!v; }, configurable: true });
 
 const goTo = (key, data) => scenes.go(key, data);
-const robotForGallery = r => ({ name: r.name ?? null, ...Object.fromEntries(SLOTS.map(s => [s, r[s]])) });
+// every slot, face included (a robot saved before faces existed gets the basic face; Firestore refuses undefined values)
+const robotForGallery = r => ({ name: r.name ?? null, ...Object.fromEntries(SLOTS.map(s => [s, r[s] ?? BASIC_PART[s]])) });
 
 const bridge = {
   player, settings,
@@ -56,6 +57,15 @@ const bridge = {
     if (session.testMode) return { newBest: r.newBest, part: r.part, looks: r.looks };
     await saveProgress(player.uid, r.progress);
     return { newBest: r.newBest, part: r.part, looks: r.looks };
+  },
+
+  /** The Garage showed these items: they stop being "new". bridge.progress changes at once (the Workshop badge reads it); saved in the background. */
+  markSeen(ids) {
+    const before = (this.progress.seen || []).length, next = markSeen(this.progress, ids || []);
+    if (next.seen.length === before) return;
+    this.progress = next;
+    if (session.testMode || !player.uid) return;
+    saveProgress(player.uid, this.progress).catch(e => console.warn('markSeen: progress not saved', e));
   },
 
   async saveRobot(robot) {

@@ -1,11 +1,13 @@
 // My Robot (the Garage): the child's robot on a turntable. One finger turns it. Slot tabs pick wheels / head / arms /
-// antenna / paint / badge; parts not earned yet are dark silhouettes that say which course gives them. The name is picked
-// from ROBOT_NAMES plus a number with − / + buttons (no keyboard, no free text anywhere). 保存 Save → bridge.saveRobot.
+// antenna / colour / badge / face; parts not earned yet are dark silhouettes (grey swatches) that say which course gives them.
+// Items the child has not looked at yet carry a red 「新」 dot (bridge.markSeen when their tab opens). The name is picked
+// from ROBOT_NAMES plus a number with − / + buttons (no keyboard, no free text anywhere).
+// 保存 Save → bridge.saveRobot, a short dance, then back to the Workshop by itself.
 import * as THREE from 'three';
 import { Scene } from '../engine/scenes.js?v=202610051406';
-import { wait } from '../engine/tween.js?v=202610051406';
-import { SLOTS, BASIC_PART, PARTS, ROBOT_NAMES, robotName } from '../../shapes-logic.js?v=202610051406';
-import { makeRobot, PART_INFO } from '../models/robot.js?v=202610051406';
+import { wait, motion } from '../engine/tween.js?v=202610051406';
+import { SLOTS, BASIC_PART, PARTS, LOOKS, LOOK_INFO, COURSES, courseByKey, ROBOT_NAMES, robotName, ownedItems, unseenItems } from '../../shapes-logic.js?v=202610051406';
+import { makeRobot, PART_INFO, faceIcon, paintCss } from '../models/robot.js?v=202610051406';
 import { SCENE, FONT } from '../theme.js?v=202610051406';
 import { sfx } from '../sfx.js?v=202610051406';
 import { confetti } from '../fx3d.js?v=202610051406';
@@ -15,8 +17,9 @@ const SLOT_INFO = {
   head:    { zh: '頭',   en: 'Head',    icon: '🤖' },
   arms:    { zh: '手',   en: 'Arms',    icon: '💪' },
   antenna: { zh: '天線', en: 'Antenna', icon: '📡' },
-  paint:   { zh: '顏色', en: 'Paint',   icon: '🎨' },
+  paint:   { zh: '顏色', en: 'Colour',  icon: '🎨' },
   badge:   { zh: '徽章', en: 'Badge',   icon: '🏅' },
+  face:    { zh: '表情', en: 'Face',    icon: '😊' },
 };
 const NAME_TAB = { zh: '名字', en: 'Name', icon: '🏷️' };
 const PART_ICON = {
@@ -29,7 +32,31 @@ const PART_EN = {
   'wheels-basic': 'Plain wheels', 'wheels-star': 'Star wheels', 'wheels-flower': 'Flower wheels',
   'head-basic': 'Plain head', 'head-tv': 'TV head', 'head-dome': 'Dome head',
   'arms-basic': 'Plain arms', 'arms-spring': 'Spring arms', 'arms-claw': 'Claw arms',
-  'antenna-zigzag': 'Zigzag antenna', 'paint-blue': 'Blue paint', 'paint-rainbow': 'Rainbow paint', 'badge-gold': 'Gold badge', none: 'None',
+  'antenna-zigzag': 'Zigzag antenna', 'paint-rainbow': 'Rainbow', 'badge-gold': 'Gold badge', none: 'None',
+  'paint-blue': 'Blue', 'paint-red': 'Red', 'paint-yellow': 'Yellow', 'paint-green': 'Green', 'paint-orange': 'Orange',
+  'paint-pink': 'Pink', 'paint-purple': 'Purple', 'paint-white': 'White', 'paint-black': 'Black', 'paint-gold': 'Gold',
+  'face-smile': 'Smile', 'face-happy': 'Happy', 'face-wink': 'Wink', 'face-surprised': 'Surprised', 'face-cool': 'Cool',
+  'face-silly': 'Silly', 'face-sleepy': 'Sleepy', 'face-love': 'Love', 'face-star': 'Star eyes', 'face-proud': 'Proud',
+};
+const COURSE_ORDER = [...COURSES.map(c => c.key), 'boss'];
+/** Which course gives an item (PARTS first, then LOOKS); null for basics. */
+const courseOf = id => COURSE_ORDER.find(k => (PARTS[k] && PARTS[k].id === id) || (LOOKS[k] && LOOKS[k].includes(id))) || null;
+/** Course name for 「完成 X 可得到」. */
+const courseZh = k => (k === 'boss' ? '測試跑道' : (courseByKey(k) || { zh: k }).zh);
+const courseEn = k => (k === 'boss' ? 'the Test Track' : (courseByKey(k) || { en: k }).en);
+/** A slot's options: the basic item, then earned items in course order. */
+function optionsFor(slot) {
+  const ids = [BASIC_PART[slot]];
+  for (const k of COURSE_ORDER) for (const id of [PARTS[k] && PARTS[k].id, ...(LOOKS[k] || [])]) {
+    if (id && !ids.includes(id) && ((PART_INFO[id] && PART_INFO[id].slot === slot) || (LOOK_INFO[id] && LOOK_INFO[id].slot === slot))) ids.push(id);
+  }
+  return ids;
+}
+/** The small red 「新」 dot on a new item or on a tab that holds one. */
+const newDot = () => {
+  const d = E('div', 'position:absolute;top:-6px;right:-6px;min-width:22px;height:22px;padding:0 3px;box-sizing:border-box;border-radius:11px;background:#ef4444;color:#fff;border:2px solid #fff;font-size:12px;font-weight:700;line-height:18px;text-align:center;pointer-events:none;box-shadow:0 1px 3px rgba(0,0,0,.25)', '新');
+  d.className = 'new-dot';
+  return d;
 };
 const K = 2 * Math.tan((20 * Math.PI) / 180); // visible height = K × camera distance (fov 40)
 
@@ -58,11 +85,14 @@ export class GarageScene extends Scene {
     this.savedJson = JSON.stringify(this.cfg);
     this.tab = 'wheels';
     this.busy = false;
+    this.leaving = false;
     this.side = null;
+    this.tabCols = 0;
 
-    // the owned set: basics + earned parts; test mode (teacher / dev) owns everything so every part can be tried
-    this.owned = new Set(Object.values(BASIC_PART));
-    for (const id of (bridge.testMode ? Object.values(PARTS).map(p => p.id) : bridge.progress.parts)) this.owned.add(id);
+    // the owned set: basics + earned parts + colours / faces of cleared courses; test mode (teacher / dev) owns everything
+    this.owned = new Set(bridge.testMode ? SLOTS.flatMap(optionsFor) : ownedItems(bridge.progress));
+    this.unseen = new Set(unseenItems(bridge.progress)); // items with a 「新」 dot still to come on their tab
+    this.fresh = new Set(); // new items on the open tab: their dot stays until the child leaves the tab
 
     this.buildRoom();
     this.buildTurntable();
@@ -129,7 +159,7 @@ export class GarageScene extends Scene {
     const t = 0.16; // the name sign at the top
     const d = Math.max(3.9 / ((1 - f - t) * K), 3.6 / (K * aspect * (1 - fw)), 5);
     const ly = 1.15 - ((f - t) / 2) * K * d, lx = (fw / 2) * K * d * aspect; // look past the robot so it sits in the free area
-    st.setView([lx, ly + 1.2, d], [lx, ly, 0]);
+    st.setView([lx, Math.max(ly + 1.2, 0.6), d], [lx, ly, 0]); // never under the floor (a tall panel pushes the view down)
   }
 
   /** Bottom panel on a normal screen, a side panel on a short one (landscape phone). */
@@ -139,34 +169,37 @@ export class GarageScene extends Scene {
     this.side = side;
     this.panel.style.cssText = `position:absolute;display:flex;flex-direction:column;gap:8px;box-sizing:border-box;background:rgba(255,251,235,.95);pointer-events:auto;font-family:${FONT};` + (side
       ? 'right:0;top:110px;bottom:0;width:min(48%,400px);padding:8px;border-left:4px solid #fcd34d;border-radius:20px 0 0 0'
-      : 'left:0;right:0;bottom:0;max-width:720px;margin:0 auto;padding:8px 8px max(8px, env(safe-area-inset-bottom));border-top:4px solid #fcd34d;border-radius:20px 20px 0 0');
+      : 'left:0;right:0;bottom:0;max-height:54%;max-width:720px;margin:0 auto;padding:8px 8px max(8px, env(safe-area-inset-bottom));border-top:4px solid #fcd34d;border-radius:20px 20px 0 0');
+    // bottom panel: the tabs stay put and only the options scroll; short side panel: the tabs scroll with them
+    if (side) this.scrollEl.prepend(this.tabsEl); else this.panel.prepend(this.tabsEl);
     return true;
   }
 
   onResize() {
     if (typeof this.stage.resize === 'function') this.stage.resize(); // measure first, then fit
     this.layoutPanel();
+    if (this.tabColsWanted() !== this.tabCols) this.renderTabs();
     this.frame();
   }
 
   /** The robot reacts (wave / hop / dance). Skipped while another reaction runs. */
-  async react(kind) {
+  async react(kind, opts = {}) {
     if (this.busy || !this.alive) return;
     this.busy = true;
-    try { await this.live(this.robot.userData[kind]({ on: n => { if (!this.alive) return; if (n === 'beat') sfx.tick(Math.floor(Math.random() * 6)); else if (n === 'boing') sfx.boing(); } })); }
+    try { await this.live(this.robot.userData[kind]({ ...opts, on: n => { if (!this.alive) return; if (n === 'beat') sfx.tick(Math.floor(Math.random() * 6)); else if (n === 'boing') sfx.boing(); } })); }
     finally { this.busy = false; }
   }
 
   // ---------------------------------------------------------------- panel
   buildPanel() {
     const panel = this.panel = E('div');
-    this.tabsEl = E('div', 'display:flex;gap:4px;flex:none');
-    this.bodyEl = E('div', 'display:flex;flex-direction:column;gap:8px;min-height:92px;justify-content:center');
-    const scroll = E('div', 'display:flex;flex-direction:column;gap:8px;flex:1 1 auto;min-height:0;overflow-y:auto');
-    scroll.append(this.tabsEl, this.bodyEl);
+    this.tabsEl = E('div', 'display:grid;gap:6px;flex:none;padding:6px 6px 0');
+    this.bodyEl = E('div', 'flex:none;display:flex;flex-direction:column;gap:8px;min-height:92px;justify-content:center;padding:6px');
+    const scroll = this.scrollEl = E('div', 'display:flex;flex-direction:column;gap:2px;flex:1 1 auto;min-height:0;overflow-y:auto');
+    scroll.appendChild(this.bodyEl);
     this.saveBtn = button('flex:none;background:#22c55e;color:#fff;border:4px solid #16a34a;font-size:20px;padding:4px 16px;min-height:56px', () => this.save());
     lines(this.saveBtn, '保存', 'Save', 'font-size:22px', 'font-size:11px;font-weight:400;opacity:.85');
-    panel.append(scroll, this.saveBtn);
+    panel.append(this.tabsEl, scroll, this.saveBtn);
     const root = document.getElementById('ui');
     root.appendChild(panel);
     this.layoutPanel();
@@ -178,53 +211,136 @@ export class GarageScene extends Scene {
 
   async exit() { if (this.ro) this.ro.disconnect(); }
 
+  /** 8 tabs in one row when the panel is wide, else 4 × 2 (each tab stays ≥ 48 px wide on a phone). */
+  tabColsWanted() { return this.panel && this.panel.clientWidth >= 560 ? 8 : 4; }
+
   renderTabs() {
     this.tabsEl.replaceChildren();
+    this.tabCols = this.tabColsWanted();
+    this.tabsEl.style.gridTemplateColumns = `repeat(${this.tabCols}, minmax(0, 1fr))`;
     for (const key of [...SLOTS, 'name']) {
       const info = key === 'name' ? NAME_TAB : SLOT_INFO[key], on = key === this.tab;
-      const b = button(`flex:1;min-width:0;padding:2px 0;border:3px solid ${on ? '#f59e0b' : '#d1d5db'};background:${on ? '#fef3c7' : '#fff'};color:#1f2937;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:56px`, () => { this.tab = key; sfx.tick(0); this.renderTabs(); this.renderBody(); });
-      b.setAttribute('aria-label', `${info.zh} ${info.en}`);
-      b.append(E('div', 'font-size:22px;line-height:1.1', info.icon), E('div', 'font-size:12px;line-height:1.1', info.zh));
+      const b = button(`position:relative;min-width:0;padding:2px 0;border:3px solid ${on ? '#f59e0b' : '#d1d5db'};background:${on ? '#fef3c7' : '#fff'};color:#1f2937;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:56px`, () => this.openTab(key));
+      const isNew = key !== 'name' && optionsFor(key).some(id => this.unseen.has(id));
+      b.setAttribute('aria-label', `${info.zh} ${info.en}${isNew ? ' 新 new' : ''}`);
+      b.append(E('div', 'font-size:22px;line-height:1.1', info.icon), E('div', 'font-size:13px;line-height:1.1', info.zh), E('div', 'font-size:9px;font-weight:400;opacity:.7;line-height:1.1', info.en));
+      if (isNew) b.appendChild(newDot());
       this.tabsEl.appendChild(b);
     }
   }
 
-  renderBody() {
-    this.bodyEl.replaceChildren();
-    if (this.tab === 'name') this.renderName(); else this.renderParts(this.tab);
+  openTab(key) {
+    if (key === this.tab) return;
+    this.tab = key; sfx.tick(0);
+    this.fresh = new Set();
+    this.renderBody();
+    this.renderTabs();
   }
 
-  partKey(id) { return Object.keys(PARTS).find(k => PARTS[k].id === id); }
+  renderBody() {
+    this.bodyEl.replaceChildren();
+    if (this.tab === 'name') { this.renderName(); return; }
+    // opening a slot shows its new items: they keep their dot while this tab is open, and count as seen from now on
+    const seenNow = optionsFor(this.tab).filter(id => this.unseen.has(id));
+    if (seenNow.length) {
+      for (const id of seenNow) { this.unseen.delete(id); this.fresh.add(id); }
+      if (this.bridge.markSeen) this.bridge.markSeen(seenNow);
+      if (this.tabsEl.childElementCount) this.renderTabs();
+    }
+    if (this.tab === 'paint') this.renderSwatches();
+    else if (this.tab === 'face') this.renderFaces();
+    else this.renderParts(this.tab);
+  }
+
+  /** 「完成 X 可得到」 for a locked item. */
+  lockedText(id) {
+    const k = courseOf(id);
+    return { zh: `完成 ${courseZh(k)} 可得到`, en: `Finish ${courseEn(k)} to get it` };
+  }
+
+  /** Grid for the many colours and faces: columns of ≥ 52 px (6 on a phone). */
+  grid() { return E('div', 'display:grid;grid-template-columns:repeat(auto-fill,minmax(52px,1fr));gap:10px 4px'); }
+
+  /** Caption under a grid that has locked items. */
+  lockedCaption(ids) {
+    if (ids.every(id => this.owned.has(id))) return;
+    const c = E('div', 'text-align:center;color:#92400e;line-height:1.15');
+    lines(c, '🔒 灰色的要完成課程才可得到', 'Grey ones: finish the course to get them', 'font-size:14px', 'font-size:10px;opacity:.75');
+    this.bodyEl.appendChild(c);
+  }
+
+  renderSwatches() {
+    const ids = optionsFor('paint'), grid = this.grid();
+    for (const id of ids) {
+      const own = this.owned.has(id), on = this.cfg.paint === id, zh = (PART_INFO[id] && PART_INFO[id].zh) || id;
+      const b = button(`position:relative;min-height:70px;padding:2px 0;border:none;background:transparent;color:#1f2937;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:3px;box-shadow:none`, () => this.pick('paint', id, own));
+      const ring = on ? '0 0 0 4px #fff, 0 0 0 7px #f59e0b' : '0 1px 3px rgba(0,0,0,.25)';
+      const sw = E('div', `width:42px;height:42px;flex:none;border-radius:50%;box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:${ring};` + (own
+        ? `background:${paintCss(id)};border:3px solid rgba(0,0,0,.18)`
+        : 'background:#d1d5db;border:3px dashed #9ca3af'), own ? '' : '🔒');
+      b.appendChild(sw);
+      if (own) { b.appendChild(E('div', 'font-size:14px;line-height:1.1', zh)); b.appendChild(E('div', 'font-size:9px;font-weight:400;opacity:.7;line-height:1', PART_EN[id] || '')); }
+      else b.appendChild(E('div', 'font-size:10px;line-height:1.15;white-space:nowrap;letter-spacing:-.3px;color:#b45309', courseZh(courseOf(id))));
+      if (this.fresh.has(id)) b.appendChild(newDot());
+      b.setAttribute('aria-label', own ? `${zh} ${PART_EN[id] || ''}` : `${zh} ${this.lockedText(id).zh}`);
+      grid.appendChild(b);
+    }
+    this.bodyEl.appendChild(grid);
+    this.lockedCaption(ids);
+  }
+
+  renderFaces() {
+    const ids = optionsFor('face'), grid = this.grid(), bg = paintCss(this.cfg.paint);
+    for (const id of ids) {
+      const own = this.owned.has(id), on = this.cfg.face === id, zh = (PART_INFO[id] && PART_INFO[id].zh) || id;
+      const b = button(`position:relative;min-height:80px;padding:3px 0;border:3px solid ${on ? '#f59e0b' : own ? '#6ee7b7' : '#9ca3af'};background:${on ? '#fef3c7' : own ? '#fff' : '#e5e7eb'};color:#1f2937;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:2px`, () => this.pick('face', id, own));
+      const pic = E('div', `width:46px;height:32px;flex:none;border-radius:10px;display:flex;align-items:center;justify-content:center;background:${own ? bg : '#cbd5e1'}`);
+      const img = E('img', `width:44px;height:27.5px;display:block;${own ? '' : 'filter:brightness(0);opacity:.35'}`);
+      img.src = faceIcon(id); img.alt = ''; img.draggable = false;
+      pic.appendChild(img);
+      b.appendChild(pic);
+      if (own) { b.appendChild(E('div', 'font-size:14px;line-height:1.1', zh)); b.appendChild(E('div', 'font-size:9px;font-weight:400;opacity:.7;line-height:1', PART_EN[id] || '')); }
+      else b.appendChild(E('div', 'font-size:10px;line-height:1.15;white-space:nowrap;letter-spacing:-.3px;color:#b45309', courseZh(courseOf(id))));
+      if (this.fresh.has(id)) b.appendChild(newDot());
+      b.setAttribute('aria-label', own ? `${zh} ${PART_EN[id] || ''}` : `${zh} ${this.lockedText(id).zh}`);
+      grid.appendChild(b);
+    }
+    this.bodyEl.appendChild(grid);
+    this.lockedCaption(ids);
+  }
 
   renderParts(slot) {
-    const ids = [BASIC_PART[slot], ...Object.values(PARTS).filter(p => p.slot === slot).map(p => p.id)];
+    const ids = optionsFor(slot);
     const row = E('div', 'display:flex;gap:8px;justify-content:center');
     for (const id of ids) {
       const own = this.owned.has(id), on = this.cfg[slot] === id;
-      const b = button(`flex:1;max-width:190px;min-height:84px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:4px;border:4px solid ${on ? '#f59e0b' : own ? '#6ee7b7' : '#9ca3af'};background:${on ? '#fef3c7' : own ? '#fff' : '#e5e7eb'};color:#1f2937`, () => this.pick(slot, id, own));
+      const b = button(`position:relative;flex:1;max-width:190px;min-height:84px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:4px;border:4px solid ${on ? '#f59e0b' : own ? '#6ee7b7' : '#9ca3af'};background:${on ? '#fef3c7' : own ? '#fff' : '#e5e7eb'};color:#1f2937`, () => this.pick(slot, id, own));
       const zh = (PART_INFO[id] && PART_INFO[id].zh) || id;
       // locked parts are dark silhouettes
       b.appendChild(E('div', `font-size:34px;line-height:1.1;${own ? '' : 'filter:brightness(0);opacity:.45'}`, PART_ICON[id] || '❓'));
       b.appendChild(E('div', `font-size:16px;line-height:1.15;${own ? '' : 'opacity:.6'}`, own ? zh : `🔒 ${zh}`));
       if (own) b.appendChild(E('div', 'font-size:11px;font-weight:400;opacity:.7;line-height:1.1', PART_EN[id] || ''));
       else {
-        const k = this.partKey(id), what = k === 'boss' ? '測試跑道' : k;
-        b.appendChild(E('div', 'font-size:13px;line-height:1.15;color:#b45309', `完成 ${what} 可得到`));
-        b.appendChild(E('div', 'font-size:10px;font-weight:400;line-height:1.1;opacity:.75', `Finish ${k === 'boss' ? 'the Test Track' : k} to get it`));
+        const t = this.lockedText(id);
+        b.appendChild(E('div', 'font-size:13px;line-height:1.15;color:#b45309', t.zh));
+        b.appendChild(E('div', 'font-size:10px;font-weight:400;line-height:1.1;opacity:.75', t.en));
       }
-      b.setAttribute('aria-label', own ? `${zh} ${PART_EN[id] || ''}` : `${zh} locked`);
+      if (this.fresh.has(id)) b.appendChild(newDot());
+      b.setAttribute('aria-label', own ? `${zh} ${PART_EN[id] || ''}` : `${zh} ${this.lockedText(id).zh}`);
       row.appendChild(b);
     }
     this.bodyEl.appendChild(row);
   }
 
   pick(slot, id, own) {
+    if (this.leaving) return;
     if (!own) {
       sfx.bonk();
-      const k = this.partKey(id);
-      this.ui.toast(`完成 ${k === 'boss' ? '測試跑道' : k} 得到`, `Finish ${k === 'boss' ? 'the Test Track' : k} to get this part`, 1600);
+      const t = this.lockedText(id);
+      this.ui.toast(t.zh, t.en, 1800);
       return;
     }
+    this.fresh.delete(id);
     if (this.cfg[slot] !== id) {
       this.cfg[slot] = id;
       this.robot.userData.setPart(slot, id);
@@ -232,7 +348,7 @@ export class GarageScene extends Scene {
       sfx.pop();
       this.renderBody();
     }
-    this.react('hop');
+    this.react(slot === 'face' ? 'wave' : 'hop');
   }
 
   // ---------------------------------------------------------------- name
@@ -273,9 +389,10 @@ export class GarageScene extends Scene {
   // ---------------------------------------------------------------- save / leave
   dirty() { return JSON.stringify(this.cfg) !== this.savedJson; }
 
-  /** One save at a time: a second call while one is in flight gets the same promise. */
+  /** One save at a time: a second call while one is in flight gets the same promise. Resolves true when saved. */
   save() {
-    if (!this.savePromise) this.savePromise = this.doSave().finally(() => { this.savePromise = null; if (this.alive) this.saveBtn.style.opacity = ''; });
+    if (this.leaving) return Promise.resolve(false);
+    if (!this.savePromise) this.savePromise = this.doSave().finally(() => { this.savePromise = null; if (this.alive && !this.leaving) this.saveBtn.style.opacity = ''; });
     return this.savePromise;
   }
 
@@ -284,26 +401,31 @@ export class GarageScene extends Scene {
     this.saveBtn.style.opacity = '0.6';
     try { await this.live(this.bridge.saveRobot({ ...this.cfg })); } catch (e) { console.error('saveRobot failed', e); this.ui.toast('未能保存', 'Not saved', 1800); return false; }
     this.savedJson = snapshot;
-    this.celebrate().catch(console.error);
+    this.leaveHappy().catch(console.error);
     return true;
   }
 
-  async celebrate() {
+  /** Saved: a short happy dance (a wave with less motion), 「已保存！」, then back to the Workshop by itself (~1.2 s). */
+  async leaveHappy() {
+    this.leaving = true;
+    this.panel.style.pointerEvents = 'none'; // nothing more to change: the robot is on its way back
     sfx.fanfare();
     confetti(this.stage, new THREE.Vector3(0, 2, 0.5), 40, this.root);
     this.ui.toast('已保存！', 'Saved!', 1400);
     while (this.busy) await this.live(wait(60)); // let a running hop / wave finish first
-    await this.react('dance');
+    await this.live(Promise.all([motion.less ? this.react('wave') : this.react('dance', { steps: 3 }), wait(1200)]));
+    if (this.alive) this.go('Workshop');
   }
 
   async askBack() {
+    if (this.leaving) return;
     if (!this.dirty()) { this.go('Workshop'); return; }
     const id = await this.live(this.ui.card({
       zh: '要保存嗎？', en: 'Save your robot?', icon: '🤖',
       buttons: [{ id: 'save', zh: '保存', en: 'Save' }, { id: 'drop', zh: '不保存', en: "Don't save" }, { id: 'stay', zh: '繼續改', en: 'Keep editing' }],
     }));
     if (id === 'stay') return;
-    if (id === 'save' && !(await this.save())) return;
+    if (id === 'save') { await this.save(); return; } // saved → leaveHappy goes back by itself; failed → stay
     if (this.alive) this.go('Workshop');
   }
 }

@@ -152,8 +152,10 @@ export const ui = {
   },
 
   toast(zh, en = '', ms = 1500) {
+    // Sits over the prompt bar at the top so it never hides the shape the child is looking at.
     const wrap = el('div', 'absolute inset-x-0 flex justify-center px-4');
-    wrap.style.top = '33%';
+    wrap.style.top = '0.5rem';
+    wrap.style.zIndex = '30';
     wrap.style.pointerEvents = 'none';
     const card = el('div', 'ui-pop bg-gray-900/85 text-white rounded-2xl px-5 py-3 text-center max-w-full');
     card.appendChild(el('div', 'text-2xl md:text-4xl font-bold', zh));

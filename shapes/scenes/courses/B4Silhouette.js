@@ -202,7 +202,7 @@ export class B4Silhouette extends CourseScene {
     this.placeTurnButton();
     this.stage.invalidate();
 
-    this.ui.prompt(`拼出${puzzle.zh}`, `Fill the ${puzzle.en} shape with the pieces`);
+    this.ui.prompt(`用圖塊拼出${puzzle.zh}`, `Fill the ${puzzle.en} shape with the pieces`);
     this.done = new Promise(res => { this.resolveDone = res; });
     await this.live(this.done);
     await this.live(this.pending);                   // a hint may still be showing
@@ -386,7 +386,7 @@ export class B4Silhouette extends CourseScene {
       tween(pc.mesh.material, { emissiveIntensity: 0.35 }, { ms: 500 });
     }
     sparkle(this.stage, this.outline, this.root);
-    const zh = `做好了！${pz.zh}`;
+    const zh = `拼好了！是${pz.zh}`;
     this.ui.toast(zh, `A ${pz.en}!`, 1600);
     voice.say(zh);
     await this.live(wait(450));

@@ -131,8 +131,8 @@ export class A2Stack extends CourseScene {
     this.target = T;
     this.showArrow(T);
     await this.live(this.fillTray(item.tray));
-    if (item.isLast) ui.prompt('最後一個，放在最頂！', 'The last one goes on the very top!');
-    else ui.prompt('哪一個可以疊上去？', 'Which can go on top?');
+    if (item.isLast) ui.prompt('最後一層，放在最頂！', 'The last one goes on the very top!');
+    else ui.prompt('哪一個可以疊在上面？', 'Which can go on top?');
 
     for (;;) {
       const mesh = await this.live(this.pick());
@@ -148,7 +148,7 @@ export class A2Stack extends CourseScene {
         this.active = null;
         break;
       }
-      const reason = !bottomIsFlat(model) ? '底部是圓的' : '頂部不平';
+      const reason = !bottomIsFlat(model) ? '底部是圓的' : '頂部是尖的';
       this.lastWrong = reason;
       await this.live(this.topple(mesh, T));
       await this.live(this.sendBack(mesh));

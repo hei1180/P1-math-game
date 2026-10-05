@@ -12,7 +12,7 @@ import * as Tiles from './tiles.js?v=202610051406';
 // ------------------------------------------------------------------ part names
 export const PART_INFO = {};
 for (const p of Object.values(PARTS)) PART_INFO[p.id] = { zh: p.zh, slot: p.slot };
-const BASIC_ZH = { 'wheels-basic': '普通輪', 'head-basic': '普通頭', 'arms-basic': '普通手', 'paint-blue': '藍色油', none: '沒有' };
+const BASIC_ZH = { 'wheels-basic': '普通輪', 'head-basic': '普通頭', 'arms-basic': '普通手', 'paint-blue': '藍色', none: '沒有' };
 for (const [slot, id] of Object.entries(BASIC_PART)) {
   // 'none' is the basic value of two slots (antenna, badge), so it carries no single slot
   if (!PART_INFO[id]) PART_INFO[id] = { zh: BASIC_ZH[id] || id, slot: id === 'none' ? null : slot };

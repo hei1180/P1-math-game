@@ -129,7 +129,7 @@ export class B3Pegboard extends CourseScene {
     this.refresh();
     this.playBar();
     const any = item.prompt === 'any';
-    this.ui.prompt(any ? `砌任何一個${t.zh}，形狀由你決定` : `砌一個${t.zh}`,
+    this.ui.prompt(any ? `圍出任何一個${t.zh}，形狀由你決定` : `圍出一個${t.zh}`,
       any ? `Make any ${n}-sided shape, you choose` : `Make a ${n}-sided shape`);
     this.busy = false;
     for (;;) {
@@ -169,15 +169,15 @@ export class B3Pegboard extends CourseScene {
     const res = checkPeg({ points: this.seq.map(p => p.slice()), closed: true }, this.target);
     if (res.ok) { await this.celebrate(); return true; }
     if (res.reason === 'wrong-sides') {
-      const zh = `這個有 ${res.sides} 條邊，要 ${this.target} 條`;
+      const zh = `這個圖形有 ${res.sides} 條邊，要有 ${this.target} 條邊`;
       this.ui.toast(zh, `This has ${res.sides} sides, we need ${this.target}`, 2400);
       voice.say(zh);
       await this.live(this.wrong(item, res.sides, t.zh)); // the band stays: Undo and fix
       return false;
     }
     // crossing / flat: not a mistake
-    if (res.reason === 'crossing') this.ui.toast('條橡筋打交叉了', 'The band crosses itself', 1800);
-    else this.ui.toast('要圍出一個形狀', 'Make a closed shape', 1800);
+    if (res.reason === 'crossing') this.ui.toast('橡筋交叉了', 'The band crosses itself', 1800);
+    else this.ui.toast('要圍出一個圖形', 'Make a closed shape', 1800);
     await this.live(wait(1400));
     this.seq = []; this.closed = false; this.refresh();
     return false;

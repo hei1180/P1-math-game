@@ -33,13 +33,13 @@ const ITEM = 0.74;                        // scale of a part on the shelf
 
 const FAIL_SLOT = { 'wheels-flat': 'wheels', 'wheels-sphere': 'wheels', 'wheels-cone': 'wheels', 'body-top': 'body', 'head-rolls': 'head', 'head-wrong': 'head', panel: 'panel' };
 const FAIL_TEXT = {
-  'wheels-flat':   { zh: '輪滾不動！', en: "These wheels can't roll!" },
+  'wheels-flat':   { zh: '輪子滾不動！', en: "These wheels can't roll!" },
   'wheels-sphere': { zh: '球輪四處亂滾！', en: 'Ball wheels roll everywhere!' },
   'wheels-cone':   { zh: '圓錐輪只會轉圈圈！', en: 'Cone wheels go round and round!' },
   'body-top':      { zh: '頭放不穩，滑走了！', en: 'The head slid off!' },
   'head-rolls':    { zh: '頭滾走了！', en: 'The head rolled away!' },
-  'head-wrong':    { zh: '看看路牌，要另一個頭！', en: 'Check the sign: a different head!' },
-  panel:           { zh: '窗口不合，彈走了！', en: 'The window popped out!' },
+  'head-wrong':    { zh: '看看路牌，要換另一個頭！', en: 'Check the sign: a different head!' },
+  panel:           { zh: '窗不合適，彈走了！', en: 'The window popped out!' },
 };
 const HEAD_ICON = {
   apex: { true: '🔺', false: '🔲' }, circleFace: { true: '⭕', false: '🔷' }, allFlat: { true: '🧊', false: '🔵' },
@@ -358,7 +358,7 @@ export class BossScene extends CourseScene {
       panel.append(title, sub);
       const need = CLUE_TEXT[job.head.fact][job.head.value];
       const rows = [
-        { icon: '🛞', zh: '輪要會滾', en: 'Wheels that can roll' },
+        { icon: '🛞', zh: '輪子要會滾動', en: 'Wheels that can roll' },
         { icon: HEAD_ICON[job.head.fact][job.head.value], zh: need.zh, en: `Head: ${need.en}` },
         { svg: polygonIcon(job.panel), zh: `${ANSWER_TEXT[job.panel].zh}窗`, en: `A window with ${ANSWER_TEXT[job.panel].en}` },
       ];
@@ -377,7 +377,7 @@ export class BossScene extends CourseScene {
       go.innerHTML = '<span>開始</span><span class="block text-xs font-normal opacity-80">Start</span>';
       go.addEventListener('click', () => { back.remove(); resolve(); });
       panel.appendChild(go); back.appendChild(panel); host.appendChild(back);
-      voice.say(`任務${NAME[i + 1] || i + 1}。輪要會滾。${need.zh}。${ANSWER_TEXT[job.panel].zh}窗。`);
+      voice.say(`任務${NAME[i + 1] || i + 1}。輪子要會滾動。${need.zh}。${ANSWER_TEXT[job.panel].zh}窗。`);
     });
   }
 
@@ -387,7 +387,7 @@ export class BossScene extends CourseScene {
     this.startJob(job);
     await this.view('build');
     await this.live(this.jobCard(job, i));
-    this.ui.prompt(`🛞 輪要會滾 · ${HEAD_ICON[job.head.fact][job.head.value]} ${CLUE_TEXT[job.head.fact][job.head.value].zh} · 🪟 ${ANSWER_TEXT[job.panel].zh}窗`,
+    this.ui.prompt(`🛞 輪子要會滾動 · ${HEAD_ICON[job.head.fact][job.head.value]} ${CLUE_TEXT[job.head.fact][job.head.value].zh} · 🪟 ${ANSWER_TEXT[job.panel].zh}窗`,
       `Wheels that roll · ${CLUE_TEXT[job.head.fact][job.head.value].en} · ${ANSWER_TEXT[job.panel].en} window`, { speak: false });
     this.canPick = true;
     for (;;) {
@@ -397,8 +397,8 @@ export class BossScene extends CourseScene {
       await this.holdWhileLeaving();
       if (this.busy) continue;
       if (!this.allPicked()) {
-        this.ui.toast('先揀齊四樣！', 'Pick all four parts first!', 1300);
-        voice.say('先揀齊四樣');
+        this.ui.toast('先選齊四樣零件！', 'Pick all four parts first!', 1300);
+        voice.say('先選齊四樣零件');
         for (const s of SLOT_ORDER.filter(s => !this.picked[s])) { const p = this.labels[s].plaque; p.scale.setScalar(1.25); tween(p.scale, { x: 1, y: 1, z: 1 }, { ms: 450, ease: 'outBack' }); }
         continue;
       }

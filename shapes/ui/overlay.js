@@ -194,8 +194,8 @@ export const ui = {
       };
       mk(btns, 'next', '下一關', 'Next', 'bg-green-500 text-white border-4 border-green-600');
       const small = el('div', 'flex gap-2');
-      mk(small, 'retry', '再玩', 'Retry', 'bg-yellow-300 text-yellow-900 border-4 border-yellow-500 flex-1');
-      mk(small, 'map', '工場', 'Map', 'bg-sky-200 text-sky-900 border-4 border-sky-400 flex-1');
+      mk(small, 'retry', '再玩一次', 'Retry', 'bg-yellow-300 text-yellow-900 border-4 border-yellow-500 flex-1');
+      mk(small, 'map', '返回工場', 'Map', 'bg-sky-200 text-sky-900 border-4 border-sky-400 flex-1');
       btns.appendChild(small);
       panel.appendChild(btns);
       modal(panel);

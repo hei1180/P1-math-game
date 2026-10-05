@@ -100,7 +100,7 @@ export class FreeBuildScene extends Scene {
     const i = this.points.findIndex(p => p[0] === x && p[1] === y);
     if (i >= 0 && i === this.points.length - 1) this.points.pop();      // tap the last peg again = take it back
     else if (i >= 0) { sfx.bonk(); return; }                            // already in the band
-    else if (this.points.length >= MAX_PEGS) { sfx.bonk(); this.ui.toast('釘夠了', 'That is enough pegs', 1200); return; }
+    else if (this.points.length >= MAX_PEGS) { sfx.bonk(); this.ui.toast('不可以再加釘子了', 'That is enough pegs', 1200); return; }
     else { this.points.push([x, y]); sfx.tick(this.points.length); }
     this.changed();
   }
@@ -108,10 +108,10 @@ export class FreeBuildScene extends Scene {
   /** What the band makes: sides = countSides, and a reason when it cannot be a shape. */
   pegState() {
     const n = this.points.length;
-    if (n < 3) return { sides: 0, ok: false, zh: n ? '再點釘子' : '點釘子', en: n ? 'Tap more pegs' : 'Tap the pegs' };
+    if (n < 3) return { sides: 0, ok: false, zh: n ? '再按釘子' : '按一下釘子', en: n ? 'Tap more pegs' : 'Tap the pegs' };
     const sides = countSides(this.points), r = checkPeg({ points: this.points, closed: true }, 0);
     if (sides >= 3 && r.reason === 'wrong-sides') return { sides, ok: true, zh: `${sides} 條邊`, en: `${sides} sides` }; // target 0 is never met, so 'wrong-sides' = a real shape
-    return { sides: 0, ok: false, zh: r.reason === 'crossing' ? '交叉了' : '再加釘子', en: r.reason === 'crossing' ? 'It crosses itself' : 'Add more pegs' };
+    return { sides: 0, ok: false, zh: r.reason === 'crossing' ? '橡筋交叉了' : '再加釘子', en: r.reason === 'crossing' ? 'It crosses itself' : 'Add more pegs' };
   }
 
   paintPeg() {
@@ -220,7 +220,7 @@ export class FreeBuildScene extends Scene {
     const a = this.aim;
     this.hideGhost();
     if (!a) return;
-    if (this.placed.length >= MAX_PIECES) { sfx.bonk(); this.ui.toast('圖塊夠了', 'That is enough pieces', 1200); return; }
+    if (this.placed.length >= MAX_PIECES) { sfx.bonk(); this.ui.toast('不可以再放圖塊了', 'That is enough pieces', 1200); return; }
     if (!a.ok) { sfx.bonk(); this.flashNo(a.x, a.y); return; }
     const item = { p: this.tool, x: a.x, y: a.y, r: this.r, mesh: null };
     this.mountItem(item, true);
@@ -328,11 +328,11 @@ export class FreeBuildScene extends Scene {
     tools.append(
       this.toolBtn('釘板', 'Pegs', '📌', () => this.switchMode('peg'), this.mode === 'peg'),
       this.toolBtn('圖塊', 'Tiles', '🧩', () => this.switchMode('tiles'), this.mode === 'tiles'),
-      this.toolBtn('還原', 'Undo', '↩', () => this.undo()));
+      this.toolBtn('上一步', 'Undo', '↩', () => this.undo()));
     if (this.mode === 'tiles') {
       tools.append(
         this.toolBtn('轉一轉', 'Turn', '↻', () => { this.r = (this.r + 1) % 4; sfx.tick(2); if (this.tool === 'erase') this.tool = 'sq'; this.renderTools(); this.paintPrompt(); }),
-        this.toolBtn('擦走', 'Erase', '🧽', () => { this.tool = this.tool === 'erase' ? 'sq' : 'erase'; sfx.tick(1); this.renderTools(); this.paintPrompt(); }, this.tool === 'erase'));
+        this.toolBtn('擦掉', 'Erase', '🧽', () => { this.tool = this.tool === 'erase' ? 'sq' : 'erase'; sfx.tick(1); this.renderTools(); this.paintPrompt(); }, this.tool === 'erase'));
     }
     tools.append(this.toolBtn('清除', 'Clear', '🗑', () => this.clear()));
     if (this.mode === 'tiles') {
@@ -354,8 +354,8 @@ export class FreeBuildScene extends Scene {
   paintPrompt(first) {
     if (this.mode === 'tiles' && this.side) { this.ui.hidePrompt(); return; } // a landscape phone has no room for the hint
     if (this.mode === 'peg') { const s = this.pegState(); this.ui.prompt(s.zh, s.en, { speak: false }); return; }
-    if (this.tool === 'erase') this.ui.prompt('點圖塊擦走', 'Tap a piece to take it away', { speak: false });
-    else this.ui.prompt(first ? '自由創作' : '拖圖塊上去', first ? 'Free build: drag a piece onto the canvas' : 'Drag a piece onto the canvas', { speak: first });
+    if (this.tool === 'erase') this.ui.prompt('按圖塊把它擦掉', 'Tap a piece to take it away', { speak: false });
+    else this.ui.prompt(first ? '自由創作' : '把圖塊拖到板上', first ? 'Free build: drag a piece onto the canvas' : 'Drag a piece onto the canvas', { speak: first });
   }
 
   changed(first = false) {
@@ -416,7 +416,7 @@ export class FreeBuildScene extends Scene {
     const c = this.creation();
     if (!c) {
       sfx.bonk();
-      if (this.mode === 'peg') this.ui.toast('先做一個形狀', 'Make a shape first', 1500); else this.ui.toast('先放一些圖塊', 'Put some pieces down first', 1500);
+      if (this.mode === 'peg') this.ui.toast('先圍一個圖形', 'Make a shape first', 1500); else this.ui.toast('先放一些圖塊', 'Put some pieces down first', 1500);
       return false;
     }
     const key = JSON.stringify(c);
@@ -428,8 +428,8 @@ export class FreeBuildScene extends Scene {
       }));
       if (id !== 'save') return false;
     }
-    try { await this.live(this.bridge.saveCreation(c)); } catch (e) { console.error('saveCreation failed', e); this.ui.toast('未能儲存', 'Not saved', 1800); return false; }
-    if (!this.bridge.creations.includes(c)) { this.ui.toast('未能儲存', 'Not saved', 1800); return false; } // the bridge refused it
+    try { await this.live(this.bridge.saveCreation(c)); } catch (e) { console.error('saveCreation failed', e); this.ui.toast('未能保存', 'Not saved', 1800); return false; }
+    if (!this.bridge.creations.includes(c)) { this.ui.toast('未能保存', 'Not saved', 1800); return false; } // the bridge refused it
     this.savedKey = key;
     sfx.fanfare();
     confetti(this.stage, new THREE.Vector3(0, 2, 0), 40, this.root);

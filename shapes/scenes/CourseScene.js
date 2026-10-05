@@ -138,7 +138,7 @@ export class CourseScene extends Scene {
     } catch (e) {
       console.error('complete failed', e);
       if (e instanceof TypeError || e instanceof ReferenceError) throw e; // a bug, not a save problem
-      ui.toast('未能儲存', 'Progress not saved', 2000);
+      ui.toast('未能保存', 'Progress not saved', 2000);
     }
 
     if (r.part) await this.live(this.flyPart(key));
@@ -191,7 +191,7 @@ export class CourseScene extends Scene {
     const was = this.input.enabled;
     this.input.enabled = false; // the card's backdrop blocks the canvas anyway; this also stops drags in flight
     const id = await this.ui.card({
-      zh: '離開這關？', en: 'Leave?', icon: '🚪',
+      zh: '要離開這一關嗎？', en: 'Leave?', icon: '🚪',
       buttons: [{ id: 'leave', zh: '離開', en: 'Leave' }, { id: 'stay', zh: '繼續', en: 'Keep playing' }],
     });
     this.input.enabled = was; // the Input object is shared by all scenes (exit() also re-enables it)

@@ -5,8 +5,8 @@ export const GAME_LABEL = { market: '🍎 Math Market', numbers: '🔢 Number Sh
 const MARKET = { easy: 'Market · Easy 1-10', medium: 'Market · Medium 1-20', hard: 'Market · Hard' };
 const NUMBERS = { num1: 'Number Shop Lv1 比較', num2: 'Number Shop Lv2 奇偶', num3: 'Number Shop Lv3 數線', num4: 'Number Shop Lv4 奇偶數線' };
 const SHAPES = {
-  shapesA1: 'A1 會滾嗎？', shapesA2: 'A2 疊高塔', shapesA3: 'A3 摸摸袋', shapesA4: 'A4 生活中的立體',
-  shapesB1: 'B1 直線曲線', shapesB2: 'B2 吃板機', shapesB3: 'B3 釘板', shapesB4: 'B4 拼砌',
+  shapesA1: 'A1 滾動測試', shapesA2: 'A2 疊高塔', shapesA3: 'A3 神秘袋', shapesA4: 'A4 身邊的立體',
+  shapesB1: 'B1 直線和曲線', shapesB2: 'B2 圖形大胃王', shapesB3: 'B3 釘板圍圖形', shapesB4: 'B4 拼砌圖形',
   shapesBoss: '測試跑道', shapes3d: 'Rush 立體', shapes2d: 'Rush 平面',
 };
 

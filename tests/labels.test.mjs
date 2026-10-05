@@ -30,8 +30,8 @@ test('Robot Workshop labels', () => {
   assert.equal(GAME_LABEL.shapes, '🤖 Robot Workshop');
   for (const m of ['shapesA1', 'shapesB4', 'shapesBoss', 'shapes3d', 'shapes2d']) assert.equal(gameOf(m), 'shapes', m);
   assert.equal(gameOf('shapesC1'), 'unknown');
-  assert.equal(modeLabel('shapesA1'), 'Robot Workshop A1 會滾嗎？');
-  assert.equal(modeLabel('shapesB3'), 'Robot Workshop B3 釘板');
+  assert.equal(modeLabel('shapesA1'), 'Robot Workshop A1 滾動測試');
+  assert.equal(modeLabel('shapesB3'), 'Robot Workshop B3 釘板圍圖形');
   assert.equal(modeLabel('shapesBoss'), 'Robot Workshop 測試跑道');
   assert.equal(modeLabel('shapes3d'), 'Robot Workshop Rush 立體');
   assert.equal(modeLabel('shapes2d'), 'Robot Workshop Rush 平面');

@@ -57,7 +57,7 @@ export const FACT_KEYS = ['rolls', 'apex', 'allFlat', 'circleFace'];
 export const CLUE_TEXT = {
   rolls:      { true: { zh: '我會滾', en: 'I can roll' },               false: { zh: '我不會滾', en: "I can't roll" } },
   apex:       { true: { zh: '我有尖頂', en: 'I have a pointy top' },     false: { zh: '我沒有尖頂', en: 'No pointy top' } },
-  allFlat:    { true: { zh: '我全部面都是平的', en: 'All my faces are flat' }, false: { zh: '我有彎彎的面', en: 'I have a curved face' } },
+  allFlat:    { true: { zh: '我所有的面都是平的', en: 'All my faces are flat' }, false: { zh: '我有彎彎的面', en: 'I have a curved face' } },
   circleFace: { true: { zh: '我有圓形的面', en: 'I have a circle face' }, false: { zh: '我沒有圓形的面', en: 'No circle face' } },
 };
 export const candidatesFor = clues => FAMILIES.filter(f => clues.every(c => FACTS[f][c.fact] === c.value));
@@ -77,7 +77,7 @@ export function clueSequence(family, rng = Math.random) {
 /** Everyday objects for A4 / Rush 3-D (built from primitives in shapes/models/objects.js, no photos). */
 export const OBJECTS = [
   { id: 'can',         zh: '汽水罐',     en: 'drink can',     family: 'cylinder' },
-  { id: 'drum',        zh: '鼓',         en: 'drum',          family: 'cylinder' },
+  { id: 'drum',        zh: '小鼓',         en: 'drum',          family: 'cylinder' },
   { id: 'ball',        zh: '皮球',       en: 'ball',          family: 'sphere' },
   { id: 'globe',       zh: '地球儀',     en: 'globe',         family: 'sphere' },
   { id: 'partyHat',    zh: '派對帽',     en: 'party hat',     family: 'cone' },
@@ -265,18 +265,18 @@ export function genBoss(rng = Math.random) {
 
 // ---------- Courses ----------
 export const COURSES = [
-  { key: 'A1', zone: 'a', zh: '會滾嗎？', en: 'Roll or not' },
+  { key: 'A1', zone: 'a', zh: '滾動測試', en: 'Roll or not' },
   { key: 'A2', zone: 'a', zh: '疊高塔', en: 'Stack tower' },
-  { key: 'A3', zone: 'a', zh: '摸摸袋', en: 'Mystery bag' },
-  { key: 'A4', zone: 'a', zh: '生活中的立體', en: 'Everyday solids' },
-  { key: 'B1', zone: 'b', zh: '直線曲線', en: 'Straight or curved' },
-  { key: 'B2', zone: 'b', zh: '吃板機', en: 'Panel Muncher' },
-  { key: 'B3', zone: 'b', zh: '釘板', en: 'Pegboard' },
-  { key: 'B4', zone: 'b', zh: '拼砌', en: 'Silhouette' },
+  { key: 'A3', zone: 'a', zh: '神秘袋', en: 'Mystery bag' },
+  { key: 'A4', zone: 'a', zh: '身邊的立體', en: 'Everyday solids' },
+  { key: 'B1', zone: 'b', zh: '直線和曲線', en: 'Straight or curved' },
+  { key: 'B2', zone: 'b', zh: '圖形大胃王', en: 'Panel Muncher' },
+  { key: 'B3', zone: 'b', zh: '釘板圍圖形', en: 'Pegboard' },
+  { key: 'B4', zone: 'b', zh: '拼砌圖形', en: 'Silhouette' },
 ];
 export const ZONES = {
-  a: { zh: '立體車房', en: 'Solid Garage', keys: ['A1', 'A2', 'A3', 'A4'], rush: 'shapes3d' },
-  b: { zh: '平面工作枱', en: 'Panel Bench', keys: ['B1', 'B2', 'B3', 'B4'], rush: 'shapes2d' },
+  a: { zh: '立體圖形區', en: 'Solid Garage', keys: ['A1', 'A2', 'A3', 'A4'], rush: 'shapes3d' },
+  b: { zh: '平面圖形區', en: 'Panel Bench', keys: ['B1', 'B2', 'B3', 'B4'], rush: 'shapes2d' },
 };
 export const courseByKey = key => COURSES.find(c => c.key === key);
 export const LINES = [
@@ -353,14 +353,14 @@ export function genRush2d(rng = Math.random) {
 export const starsFor = mistakes => (mistakes === 0 ? 3 : mistakes <= 2 ? 2 : 1);
 export const PARTS = {
   A1: { id: 'wheels-star',    slot: 'wheels',  zh: '星星輪' },
-  A2: { id: 'arms-spring',    slot: 'arms',    zh: '彈弓手' },
+  A2: { id: 'arms-spring',    slot: 'arms',    zh: '彈簧手' },
   A3: { id: 'head-tv',        slot: 'head',    zh: '電視頭' },
-  A4: { id: 'paint-rainbow',  slot: 'paint',   zh: '彩虹油' },
+  A4: { id: 'paint-rainbow',  slot: 'paint',   zh: '彩虹色' },
   B1: { id: 'antenna-zigzag', slot: 'antenna', zh: '閃電天線' },
   B2: { id: 'head-dome',      slot: 'head',    zh: '圓頂頭' },
   B3: { id: 'arms-claw',      slot: 'arms',    zh: '夾夾手' },
   B4: { id: 'wheels-flower',  slot: 'wheels',  zh: '花花輪' },
-  boss: { id: 'badge-gold',   slot: 'badge',   zh: '金章' },
+  boss: { id: 'badge-gold',   slot: 'badge',   zh: '金獎章' },
 };
 export const SLOTS = ['wheels', 'head', 'arms', 'antenna', 'paint', 'badge'];
 export const BASIC_PART = { wheels: 'wheels-basic', head: 'head-basic', arms: 'arms-basic', antenna: 'none', paint: 'paint-blue', badge: 'none' };

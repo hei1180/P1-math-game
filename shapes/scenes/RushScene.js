@@ -34,8 +34,8 @@ const PLANE = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0); // drag plane z = 
 
 const MOUTH = { 3: 'tri-eq', 4: 'quad-square', 5: 'pent-reg', 6: 'hex-reg', circle: 'circle' };
 const TEXT = {
-  a: { zh: '放進對的箱子！', en: 'Put each one in the right bin!' },
-  b: { zh: '放進對的口！', en: 'Feed each tile to the right mouth!' },
+  a: { zh: '放進正確的箱子！', en: 'Put each one in the right bin!' },
+  b: { zh: '餵進正確的嘴巴！', en: 'Feed each tile to the right mouth!' },
 };
 
 const lam = c => new THREE.MeshLambertMaterial({ color: c });

@@ -1,4 +1,4 @@
-// B2 吃板機 Panel Muncher (1S2: name a flat shape by counting its sides).
+// B2 圖形大胃王 Panel Muncher (1S2: name a flat shape by counting its sides).
 // A friendly machine has five mouths: 3, 4, 5, 6 sides and 圓形. Each tile (regular, irregular, dented, turned) slides onto the bench;
 // the child can tap it to light up its sides one by one with spoken numbers, then drags it into the right mouth.
 // Mouths are labelled with text + side-count dots (never a colour code). Grading: the item's answer from genCourse (tileAnswer).
@@ -173,7 +173,7 @@ export class B2Muncher extends CourseScene {
   // ------------------------------------------------------------------ one item
   async playItem(item, i) {
     const { ui } = this;
-    ui.prompt('它有幾多條邊？餵給對的嘴巴', 'How many sides? Feed the right mouth.', { speak: i === 0 });
+    ui.prompt('這個圖形有多少條邊？餵進正確的嘴巴。', 'How many sides? Feed the right mouth.', { speak: i === 0 });
     await this.slideIn(item);
     for (;;) {
       this.arm(true);
@@ -326,7 +326,7 @@ export class B2Muncher extends CourseScene {
       }
       sfx.tick(0); this.stage.invalidate();
       this.ui.toast('圓形', 'A circle', 1800);
-      await this.live(Promise.all([voice.say('它是圓形'), wait(900)]));
+      await this.live(Promise.all([voice.say('這是圓形'), wait(900)]));
       return;
     }
 

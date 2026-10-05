@@ -249,7 +249,7 @@ export class B1Lines extends CourseScene {
   async playSort(item) {
     const { ui } = this;
     const info = LINES.find(l => l.id === item.line);
-    ui.prompt('它是直線還是曲線？放進對的籃子', 'Straight or curved? Put it in the right basket.', { speak: this.index === 0 });
+    ui.prompt('這是直線還是曲線？放進正確的籃子。', 'Straight or curved? Put it in the right basket.', { speak: this.index === 0 });
     const holder = this.spawnWire(item.line);
     sfx.pop();
     await this.tw(holder.position, { y: this.wireHome.y }, { ms: 450, ease: 'outBounce' });
@@ -307,8 +307,8 @@ export class B1Lines extends CourseScene {
     sfx.zap();
     await this.tw(beam.inner.scale, { y: beam.len }, { ms: 350 });
     const straight = item.answer === 'straight';
-    this.ui.toast(straight ? '直線直直的，不會彎' : '曲線是彎彎的，不是直的', straight ? 'A straight line does not bend.' : 'A curved line bends away from the straight line.', 2600);
-    await Promise.all([this.live(voice.say(straight ? '直線直直的，不會彎' : '曲線是彎彎的，不是直的')), this.sleep(1800)]);
+    this.ui.toast(straight ? '直線是直的，沒有彎曲' : '曲線是彎彎的', straight ? 'A straight line does not bend.' : 'A curved line bends away from the straight line.', 2600);
+    await Promise.all([this.live(voice.say(straight ? '直線是直的，沒有彎曲' : '曲線是彎彎的')), this.sleep(1800)]);
     this.discard(beam.pivot);
   }
 
@@ -393,7 +393,7 @@ export class B1Lines extends CourseScene {
     const { ui } = this;
     await this.ensureLaser();
     this.fit(400); // leave room for the buttons
-    ui.prompt('有幾多條直線可以連接這兩點？', 'How many straight lines can join these two dots?');
+    ui.prompt('可以畫多少條直線連接這兩點？', 'How many straight lines can join these two dots?');
     const opts = shuffle([{ id: 'one', zh: '1 條', en: 'One' }, { id: 'many', zh: '很多條', en: 'Many' }], this.bridge.rng);
     for (;;) {
       const id = await this.live(ui.choices(opts));
@@ -416,17 +416,17 @@ export class B1Lines extends CourseScene {
     beam.pivot.rotation.y = 0.4;
     sfx.zap();
     await this.tw(beam.inner.scale, { y: beam.len }, { ms: 300 });
-    this.ui.toast('只有一條直線', 'Only one! The new line lands right on the first.', 2600);
+    this.ui.toast('只可以畫一條直線', 'Only one! The new line lands right on the first.', 2600);
     sfx.boing();
     await this.tw(beam.pivot.rotation, { y: 0 }, { ms: 450, ease: 'outBack' });
-    await Promise.all([this.live(voice.say('只有一條直線，第二條剛好疊在第一條上')), this.sleep(1500)]);
+    await Promise.all([this.live(voice.say('只可以畫一條直線，第二條會和第一條重疊')), this.sleep(1500)]);
     this.discard(beam.pivot);
   }
 
   /** Many curves go through the same two points. */
   async curveDemo() {
     const [a, b] = this.dotPos;
-    const say = this.ui.prompt('但曲線可以有很多條！', 'But many curves can!');
+    const say = this.ui.prompt('但是曲線可以畫很多條！', 'But many curves can!');
     for (const bend of [1.7, -1.3, 0.9, -0.7]) {
       let col = toyColor(this.bridge.rng);
       if (col === 0xef4444) col = 0x3b82f6; // not the laser's red

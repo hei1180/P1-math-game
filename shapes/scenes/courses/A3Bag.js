@@ -1,4 +1,4 @@
-// A3 摸摸袋 Mystery bag. A solid hides in a cloth bag. Clues come out of the bag one by one (icon + words + voice);
+// A3 神秘袋 Mystery bag. A solid hides in a cloth bag. Clues come out of the bag one by one (icon + words + voice);
 // the child picks the matching friend (tap the 3-D friend, or the big buttons at the bottom).
 // Grading: only shapes-logic (candidatesFor over the item's clues). A wrong friend greys out and the next clue shows.
 // After the 2nd wrong pick on a bag (hint): every remaining clue shows at once and every friend the clues rule out greys out.
@@ -174,7 +174,7 @@ export class A3Bag extends CourseScene {
     const { ui } = this;
     this.cur = { item, shown: 0, out: new Set(), resolve: null, solid: null };
     await this.live(this.resetFriends());
-    if (i === 0) ui.prompt('袋入面是哪位朋友？聽聽線索', 'Who is in the bag? Listen to the clues.', { speak: false });
+    if (i === 0) ui.prompt('袋裏面是哪一位朋友？聽聽線索', 'Who is in the bag? Listen to the clues.', { speak: false });
     else ui.hidePrompt();
 
     // a new hidden solid goes into the bag (any model of the family)
@@ -192,7 +192,7 @@ export class A3Bag extends CourseScene {
       await this.live(tween(this.bag.scale, { y: BAG.scale * 0.8 }, { ms: 90 }));
       await this.live(tween(this.bag.scale, { y: BAG.scale }, { ms: 260, ease: 'outBack' }));
     }
-    if (i === 0) { await this.live(voice.say('袋入面是哪位朋友？聽聽線索。')); ui.hidePrompt(); } // the bubble is the prompt from here on
+    if (i === 0) { await this.live(voice.say('袋裏面是哪一位朋友？聽聽線索。')); ui.hidePrompt(); } // the bubble is the prompt from here on
     await this.live(this.revealNext());
 
     for (;;) {

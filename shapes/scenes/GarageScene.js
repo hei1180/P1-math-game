@@ -15,7 +15,7 @@ const SLOT_INFO = {
   head:    { zh: '頭',   en: 'Head',    icon: '🤖' },
   arms:    { zh: '手',   en: 'Arms',    icon: '💪' },
   antenna: { zh: '天線', en: 'Antenna', icon: '📡' },
-  paint:   { zh: '油漆', en: 'Paint',   icon: '🎨' },
+  paint:   { zh: '顏色', en: 'Paint',   icon: '🎨' },
   badge:   { zh: '徽章', en: 'Badge',   icon: '🏅' },
 };
 const NAME_TAB = { zh: '名字', en: 'Name', icon: '🏷️' };
@@ -209,7 +209,7 @@ export class GarageScene extends Scene {
       if (own) b.appendChild(E('div', 'font-size:11px;font-weight:400;opacity:.7;line-height:1.1', PART_EN[id] || ''));
       else {
         const k = this.partKey(id), what = k === 'boss' ? '測試跑道' : k;
-        b.appendChild(E('div', 'font-size:13px;line-height:1.15;color:#b45309', `完成 ${what} 得到`));
+        b.appendChild(E('div', 'font-size:13px;line-height:1.15;color:#b45309', `完成 ${what} 可得到`));
         b.appendChild(E('div', 'font-size:10px;font-weight:400;line-height:1.1;opacity:.75', `Finish ${k === 'boss' ? 'the Test Track' : k} to get it`));
       }
       b.setAttribute('aria-label', own ? `${zh} ${PART_EN[id] || ''}` : `${zh} locked`);
@@ -282,7 +282,7 @@ export class GarageScene extends Scene {
   async doSave() {
     const snapshot = JSON.stringify(this.cfg); // what is being saved; later edits made while it saves stay unsaved
     this.saveBtn.style.opacity = '0.6';
-    try { await this.live(this.bridge.saveRobot({ ...this.cfg })); } catch (e) { console.error('saveRobot failed', e); this.ui.toast('未能儲存', 'Not saved', 1800); return false; }
+    try { await this.live(this.bridge.saveRobot({ ...this.cfg })); } catch (e) { console.error('saveRobot failed', e); this.ui.toast('未能保存', 'Not saved', 1800); return false; }
     this.savedJson = snapshot;
     this.celebrate().catch(console.error);
     return true;

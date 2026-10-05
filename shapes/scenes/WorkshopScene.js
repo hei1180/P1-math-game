@@ -36,9 +36,9 @@ const ZONE_BANNER = {
 };
 
 const LOCK = {
-  teacher: ['老師未開放', "Teacher hasn't opened this yet"],
+  teacher: ['老師還未開放', "Teacher hasn't opened this yet"],
   prev: ['先完成上一關', 'Finish the previous course first'],
-  clear: ['完成全部關卡才可開始', 'Clear every course first'],
+  clear: ['完成所有關卡才可以開始', 'Clear every course first'],
 };
 
 /** Where a station leads: [scene key, start data]. */
@@ -515,9 +515,9 @@ export class WorkshopScene extends Scene {
     const zh = document.createElement('div'), en = document.createElement('div');
     zh.className = 'text-lg font-bold'; en.className = 'text-xs text-gray-500';
     if (name) { zh.textContent = `🤖 ${robotName(name)}`; en.textContent = '我的機械人 My Robot'; }
-    else { zh.textContent = '🤖 幫我改名'; en.textContent = 'Name me'; }
+    else { zh.textContent = '🤖 幫我起名字'; en.textContent = 'Name me'; }
     chip.append(zh, en);
-    chip.setAttribute('aria-label', name ? `${robotName(name)} 我的機械人 My Robot` : '幫我改名 Name me');
+    chip.setAttribute('aria-label', name ? `${robotName(name)} 我的機械人 My Robot` : '幫我起名字 Name me');
     const wrap = document.createElement('div');
     wrap.className = 'absolute inset-0'; wrap.style.pointerEvents = 'none';
     wrap.append(trophy, home, chip);
@@ -639,7 +639,7 @@ export class WorkshopScene extends Scene {
     s.wellDoneShown = true;
     const was = this.busy;
     this.busy = true;
-    try { voice.say('今日做得好！'); } catch (e) { /* ignore */ }
+    try { voice.say('今天做得很好！'); } catch (e) { /* ignore */ }
     let on = true;
     const robot = this.robot.userData;
     const dancer = (async () => {
@@ -648,7 +648,7 @@ export class WorkshopScene extends Scene {
       while (on && this.alive) await this.live(robot.dance({ on: () => sfx.tick(0) }));
     })();
     const id = await this.live(this.ui.card({
-      zh: '今日做得好！', en: 'Great job today!', icon: '🎉',
+      zh: '今天做得很好！', en: 'Great job today!', icon: '🎉',
       buttons: [{ id: 'go', zh: '繼續', en: 'Continue' }, { id: 'done', zh: '休息', en: 'Done' }],
     }));
     on = false;

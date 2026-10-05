@@ -326,7 +326,7 @@ export class GalleryScene extends Scene {
     this.placeUi();
     this.ui.back(() => this.closeEntry());
     if (entry.creations.length) this.ui.prompt(entry.own ? '我的作品' : '作品', entry.own ? 'My work' : 'Creations', { speak: false });
-    else this.ui.prompt('還未有創作', 'No creations yet', { speak: false });
+    else this.ui.prompt('還未有作品', 'No creations yet', { speak: false });
     this.frameDetail(500);
     this.stage.invalidate();
   }

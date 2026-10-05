@@ -177,7 +177,7 @@ export class A1Roll extends CourseScene {
 
   async playItem(item) {
     const { ui, stage } = this;
-    const label = FAMILY[familyOf(item.model)].zh + (item.pose === 'side' ? '(側放)' : '');
+    const label = FAMILY[familyOf(item.model)].zh + (item.pose === 'side' ? '（橫放）' : '');
     const rig = this.rig = new Rig(item.model, item.pose, toyColor(this.bridge.rng));
     this.root.add(rig.mover);
     const style = rollStyle(item.model, item.pose);
@@ -189,7 +189,7 @@ export class A1Roll extends CourseScene {
     rig.place(path, 0);
     await this.live(this.dropIn(rig, path));
 
-    ui.prompt('它會滾下去嗎？', 'Will it roll?');
+    ui.prompt('這個立體會滾下斜台嗎？', 'Will it roll?');
     const choices = [
       { id: 'yes', zh: '會滾', en: 'It rolls', icon: '🛞' },
       { id: 'no', zh: '不會滾', en: "It doesn't roll", icon: '🧱' },
@@ -294,9 +294,9 @@ export class A1Roll extends CourseScene {
   async hint(item) {
     const rig = this.rig;
     let zh, en;
-    if (rolls(item.model, item.pose)) { zh = '我有彎彎的面，所以會滾'; en = 'I have a curved surface, so I roll'; }
-    else if (['cylinder', 'cone'].includes(familyOf(item.model))) { zh = '我平放時不會滾，側放時就會滾'; en = "I don't roll standing up, but I roll on my side"; }
-    else { zh = '我的面都是平的，所以不會滾'; en = 'All my faces are flat, so I do not roll'; }
+    if (rolls(item.model, item.pose)) { zh = '我有彎彎的面，所以會滾動'; en = 'I have a curved surface, so I roll'; }
+    else if (['cylinder', 'cone'].includes(familyOf(item.model))) { zh = '我直立時不會滾動，橫放時就會滾動'; en = "I don't roll standing up, but I roll on my side"; }
+    else { zh = '我所有的面都是平的，所以不會滾動'; en = 'All my faces are flat, so I do not roll'; }
     if (rig) setMood(rig.solid, 'happy');
     this.ui.toast(zh, en, 3200);
     const hop = rig && !motion.less ? this.hopOnce(rig) : Promise.resolve();

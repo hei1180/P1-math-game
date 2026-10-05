@@ -290,7 +290,7 @@ export class A4Everyday extends CourseScene {
     // prompts: name it and ask for a spin, then say what to do (the child may already be playing)
     const asked = (async () => {
       await this.live(Promise.all([
-        ui.prompt(`這是${o.zh}。轉一轉，看清楚`, `A ${o.en}. Spin it and look.`),
+        ui.prompt(`這是${o.zh}。轉一轉，看清楚。`, `A ${o.en}. Spin it and look.`),
         wait(2600),
       ]));
       if (token !== this.token || !this.pickResolve) return;

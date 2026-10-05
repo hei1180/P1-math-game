@@ -3,15 +3,15 @@
 // Grading: only shapes-logic (candidatesFor over the item's clues). A wrong friend greys out and the next clue shows.
 // After the 2nd wrong pick on a bag (hint): every remaining clue shows at once and every friend the clues rule out greys out.
 import * as THREE from 'three';
-import { CourseScene } from '../CourseScene.js?v=202610051406';
-import { tween, wait, motion } from '../../engine/tween.js?v=202610051406';
-import { blobShadow } from '../../engine/stage.js?v=202610051406';
-import { voice } from '../../engine/voice.js?v=202610051406';
-import { SCENE, toyColor } from '../../theme.js?v=202610051406';
-import { sfx } from '../../sfx.js?v=202610051406';
-import { makeSolid, setMood, blink } from '../../models/solids.js?v=202610051406';
-import { sparkle } from '../../fx3d.js?v=202610051406';
-import { FAMILIES, FAMILY, MODEL_IDS, familyOf, CLUE_TEXT, candidatesFor, shuffle, pick } from '../../../shapes-logic.js?v=202610051406';
+import { CourseScene } from '../CourseScene.js?v=202610051459';
+import { tween, wait, motion } from '../../engine/tween.js?v=202610051459';
+import { blobShadow } from '../../engine/stage.js?v=202610051459';
+import { voice } from '../../engine/voice.js?v=202610051459';
+import { SCENE, toyColor } from '../../theme.js?v=202610051459';
+import { sfx } from '../../sfx.js?v=202610051459';
+import { makeSolid, setMood, blink } from '../../models/solids.js?v=202610051459';
+import { sparkle } from '../../fx3d.js?v=202610051459';
+import { FAMILIES, FAMILY, MODEL_IDS, familyOf, CLUE_TEXT, candidatesFor, shuffle, pick } from '../../../shapes-logic.js?v=202610051459';
 
 // The friend that stands in the row for each family (a solid's twin comes out of the bag in any model of its family).
 const REP = { prism: 'cube', cylinder: 'cylinder', pyramid: 'sqPyramid', cone: 'cone', sphere: 'sphere' };

@@ -4,20 +4,20 @@
 // goes back to its bay, the faulty part glows, and after the 2nd failed drive the right choice glows in that row.
 // After 3 good builds: trophy, fanfare, fireworks (Less motion: just the trophy), then the base class's end panel.
 import * as THREE from 'three';
-import { CourseScene } from './CourseScene.js?v=202610051406';
-import { tween, wait, motion } from '../engine/tween.js?v=202610051406';
-import { disposeTree } from '../engine/stage.js?v=202610051406';
-import { sfx } from '../sfx.js?v=202610051406';
-import { voice } from '../engine/voice.js?v=202610051406';
-import { FONT, SCENE, TOY_COLORS, toyColor } from '../theme.js?v=202610051406';
-import { confetti, sparkle, puff } from '../fx3d.js?v=202610051406';
-import { makeSolid } from '../models/solids.js?v=202610051406';
-import { makeTile } from '../models/tiles.js?v=202610051406';
-import { makeBuildRobot } from '../models/robot.js?v=202610051406';
+import { CourseScene } from './CourseScene.js?v=202610051459';
+import { tween, wait, motion } from '../engine/tween.js?v=202610051459';
+import { disposeTree } from '../engine/stage.js?v=202610051459';
+import { sfx } from '../sfx.js?v=202610051459';
+import { voice } from '../engine/voice.js?v=202610051459';
+import { FONT, SCENE, TOY_COLORS, toyColor } from '../theme.js?v=202610051459';
+import { confetti, sparkle, puff } from '../fx3d.js?v=202610051459';
+import { makeSolid } from '../models/solids.js?v=202610051459';
+import { makeTile } from '../models/tiles.js?v=202610051459';
+import { makeBuildRobot } from '../models/robot.js?v=202610051459';
 import {
   WHEEL_CHOICES, BODY_CHOICES, HEAD_CHOICES, checkBuild, familyOf, bottomIsFlat, FACTS, FAMILY, CLUE_TEXT, ANSWER_TEXT,
   tileAnswer, templateById, shuffle, lcg,
-} from '../../shapes-logic.js?v=202610051406';
+} from '../../shapes-logic.js?v=202610051459';
 
 // ---- world layout (x right, y up, z towards the camera). The robot drives along +x on the lane. ----
 const BAY_X = -3.9, LANE_Z = 0.6, FINISH_X = BAY_X + 8.3;

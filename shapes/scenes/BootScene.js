@@ -1,4 +1,4 @@
-import { Scene } from '../engine/scenes.js?v=202610051406';
+import { Scene } from '../engine/scenes.js?v=202610051459';
 
 const wait = ms => new Promise(r => setTimeout(r, ms));
 

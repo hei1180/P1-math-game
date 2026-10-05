@@ -2,9 +2,9 @@
 // from stage.onUpdate, keeps rendering awake while it runs, and removes + disposes itself at the end,
 // or as soon as it is no longer attached to stage.scene (e.g. its scene's root was removed because the scene was left).
 import * as THREE from 'three';
-import { TOY_COLORS } from './theme.js?v=202610051406';
-import { motion } from './engine/tween.js?v=202610051406';
-import { disposeTree } from './engine/stage.js?v=202610051406';
+import { TOY_COLORS } from './theme.js?v=202610051459';
+import { motion } from './engine/tween.js?v=202610051459';
+import { disposeTree } from './engine/stage.js?v=202610051459';
 
 let seq = 0;
 

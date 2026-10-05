@@ -2,7 +2,7 @@
 // Every object sits in a 1x1x1 box centred on the origin (the globe's little stand hangs below that box)
 // and is clearly one family's shape: its main body is the cylinder / sphere / cone / prism / pyramid.
 import * as THREE from 'three';
-import { OBJECTS } from '../../shapes-logic.js?v=202610051406';
+import { OBJECTS } from '../../shapes-logic.js?v=202610051459';
 
 // ---- shared caches: geometries, materials and textures are built once and never disposed (userData.shared) ----
 const cache = new Map();

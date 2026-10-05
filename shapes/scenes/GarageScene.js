@@ -4,13 +4,13 @@
 // from ROBOT_NAMES plus a number with − / + buttons (no keyboard, no free text anywhere).
 // 保存 Save → bridge.saveRobot, a short dance, then back to the Workshop by itself.
 import * as THREE from 'three';
-import { Scene } from '../engine/scenes.js?v=202610051406';
-import { wait, motion } from '../engine/tween.js?v=202610051406';
-import { SLOTS, BASIC_PART, PARTS, LOOKS, LOOK_INFO, COURSES, courseByKey, ROBOT_NAMES, robotName, ownedItems, unseenItems } from '../../shapes-logic.js?v=202610051406';
-import { makeRobot, PART_INFO, faceIcon, paintCss } from '../models/robot.js?v=202610051406';
-import { SCENE, FONT } from '../theme.js?v=202610051406';
-import { sfx } from '../sfx.js?v=202610051406';
-import { confetti } from '../fx3d.js?v=202610051406';
+import { Scene } from '../engine/scenes.js?v=202610051459';
+import { wait, motion } from '../engine/tween.js?v=202610051459';
+import { SLOTS, BASIC_PART, PARTS, LOOKS, LOOK_INFO, COURSES, courseByKey, ROBOT_NAMES, robotName, ownedItems, unseenItems } from '../../shapes-logic.js?v=202610051459';
+import { makeRobot, PART_INFO, faceIcon, paintCss } from '../models/robot.js?v=202610051459';
+import { SCENE, FONT } from '../theme.js?v=202610051459';
+import { sfx } from '../sfx.js?v=202610051459';
+import { confetti } from '../fx3d.js?v=202610051459';
 
 const SLOT_INFO = {
   wheels:  { zh: '輪子', en: 'Wheels',  icon: '⚙️' },

@@ -30,7 +30,7 @@ export class A2Stack extends CourseScene {
   async setup() {
     const { stage } = this;
     const R = this.root;
-    this.busy = false; this.waiter = null; this.tray = []; this.lastWrong = null;
+    this.busy = false; this.waiter = null; this.active = null; this.tray = []; this.lastWrong = null;
 
     // ---- the table, the tray ----
     const wood = new THREE.MeshLambertMaterial({ color: SCENE.bench }), dark = new THREE.MeshLambertMaterial({ color: 0x8b5a2b });
@@ -145,12 +145,14 @@ export class A2Stack extends CourseScene {
       if (ok) {
         await this.live(this.setDown(mesh, T, model));
         this.removeFromTray(mesh);
+        this.active = null;
         break;
       }
       const reason = !bottomIsFlat(model) ? '底部是圓的' : '頂部不平';
       this.lastWrong = reason;
       await this.live(this.topple(mesh, T));
       await this.live(this.sendBack(mesh));
+      this.active = null;
       this.busy = false;
       this.showArrow(T);
       await this.wrong(item, reason, FAMILY[familyOf(model)].zh);
@@ -211,12 +213,12 @@ export class A2Stack extends CourseScene {
 
   choose(mesh) {
     if (!this.waiter || this.busy || !this.tray.includes(mesh)) return;
-    const w = this.waiter; this.waiter = null; w(mesh);
+    const w = this.waiter; this.waiter = null; this.active = mesh; w(mesh);
   }
 
   /** A dragged piece was let go: onto the tower it counts, anywhere else it goes back to its place. */
   dropped(mesh, cancelled) {
-    if (!this.tray.includes(mesh)) return;
+    if (!this.tray.includes(mesh) || mesh === this.active) return; // the chosen piece is flying: motion owns it
     const slot = mesh.userData.slot;
     if (mesh.position.distanceTo(slot) < 0.25) { mesh.position.copy(slot); this.stage.invalidate(); return; } // just a tap: onTap decides
     if (!cancelled && !this.busy && this.waiter && this.nearTower(mesh)) { this.choose(mesh); return; }
@@ -227,10 +229,14 @@ export class A2Stack extends CourseScene {
     const T = this.target;
     if (!T) return false;
     const { stage } = this;
-    const p = stage.toScreen(mesh), lim = Math.max(110, stage.height * 0.2);
+    const p = stage.toScreen(mesh), s = stage.toScreen(mesh.userData.slot);
+    // one world unit in pixels: on a narrow phone the whole table is small, so a fixed pixel radius would cover it
+    const a = stage.toScreen(new THREE.Vector3(T.x, TABLE_Y, TOWER_Z)), b = stage.toScreen(new THREE.Vector3(T.x + 1, TABLE_Y, TOWER_Z));
+    const lim = Math.min(Math.max(110, stage.height * 0.2), 1.6 * Math.hypot(b.x - a.x, b.y - a.y));
     for (const y of [T.topY + 0.4, (T.topY + TABLE_Y) / 2, TABLE_Y + 0.3]) {
       const q = stage.toScreen(new THREE.Vector3(T.x, y, TOWER_Z));
-      if (Math.hypot(p.x - q.x, p.y - q.y) < lim) return true;
+      const d = Math.hypot(p.x - q.x, p.y - q.y);
+      if (d < lim && d < 0.6 * Math.hypot(s.x - q.x, s.y - q.y)) return true; // and clearly nearer the tower than its tray place
     }
     return false;
   }

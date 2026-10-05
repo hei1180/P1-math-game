@@ -26,8 +26,8 @@ const HOLE_Z = -1.8; // world z of the middle of a mouth
  * (clear of the prompt bar at the top and `bottom` px at the bottom), with the content centred in the free band.
  * (The same helper lives in B1Lines.js; the two course files are independent on purpose.)
  */
-function fitView(stage, pts, look, { top = 175, bottom = 24, side = 0.88, ms = 0 } = {}) {
-  const cam = stage.camera, h = Math.max(1, stage.height);
+function fitView(stage, pts, look, { top: topPx = 175, bottom = 24, side = 0.88, ms = 0 } = {}) {
+  const cam = stage.camera, h = Math.max(1, stage.height), top = Math.min(topPx, h * 0.3); // landscape phones: keep the stage big
   const yHi = 1 - (2 * top) / h, yLo = -1 + (2 * bottom) / h, mid = (yHi + yLo) / 2;
   const tanV = Math.tan(THREE.MathUtils.degToRad(cam.fov / 2));
   const v = new THREE.Vector3(), L = new THREE.Vector3(...look);
@@ -213,7 +213,7 @@ export class B2Muncher extends CourseScene {
         this.hover(-1);
         if (m >= 0 && this.dropResolve) { const r = this.dropResolve; this.dropResolve = null; r(m); return; }
         if (o.position.distanceTo(HOME) < 0.25) o.position.copy(HOME); // a tap, not a drag
-        else await tween(o.position, { x: HOME.x, y: HOME.y, z: HOME.z }, { ms: 250 }); // dropped nowhere: back
+        else await this.tw(o.position, { x: HOME.x, y: HOME.y, z: HOME.z }, { ms: 250 }); // dropped nowhere: back
       },
     });
   }
@@ -340,6 +340,10 @@ export class B2Muncher extends CourseScene {
       }
       return c;
     };
+    // numbers stay readable on small screens: at least ~30 px across
+    const { stage } = this, dist = stage.camera.position.distanceTo(tile.position);
+    const ppu = stage.height / (2 * dist * Math.tan(THREE.MathUtils.degToRad(stage.camera.fov / 2)));
+    const bs = Math.max(0.46, 30 / ppu), off = 0.45 + (bs - 0.46) / 2;
     const badges = [];
     for (let i = 0; i < n; i++) {
       const a = W[i], b = W[(i + 1) % n], dir = b.clone().sub(a), len = dir.length();
@@ -351,9 +355,9 @@ export class B2Muncher extends CourseScene {
       const rx = mid.x - cx, rz = mid.z - cz, rl = Math.hypot(rx, rz) || 1;
       if ((rx * nx + rz * nz) / rl > 0.2) { nx += rx / rl; nz += rz / rl; const nl = Math.hypot(nx, nz); nx /= nl; nz /= nl; }
       const sp = digitSprite(i + 1);
-      sp.position.set(mid.x + nx * 0.45, y + 0.32, mid.z + nz * 0.45);
+      sp.position.set(mid.x + nx * off, y + 0.32, mid.z + nz * off);
       for (let k = 0; k < 6; k++) { // two numbers too close (short sides in a dent): push the new one away from the other
-        const near = badges.find(o => Math.hypot(o.position.x - sp.position.x, o.position.z - sp.position.z) < 0.52);
+        const near = badges.find(o => Math.hypot(o.position.x - sp.position.x, o.position.z - sp.position.z) < bs + 0.06);
         if (!near) break;
         const dx = sp.position.x - near.position.x, dz = sp.position.z - near.position.z, dl = Math.hypot(dx, dz) || 1;
         sp.position.x += (dx / dl) * 0.2; sp.position.z += (dz / dl) * 0.2;
@@ -364,9 +368,10 @@ export class B2Muncher extends CourseScene {
       sfx.tick(i);
       this.stage.invalidate();
       const say = voice.say(CN[i + 1]);
-      await this.live(Promise.all([tween(sp.scale, { x: 0.46, y: 0.46, z: 0.46 }, { ms: 160, ease: 'outBack' }), say, wait(420)]));
+      await this.live(Promise.all([tween(sp.scale, { x: bs, y: bs, z: bs }, { ms: 160, ease: 'outBack' }), say, wait(420)]));
       if (gen !== this.countGen) return;
     }
+    if (gen !== this.countGen) return;
     this.ui.toast(`${CN[n]}條邊`, `${n} sides`, 1800);
     await this.live(Promise.all([voice.say(`共有${CN[n]}條邊`), wait(700)]));
   }

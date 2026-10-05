@@ -21,8 +21,8 @@ const Y_AXIS = new THREE.Vector3(0, 1, 0);
  * (clear of the prompt bar at the top and `bottom` px of buttons at the bottom), with the content centred in the free band.
  * (The same helper lives in B2Muncher.js; the two course files are independent on purpose.)
  */
-function fitView(stage, pts, look, { top = 175, bottom = 24, side = 0.86, ms = 0 } = {}) {
-  const cam = stage.camera, h = Math.max(1, stage.height);
+function fitView(stage, pts, look, { top: topPx = 175, bottom = 24, side = 0.86, ms = 0 } = {}) {
+  const cam = stage.camera, h = Math.max(1, stage.height), top = Math.min(topPx, h * 0.3); // landscape phones: keep the stage big
   const yHi = 1 - (2 * top) / h, yLo = -1 + (2 * bottom) / h, mid = (yHi + yLo) / 2;
   const tanV = Math.tan(THREE.MathUtils.degToRad(cam.fov / 2));
   const v = new THREE.Vector3(), L = new THREE.Vector3(...look);
@@ -113,7 +113,7 @@ export class B1Lines extends CourseScene {
     const { root } = this;
     this.mode = 'sort';
     this.pickResolve = null; this.tapResolve = null; this.offDrag = null; this.holder = null; this.wireHome = new THREE.Vector3(0, 0.18, 0.15);
-    this.laser = null; this.pair = null; this.pulsing = []; this.pulseT = 0;
+    this.laser = null; this.pulsing = []; this.pulseT = 0;
 
     // two baskets; which side is which is random
     const sides = shuffle([['straight', '直線', 'Straight'], ['curved', '曲線', 'Curved']], this.bridge.rng);
@@ -166,7 +166,7 @@ export class B1Lines extends CourseScene {
   update(dt) {
     const { stage } = this;
     if (this._viewKey && this._viewKey !== `${stage.camera.aspect.toFixed(3)}|${stage.height}`) this.fit();
-    if (this.pulsing.length) {
+    if (this.pulsing.length && !motion.less) {
       this.pulseT += dt;
       const s = 1 + 0.22 * Math.sin(this.pulseT * 6);
       for (const d of this.pulsing) d.userData.ring.scale.setScalar(s);
@@ -337,7 +337,7 @@ export class B1Lines extends CourseScene {
       label.position.set(0, -0.23, 0.95);
       g.add(core, ring, hit, label);
       g.position.copy(p); g.scale.setScalar(0.01);
-      g.userData = { ring, core };
+      g.userData = { ring };
       this.root.add(g); this.dots.push(g);
     });
     sfx.pop();
@@ -374,7 +374,6 @@ export class B1Lines extends CourseScene {
       } else second = d;
     }
     this.pulse([]);
-    this.pair = [first, second];
     this.laser = this.shoot(first.position, second.position, { color: 0xef4444, radius: 0.04 });
     sfx.zap();
     await this.tw(this.laser.inner.scale, { y: this.laser.len }, { ms: 320 });
@@ -386,7 +385,6 @@ export class B1Lines extends CourseScene {
   async ensureLaser() {
     await this.toDots();
     if (this.laser) return;
-    this.pair = this.dots.slice();
     this.laser = this.shoot(this.dots[0].position, this.dots[1].position, { color: 0xef4444, radius: 0.04 });
     this.laser.inner.scale.y = this.laser.len;
   }

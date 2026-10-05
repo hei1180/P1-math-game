@@ -44,6 +44,31 @@ function button(cls, minH = 56) {
   return b;
 }
 
+const EARNED = {
+  part: { icon: '🔧', zh: '新零件', en: 'New part' },
+  paint: { icon: '', zh: '新顏色', en: 'New colour' },
+  face: { icon: '😃', zh: '新表情', en: 'New face' },
+};
+/** Compact list of what a course unlocked: icon (or colour swatch), 新零件：星星輪, small English label. */
+function earnedList(items) {
+  const box = el('div', 'ui-pop mx-auto mt-1 inline-flex flex-col gap-1 bg-emerald-50 border-2 border-emerald-200 rounded-2xl px-3 py-1 text-left');
+  for (const it of items) {
+    const info = EARNED[it.kind]; if (!info) continue;
+    const row = el('div', 'flex items-center gap-2 leading-tight');
+    if (it.kind === 'paint') {
+      const sw = el('span', 'inline-block flex-none w-6 h-6 rounded-full border-2 border-gray-400');
+      sw.style.background = '#' + (it.hex ?? 0x999999).toString(16).padStart(6, '0');
+      row.appendChild(sw);
+    } else row.appendChild(el('span', 'text-xl flex-none w-6 text-center', info.icon));
+    const t = el('span', 'min-w-0');
+    t.appendChild(el('span', 'text-lg font-bold text-emerald-700', `${info.zh}：${it.zh}`));
+    t.appendChild(el('span', 'text-xs text-gray-500 ml-1', info.en));
+    row.appendChild(t);
+    box.appendChild(row);
+  }
+  return box;
+}
+
 /** A modal backdrop that blocks taps to the canvas and holds one centred panel. */
 function modal(panel) {
   const back = el('div', 'absolute inset-0 flex items-center justify-center p-4 bg-black/50');
@@ -166,8 +191,13 @@ export const ui = {
     setTimeout(() => { if (gen === S.gen && S.toast === wrap) drop('toast'); }, ms);
   },
 
-  /** End-of-course panel. Resolves 'next' | 'map' | 'retry'. */
-  endPanel({ title, stars = 0, newBest = false, partZh = '' }) {
+  /**
+   * End-of-course panel. Resolves 'next' | 'map' | 'retry'.
+   * earned: [{ kind: 'part' | 'paint' | 'face', zh, hex? }] — what this run unlocked (listed under the stars).
+   * partZh (older callers) is the same as earned = [{ kind: 'part', zh: partZh }].
+   */
+  endPanel({ title, stars = 0, newBest = false, earned = null, partZh = '' }) {
+    const got = earned || (partZh ? [{ kind: 'part', zh: partZh }] : []);
     return new Promise(resolve => {
       const gen = S.gen;
       const panel = el('div', 'ui-pop bg-white rounded-3xl border-4 border-yellow-300 p-5 w-full max-w-sm text-center');
@@ -182,7 +212,7 @@ export const ui = {
         starEls.push(s); row.appendChild(s);
       }
       panel.appendChild(row);
-      const extra = el('div', 'min-h-[3.5rem] mb-3');
+      const extra = el('div', 'min-h-[3.5rem] mb-3 flex flex-col items-center gap-1');
       panel.appendChild(extra);
       const btns = el('div', 'flex flex-col gap-2');
       const mk = (parent, id, zh, en, cls) => {
@@ -213,7 +243,7 @@ export const ui = {
       }
       later(step * (stars + 1), gen, () => {
         if (newBest) extra.appendChild(el('div', 'ui-pop text-xl font-bold text-orange-500', '新紀錄 New best!'));
-        if (partZh) extra.appendChild(el('div', 'ui-pop text-lg font-bold text-emerald-600', `新零件 New part: ${partZh}`));
+        if (got.length) extra.appendChild(earnedList(got));
       });
     });
   },

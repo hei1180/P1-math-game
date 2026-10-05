@@ -28,7 +28,7 @@ import { tween, wait } from '../engine/tween.js?v=202610051406';
 import { SCENE } from '../theme.js?v=202610051406';
 import { sfx } from '../sfx.js?v=202610051406';
 import { confetti, sparkle } from '../fx3d.js?v=202610051406';
-import { genCourse, courseByKey, starsFor, nextCourse, isCourseOpen, isZoneCleared, recordResult, PARTS } from '../../shapes-logic.js?v=202610051406';
+import { genCourse, courseByKey, starsFor, nextCourse, isCourseOpen, isZoneCleared, recordResult, PARTS, LOOK_INFO } from '../../shapes-logic.js?v=202610051406';
 
 const BOSS = { key: 'boss', zone: null, zh: '測試跑道', en: 'Test Track' };
 
@@ -132,7 +132,7 @@ export class CourseScene extends Scene {
     ui.back(null); ui.hidePrompt(); ui.clearChoices();
     const stars = starsFor(this.mistakes);
     const durationSec = Math.round((performance.now() - this.t0) / 1000);
-    let r = { newBest: false, part: null };
+    let r = { newBest: false, part: null, looks: [] };
     try {
       r = await this.live(bridge.complete(key, stars, { mistakes: this.mistakes, durationSec, confusions: this.confusions }));
     } catch (e) {
@@ -144,13 +144,14 @@ export class CourseScene extends Scene {
     if (r.part) await this.live(this.flyPart(key));
     else if (stars >= 2) this.confetti(0, 1.5, 0, 50);
 
-    const choice = await this.live(ui.endPanel({
-      title: '做得好！', stars, newBest: !!r.newBest,
-      partZh: r.part && PARTS[key] ? PARTS[key].zh : '',
-    }));
+    const looks = (r.looks || []).filter(id => LOOK_INFO[id]);
+    const earned = [];
+    if (r.part && PARTS[key]) earned.push({ kind: 'part', zh: PARTS[key].zh });
+    for (const id of looks) earned.push({ kind: LOOK_INFO[id].slot, zh: LOOK_INFO[id].zh, hex: LOOK_INFO[id].hex });
+    const choice = await this.live(ui.endPanel({ title: '做得好！', stars, newBest: !!r.newBest, earned }));
 
     // Leaving the scene: go() is intentionally not awaited (it would only resolve after the next scene's enter).
-    const justDone = { key, stars, newBest: !!r.newBest, part: r.part || null };
+    const justDone = { key, stars, newBest: !!r.newBest, part: r.part || null, looks };
     if (choice === 'retry') { this.go(key === 'boss' ? 'Boss' : key, key === 'boss' ? undefined : { key }); return; }
     if (choice === 'map') { this.go('Workshop', { justDone }); return; }
     this.go('Workshop', { justDone, goTo: this.routeAfter(stars) });
@@ -160,7 +161,7 @@ export class CourseScene extends Scene {
   routeAfter(stars) {
     const { key, bridge, course } = this;
     if (!course.zone) return null; // boss
-    // bridge.progress is not updated in test mode, so work from the result we just recorded (pure).
+    // Work from the result recorded on top (pure; recording twice is harmless, bridge.progress may already hold it).
     const after = recordResult(bridge.progress, key, stars).progress;
     const next = nextCourse(key);
     if (next && isCourseOpen(after, next, bridge.settings.shapesUnlock, bridge.testMode)) return next;

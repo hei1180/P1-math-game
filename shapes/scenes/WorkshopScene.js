@@ -1,8 +1,11 @@
 // The Workshop map 工場: one 3-D floor with a pad for every station. The child's robot stands on the pad it
 // visited last, walks to the pad that is tapped and then the scene starts (the Rod Town "Next" pattern).
 //
-// Start data: { justDone?: { key, stars, newBest, part }, goTo?: course key | 'rush-a' | 'rush-b' | null }.
-//  - justDone: the medal of that pad pops (and "new part" shows); goTo: the robot walks on to that pad and starts it.
+// Start data: { justDone?: { key, stars, newBest, part, looks }, goTo?: course key | 'rush-a' | 'rush-b' | null }.
+//  - justDone: the medal of that pad pops (and a toast lists the new part / colour / face); goTo: the robot walks on
+//    to that pad and starts it.
+// Tapping an empty spot of the floor makes the robot stroll there (per-frame walk in update(), retargets smoothly).
+// The garage pad (and the name chip) show a pulsing 「新！」 while unseenItems(progress) is not empty.
 // Two floor plans, picked by whichever lets the camera sit closest for the current screen shape:
 //  'wide' both zones side by side (landscape), 'stack' zones in two rows of five (tablets), 'tall' a 3-column snake (phone portrait).
 // The robot's name chip, the trophy and home buttons are DOM (in #ui, like BootScene) so they stay big and crisp.
@@ -16,7 +19,7 @@ import { sfx } from '../sfx.js?v=202610051406';
 import { sparkle, confetti } from '../fx3d.js?v=202610051406';
 import { makeRobot } from '../models/robot.js?v=202610051406';
 import { makeSolid, blink } from '../models/solids.js?v=202610051406';
-import { COURSES, ZONES, PARTS, lcg, nextCourse, robotName, isCourseOpen, isRushOpen, isBossOpen, isZoneOpen, isZoneCleared } from '../../shapes-logic.js?v=202610051406';
+import { COURSES, ZONES, PARTS, LOOK_INFO, unseenItems, lcg, nextCourse, robotName, isCourseOpen, isRushOpen, isBossOpen, isZoneOpen, isZoneCleared } from '../../shapes-logic.js?v=202610051406';
 
 // ------------------------------------------------------------------ stations
 const ZONE_COLOR = { a: 0xf59e0b, b: 0x0ea5e9 };
@@ -212,6 +215,16 @@ function bannerTexture(zone, cleared, W, H) {
   return texOf(c);
 }
 
+/** 「新！」 badge: red pill, yellow rim, white text. */
+function newTexture() {
+  const W = 256, H = 150, c = canvas(W, H), g = c.getContext('2d');
+  g.fillStyle = '#ef4444'; rrect(g, 8, 8, W - 16, H - 16, (H - 16) / 2); g.fill();
+  g.lineWidth = 12; g.strokeStyle = '#facc15'; g.stroke();
+  g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  const zs = fitText(g, '新！', W - 60, 92); g.font = `bold ${zs}px ${FONT}`; g.fillText('新！', W / 2 + 6, H / 2 + 4);
+  return texOf(c);
+}
+
 const emojiTex = ch => { const c = canvas(128, 128), g = c.getContext('2d'); g.font = `104px ${EMOJI_FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(ch, 64, 70); return texOf(c); };
 
 function floorTexture() {
@@ -256,6 +269,7 @@ function gearGeometry(r, teeth) {
   return new THREE.ExtrudeGeometry(s, { depth: 0.14, bevelEnabled: false });
 }
 
+const wrapAngle = a => ((a + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI;
 const lam = (color, extra = {}) => new THREE.MeshLambertMaterial({ color, ...extra });
 const FRIENDS = ['sphere', 'cylinder', 'cone', 'cube', 'sqPyramid'];
 
@@ -264,13 +278,15 @@ export class WorkshopScene extends Scene {
   async enter(data) {
     const { justDone, goTo } = data || {};
     const { bridge, ui } = this;
-    this.pads = {}; this.friends = []; this.gears = [];
+    this.pads = {}; this.friends = []; this.gears = []; this.blockers = []; this.floorMesh = null; this.newBadge = null;
+    this.stroll = null;
     this.busy = true; this.walking = false; this.ready = false;
     this.t = 0; this.acc = 0; this.sz = [0, 0];
     this.layout = null; this.fit = null; this.world = null;
     const jd = justDone && STATIONS[justDone.key] ? justDone : null;
     this.shown = jd ? { [jd.key]: jd.stars } : {}; // stars to show for a pad even when bridge.progress lacks them (test mode)
     this.hidden = new Set(jd && jd.newBest ? [jd.key] : []); // medals that will pop in a moment
+    this.holdBadge = !!(jd && (jd.part || (jd.looks && jd.looks.length))); // the 「新！」 badge pops with the toast
 
     this.robot = makeRobot(bridge.progress.robot);
     this.robot.add(blobShadow(0.62));
@@ -279,7 +295,10 @@ export class WorkshopScene extends Scene {
     this.buildHud();
     this.relayout();
     this.input.onTap(() => Object.values(this.pads).map(p => p.group), g => this.onPad(g.userData.padKey));
-    this.input.onTap(() => [this.robot], () => this.onPad(this.here));
+    // out on the floor the robot is not a tap target, so it never hides the sign behind it (taps go through)
+    this.input.onTap(() => (this.here && !this.stroll ? [this.robot] : []), () => this.onPad(this.here));
+    // the floor, plus scenery that only blocks it (a tap on a banner or a toolbox does nothing)
+    this.input.onTap(() => (this.floorMesh ? [this.floorMesh, ...this.blockers] : []), (t, pt) => { if (t === this.floorMesh) this.onFloor(pt); });
     this.ready = true;
     this.busy = false;
     this.stage.invalidate();
@@ -288,7 +307,7 @@ export class WorkshopScene extends Scene {
     else await this.maybeWellDone();
   }
 
-  async exit() { /* nothing is held awake: idle motion only pokes invalidate(); DOM hud is removed by ui.clear() */ }
+  async exit() { this.stopStroll(); /* idle motion only pokes invalidate(); DOM hud is removed by ui.clear() */ }
 
   // ---------------------------------------------------------------- state
   get unlock() { return this.bridge.settings.shapesUnlock || {}; }
@@ -352,12 +371,15 @@ export class WorkshopScene extends Scene {
   buildWorld(L) {
     if (this.world) { this.root.remove(this.world); disposeTree(this.world); }
     this.layout = L; this.pads = {}; this.friends = []; this.gears = [];
+    this.blockers = []; this.obstacles = []; this.floorMesh = null; this.newBadge = null;
+    this.stopStroll();
     const w = this.world = new THREE.Group();
     this.root.add(w);
     this.buildFloorAndWall(w, L);
     this.buildScenery(w, L);
     this.buildPads(w, L);
     this.buildFriends(w, L);
+    this.updateNewBadge();
     this.stage.invalidate();
   }
 
@@ -369,21 +391,22 @@ export class WorkshopScene extends Scene {
     const geo = new THREE.ExtrudeGeometry(s, { depth: 0.4, bevelEnabled: false });
     geo.rotateX(-Math.PI / 2); geo.translate(0, -0.4, 0);
     const floor = new THREE.Mesh(geo, [lam(0xffffff, { map: floorTexture() }), lam(0xc9a66b)]);
-    w.add(floor);
+    w.add(floor); this.floorMesh = floor;
 
     const ww = x1 - x0, wall = new THREE.Mesh(new THREE.BoxGeometry(ww, 5, 0.3), lam(SCENE.wall));
     wall.position.set((x0 + x1) / 2, 2.5, L.wallZ); w.add(wall);
     const bench = new THREE.Mesh(new THREE.BoxGeometry(ww, 0.5, 0.35), lam(SCENE.bench));
     bench.position.set((x0 + x1) / 2, 0.25, L.wallZ + 0.3); w.add(bench);
+    this.blockers.push(wall, bench);
     const winTex = windowTexture(), winGeo = new THREE.PlaneGeometry(1.9, 1.52);
     for (const x of L.windows) {
       const m = new THREE.Mesh(winGeo, new THREE.MeshBasicMaterial({ map: winTex, transparent: true }));
-      m.position.set(x, 3, L.wallZ + 0.17); w.add(m);
+      m.position.set(x, 3, L.wallZ + 0.17); w.add(m); this.blockers.push(m);
     }
     const gg = gearGeometry(0.75, 9);
     L.gears.forEach((x, i) => {
       const g = new THREE.Mesh(gg, lam(i % 2 ? 0xf59e0b : SCENE.metal));
-      g.position.set(x, 3.1, L.wallZ + 0.16); g.rotation.z = i; w.add(g); this.gears.push({ m: g, sp: i % 2 ? -0.25 : 0.25 });
+      g.position.set(x, 3.1, L.wallZ + 0.16); g.rotation.z = i; w.add(g); this.blockers.push(g); this.gears.push({ m: g, sp: i % 2 ? -0.25 : 0.25 });
     });
   }
 
@@ -408,17 +431,17 @@ export class WorkshopScene extends Scene {
       if (kind === 'toolbox') {
         const b = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.5, 0.55), lam(0xef4444)); b.position.set(x, 0.25, z);
         const lid = new THREE.Mesh(new THREE.BoxGeometry(1, 0.12, 0.6), lam(0xb91c1c)); lid.position.set(x, 0.56, z);
-        w.add(b, lid);
+        w.add(b, lid); this.blockers.push(b, lid); this.obstacles.push({ x, z, r: 0.65 });
       } else if (kind === 'crates') {
         const a = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 0.8), lam(0xd9a066)); a.position.set(x, 0.4, z);
         const b = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 0.6), lam(0xc08a50)); b.position.set(x + 0.2, 1.1, z + 0.05); b.rotation.y = 0.4;
-        w.add(a, b);
+        w.add(a, b); this.blockers.push(a, b); this.obstacles.push({ x, z, r: 0.65 });
       } else if (kind === 'conveyor') {
         const belt = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.3, 0.9), lam(SCENE.dark)); belt.position.set(x, 0.28, z);
         const rg = new THREE.CylinderGeometry(0.2, 0.2, 0.95, 12);
         for (const dx of [-1.8, 1.8]) { const r = new THREE.Mesh(rg, lam(SCENE.metal)); r.rotation.x = Math.PI / 2; r.position.set(x + dx, 0.28, z); w.add(r); }
         const parcel = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.45, 0.55), lam(0x22c55e)); parcel.position.set(x - 0.5, 0.65, z);
-        w.add(belt, parcel);
+        w.add(belt, parcel); this.blockers.push(belt, parcel); this.obstacles.push({ x0: x - 2, x1: x + 2, z0: z - 0.5, z1: z + 0.5 });
       }
     }
     // zone banners
@@ -426,7 +449,8 @@ export class WorkshopScene extends Scene {
     for (const b of L.banners) {
       const cleared = isZoneCleared(this.bridge.progress, b.zone);
       const m = new THREE.Mesh(new THREE.PlaneGeometry(b.w, bh), new THREE.MeshBasicMaterial({ map: bannerTexture(b.zone, cleared, 640, Math.round(640 * bh / b.w)), transparent: true }));
-      this.tilt(m, bh, L); m.position.set(b.x, m.position.y, b.z); w.add(m);
+      this.tilt(m, bh, L); m.position.set(b.x, m.position.y, b.z); w.add(m); this.blockers.push(m);
+      this.obstacles.push({ x0: b.x - b.w / 2, x1: b.x + b.w / 2, z0: b.z - bh * 0.4, z1: b.z + bh * 0.4 });
     }
   }
 
@@ -479,6 +503,26 @@ export class WorkshopScene extends Scene {
     return s;
   }
 
+  /** 「新！」 over the garage pad (and on the name chip) while something earned is still unseen. */
+  updateNewBadge() {
+    const pad = this.pads.garage;
+    const on = !this.holdBadge && unseenItems(this.bridge.progress).length > 0;
+    if (this.chipNew) this.chipNew.style.display = on ? '' : 'none';
+    if (!pad) return null;
+    if (!on) {
+      if (this.newBadge) { this.newBadge.parent.remove(this.newBadge); this.newBadge.material.map.dispose(); this.newBadge.material.dispose(); this.newBadge = null; this.stage.invalidate(); }
+      return null;
+    }
+    if (this.newBadge) return this.newBadge;
+    const r = this.layout.padR, w = r * 1.55;
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: newTexture(), transparent: true, depthTest: false, depthWrite: false }));
+    s.scale.set(w, w * 150 / 256, 1); s.position.set(r + 0.15, 1.45, -r * 0.2); s.renderOrder = 6;
+    s.userData.base = w;
+    pad.group.add(s); this.newBadge = s;
+    this.stage.invalidate();
+    return s;
+  }
+
   buildFriends(w, L) {
     const rng = lcg(11);
     FRIENDS.forEach((id, i) => {
@@ -487,7 +531,7 @@ export class WorkshopScene extends Scene {
       f.scale.setScalar(0.85);
       f.position.set(spot[0], f.userData.restY * 0.85, spot[1]);
       f.rotation.y = spot[0] < 0 ? 0.35 : -0.35;
-      w.add(f);
+      w.add(f); this.blockers.push(f); this.obstacles.push({ x: spot[0], z: spot[1], r: 0.5 });
       this.friends.push({ obj: f, holder: f.children[0], phase: i * 1.7, nextBlink: 1.5 + i * 0.9 });
     });
   }
@@ -517,6 +561,12 @@ export class WorkshopScene extends Scene {
     if (name) { zh.textContent = `🤖 ${robotName(name)}`; en.textContent = '我的機械人 My Robot'; }
     else { zh.textContent = '🤖 幫我起名字'; en.textContent = 'Name me'; }
     chip.append(zh, en);
+    const dot = this.chipNew = document.createElement('span');
+    dot.className = 'absolute rounded-full bg-red-500 text-white font-bold border-2 border-yellow-300 shadow px-2 leading-tight';
+    dot.style.cssText += 'top:-20px;right:-22px;font-size:15px;display:none;pointer-events:none';
+    if (!motion.less) dot.classList.add('ui-pulse');
+    dot.textContent = '新！';
+    chip.appendChild(dot);
     chip.setAttribute('aria-label', name ? `${robotName(name)} 我的機械人 My Robot` : '幫我起名字 Name me');
     const wrap = document.createElement('div');
     wrap.className = 'absolute inset-0'; wrap.style.pointerEvents = 'none';
@@ -529,6 +579,8 @@ export class WorkshopScene extends Scene {
     if (!this.ready || !this.alive) return;
     const [W, H] = this.sz, st = this.stage;
     if ((st.width !== W || st.height !== H) && !this.walking) this.relayout();
+    this.stepStroll(dt);
+    this.followFloor(dt);
     if (motion.less) return;
     this.t += dt; this.acc += dt;
     if (this.acc < 1 / 12) return; // ~12 frames a second is plenty for a gentle idle
@@ -540,10 +592,102 @@ export class WorkshopScene extends Scene {
       if (t > f.nextBlink) { f.nextBlink = t + 2.5 + Math.random() * 3; blink(f.obj); }
     }
     for (const g of this.gears) g.m.rotation.z += g.sp * (1 / 12);
+    const nb = this.newBadge;
+    if (nb && !nb.userData.popping) { const k = 1 + 0.12 * Math.sin(t * 6), w = nb.userData.base * k; nb.scale.set(w, w * 150 / 256, 1); }
     st.invalidate();
   }
 
   // ---------------------------------------------------------------- taps and walking
+  /** A tap on an empty spot of the floor: the robot strolls there (a new tap just changes where it is heading). */
+  onFloor(pt) {
+    if (this.busy || !this.alive || !this.layout || !pt) return;
+    const [x, z] = this.clampTarget(pt.x, pt.z);
+    try { sfx.tick(1); } catch (e) { /* ignore */ }
+    this.ripple(pt.x, pt.z);
+    this.here = null;
+    if (this.stroll) { this.stroll.x = x; this.stroll.z = z; }
+    else { this.stroll = { x, z, walked: 0 }; this.stage.awake('workshop-walk', true); }
+    this.view(x, z, 700);
+  }
+
+  /** Keep a stroll target on the floor, off the pads (and their signs), props, banners and shape friends. */
+  clampTarget(x, z) {
+    const L = this.layout, R = 0.5, [fx0, fx1, fz0, fz1] = L.floor;
+    const zMin = Math.max(fz0 + R + 0.1, L.wallZ + 0.5 + R), sinP = Math.sin(L.pitch);
+    const rects = L.pads.map(p => ({ x0: p.x - Math.max(L.padR + 0.15, L.signW / 2), x1: p.x + Math.max(L.padR + 0.15, L.signW / 2), z0: p.z - L.padR - 0.15, z1: p.z + L.padR + 0.2 + L.signH * sinP }));
+    const all = rects.concat(this.obstacles);
+    for (let pass = 0; pass < 6; pass++) {
+      x = Math.min(fx1 - R - 0.1, Math.max(fx0 + R + 0.1, x));
+      z = Math.min(fz1 - R - 0.1, Math.max(zMin, z));
+      let moved = false;
+      for (const o of all) {
+        if (o.r !== undefined) {
+          const dx = x - o.x, dz = z - o.z, d = Math.hypot(dx, dz), need = o.r + R;
+          if (d < need) { const k = d > 1e-4 ? need / d : 1; x = o.x + (d > 1e-4 ? dx * k : need); z = o.z + (d > 1e-4 ? dz * k : 0); moved = true; }
+        } else if (x > o.x0 - R && x < o.x1 + R && z > o.z0 - R && z < o.z1 + R) {
+          // out through the nearest side
+          const opts = [[o.x0 - R - 0.01, z], [o.x1 + R + 0.01, z], [x, o.z0 - R - 0.01], [x, o.z1 + R + 0.01]];
+          let best = opts[0], bd = Infinity;
+          for (const q of opts) { const d = Math.hypot(q[0] - x, q[1] - z); if (d < bd) { bd = d; best = q; } }
+          [x, z] = best; moved = true;
+        }
+      }
+      if (!moved) break;
+    }
+    return [x, z];
+  }
+
+  /** A ring on the floor where the finger touched; it grows and fades (just fades with Less motion). */
+  ripple(x, z) {
+    const m = new THREE.Mesh(new THREE.RingGeometry(0.3, 0.42, 36), new THREE.MeshBasicMaterial({ color: 0x0ea5e9, transparent: true, opacity: 0.95, depthWrite: false }));
+    m.rotation.x = -Math.PI / 2; m.position.set(x, 0.03, z); m.renderOrder = 3;
+    this.root.add(m);
+    const ms = motion.less ? 500 : 650, grow = motion.less ? 1 : 1.9;
+    if (!motion.less) m.scale.setScalar(0.45);
+    Promise.all([tween(m.scale, { x: grow, y: grow, z: grow }, { ms, ease: 'outCubic' }), tween(m.material, { opacity: 0 }, { ms, ease: 'inOutCubic' })])
+      .then(() => { this.root.remove(m); m.geometry.dispose(); m.material.dispose(); this.stage.invalidate(); });
+  }
+
+  /** One frame of a stroll: turn toward the target, roll forward (wheels spin, a little bob), then face the camera. */
+  stepStroll(dt) {
+    const s = this.stroll; if (!s) return;
+    dt = Math.min(dt, 0.05);
+    const r = this.robot, rig = r.children[0], dx = s.x - r.position.x, dz = s.z - r.position.z, dist = Math.hypot(dx, dz);
+    const there = dist < 0.02;
+    const d = wrapAngle((there ? 0 : Math.atan2(dx, dz)) - r.rotation.y);
+    r.rotation.y += Math.sign(d) * Math.min(Math.abs(d), 9 * dt);
+    if (!there) {
+      const facing = Math.abs(d) < 1.2 ? Math.max(0.3, Math.cos(d)) : 0; // turn on the spot first when facing away
+      const speed = Math.min(6, Math.max(2.4, dist * 1.1)); // brisk across the map, slowing down at the end
+      const step = Math.min(dist, speed * dt * facing);
+      r.position.x += (dx / dist) * step; r.position.z += (dz / dist) * step;
+      s.walked += step;
+      const wheels = rig.children.find(c => c.userData && c.userData.spins);
+      if (wheels) for (const w of wheels.userData.spins) w.rotation.x += step / 0.3;
+      rig.position.y = motion.less ? 0 : Math.abs(Math.sin(s.walked * 4.5)) * 0.07;
+    } else {
+      rig.position.y = 0;
+      if (Math.abs(d) < 0.01) { r.rotation.y = 0; this.stopStroll(); }
+    }
+    this.stage.invalidate();
+  }
+
+  stopStroll() {
+    if (this.stroll) { this.stroll = null; const rig = this.robot && this.robot.children[0]; if (rig) rig.position.y = 0; }
+    this.stage.awake('workshop-walk', false);
+  }
+
+  /** Stand on a pad's top when over one, on the floor otherwise (the walks only move x and z). */
+  followFloor(dt) {
+    const L = this.layout, r = this.robot; if (!L || !r) return;
+    let want = 0;
+    for (const p of L.pads) if (Math.hypot(p.x - r.position.x, p.z - r.position.z) < L.padR) { want = PAD_H; break; }
+    const y = r.position.y;
+    if (Math.abs(want - y) < 1e-4) return;
+    r.position.y = Math.abs(want - y) < 0.004 ? want : y + (want - y) * Math.min(1, dt * 18);
+    this.stage.invalidate();
+  }
+
   async onPad(key) {
     if (this.busy || !this.alive) return;
     const pad = this.pads[key]; if (!pad) return;
@@ -563,6 +707,7 @@ export class WorkshopScene extends Scene {
   async launch(key) {
     const pad = this.pads[key]; if (!pad) return;
     this.busy = true;
+    this.stopStroll();
     try {
       await this.walkTo(pad);
       this.saveLast(key);
@@ -621,15 +766,36 @@ export class WorkshopScene extends Scene {
         if (nx && this.pads[nx] && this.pads[nx].state.open) sparkle(this.stage, new THREE.Vector3(this.pads[nx].x, 0.6, this.pads[nx].z), this.root);
         await this.live(wait(450));
       }
-      if (jd.part && PARTS[jd.key]) {
-        this.ui.toast('新零件！', `New part: ${PARTS[jd.key].zh}`, 1400);
-        try { sfx.star(2); } catch (e) { /* ignore */ }
-        await this.live(wait(1500));
-      }
+      await this.showEarned(jd);
     }
     await this.maybeWellDone();
     this.busy = false;
     if (goTo && this.pads[goTo] && this.pads[goTo].state.open) await this.launch(goTo);
+  }
+
+  /** New part / colour / face from this course: a toast that sends the child to 我的機械人, and the 「新！」 badge pops in. */
+  async showEarned(jd) {
+    const zh = [], en = [];
+    if (jd.part && PARTS[jd.key]) { zh.push(`新零件：${PARTS[jd.key].zh}`); en.push('a new part'); }
+    for (const id of jd.looks || []) {
+      const info = LOOK_INFO[id]; if (!info) continue;
+      if (info.slot === 'paint') { zh.push(`新顏色：${info.zh}`); en.push('a new colour'); }
+      else if (info.slot === 'face') { zh.push(`新表情：${info.zh}`); en.push('a new face'); }
+    }
+    this.holdBadge = false;
+    if (!zh.length) { this.updateNewBadge(); return; }
+    const enLine = en.length > 1 ? `${en.slice(0, -1).join(', ')} and ${en[en.length - 1]}` : en[0];
+    this.ui.toast(`${zh.join('、')}！到「我的機械人」看看吧`, `You got ${enLine}! Go to My Robot to see.`, 3200);
+    try { sfx.star(2); } catch (e) { /* ignore */ }
+    const pad = this.pads.garage;
+    if (pad) sparkle(this.stage, new THREE.Vector3(pad.x, 0.7, pad.z), this.root);
+    const b = this.updateNewBadge();
+    if (b) {
+      const w = b.userData.base; b.userData.popping = true; b.scale.set(0.001, 0.001, 1);
+      await this.live(tween(b.scale, { x: w, y: w * 150 / 256 }, { ms: 450, ease: 'outBack' }));
+      b.userData.popping = false;
+    }
+    await this.live(wait(1800));
   }
 
   /** After 3 courses in one sitting: the robot dances, and the child decides. */

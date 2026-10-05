@@ -4,15 +4,15 @@
 // Grading: the bin's family against item.answer (from shapes-logic). A wrong bin spits the object out; the 2nd wrong
 // on one object runs the hint: the right friend jumps next to the object and both glow.
 import * as THREE from 'three';
-import { CourseScene } from '../CourseScene.js?v=0';
-import { tween, wait, motion } from '../../engine/tween.js?v=0';
-import { blobShadow } from '../../engine/stage.js?v=0';
-import { voice } from '../../engine/voice.js?v=0';
-import { SCENE, toyColor } from '../../theme.js?v=0';
-import { sfx } from '../../sfx.js?v=0';
-import { makeSolid, setMood, blink } from '../../models/solids.js?v=0';
-import { makeObject } from '../../models/objects.js?v=0';
-import { FAMILIES, FAMILY, objectById, shuffle } from '../../../shapes-logic.js?v=0';
+import { CourseScene } from '../CourseScene.js?v=202610051406';
+import { tween, wait, motion } from '../../engine/tween.js?v=202610051406';
+import { blobShadow } from '../../engine/stage.js?v=202610051406';
+import { voice } from '../../engine/voice.js?v=202610051406';
+import { SCENE, toyColor } from '../../theme.js?v=202610051406';
+import { sfx } from '../../sfx.js?v=202610051406';
+import { makeSolid, setMood, blink } from '../../models/solids.js?v=202610051406';
+import { makeObject } from '../../models/objects.js?v=202610051406';
+import { FAMILIES, FAMILY, objectById, shuffle } from '../../../shapes-logic.js?v=202610051406';
 
 const REP = { prism: 'cube', cylinder: 'cylinder', pyramid: 'sqPyramid', cone: 'cone', sphere: 'sphere' };
 const CJK = '"PingFang TC","Microsoft JhengHei",system-ui,sans-serif'; // canvas text must resolve to a CJK face

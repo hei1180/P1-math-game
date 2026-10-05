@@ -2,12 +2,12 @@
 // makeBuildRobot = the Boss test-drive robot, assembled from solids + a tile window, with scripted drives.
 // All geometry / materials / textures are cached and flagged userData.shared, so disposeTree never frees them.
 import * as THREE from 'three';
-import { PARTS, SLOTS, BASIC_PART, posesOf, familyOf, shuffle, TILE_TEMPLATES, templateById } from '../../shapes-logic.js?v=0';
-import { TOY_COLORS } from '../theme.js?v=0';
-import { tween, cancelTweens, motion } from '../engine/tween.js?v=0';
-import { disposeTree } from '../engine/stage.js?v=0';
-import * as Solids from './solids.js?v=0';
-import * as Tiles from './tiles.js?v=0';
+import { PARTS, SLOTS, BASIC_PART, posesOf, familyOf, shuffle, TILE_TEMPLATES, templateById } from '../../shapes-logic.js?v=202610051406';
+import { TOY_COLORS } from '../theme.js?v=202610051406';
+import { tween, cancelTweens, motion } from '../engine/tween.js?v=202610051406';
+import { disposeTree } from '../engine/stage.js?v=202610051406';
+import * as Solids from './solids.js?v=202610051406';
+import * as Tiles from './tiles.js?v=202610051406';
 
 // ------------------------------------------------------------------ part names
 export const PART_INFO = {};

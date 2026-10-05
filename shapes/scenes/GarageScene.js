@@ -2,13 +2,13 @@
 // antenna / paint / badge; parts not earned yet are dark silhouettes that say which course gives them. The name is picked
 // from ROBOT_NAMES plus a number with − / + buttons (no keyboard, no free text anywhere). 保存 Save → bridge.saveRobot.
 import * as THREE from 'three';
-import { Scene } from '../engine/scenes.js?v=0';
-import { wait } from '../engine/tween.js?v=0';
-import { SLOTS, BASIC_PART, PARTS, ROBOT_NAMES, robotName } from '../../shapes-logic.js?v=0';
-import { makeRobot, PART_INFO } from '../models/robot.js?v=0';
-import { SCENE, FONT } from '../theme.js?v=0';
-import { sfx } from '../sfx.js?v=0';
-import { confetti } from '../fx3d.js?v=0';
+import { Scene } from '../engine/scenes.js?v=202610051406';
+import { wait } from '../engine/tween.js?v=202610051406';
+import { SLOTS, BASIC_PART, PARTS, ROBOT_NAMES, robotName } from '../../shapes-logic.js?v=202610051406';
+import { makeRobot, PART_INFO } from '../models/robot.js?v=202610051406';
+import { SCENE, FONT } from '../theme.js?v=202610051406';
+import { sfx } from '../sfx.js?v=202610051406';
+import { confetti } from '../fx3d.js?v=202610051406';
 
 const SLOT_INFO = {
   wheels:  { zh: '輪子', en: 'Wheels',  icon: '⚙️' },

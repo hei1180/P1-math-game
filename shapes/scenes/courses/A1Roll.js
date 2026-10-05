@@ -3,15 +3,15 @@
 //   'any' sphere: rolls down and wobbles off the mat   'straight' lying cylinder: rolls straight
 //   'circle' lying cone: rolls in an arc               null: slides down slowly with a scrape
 import * as THREE from 'three';
-import { CourseScene } from '../CourseScene.js?v=0';
-import { FAMILY, familyOf, rolls, rollStyle } from '../../../shapes-logic.js?v=0';
-import { tween, wait, motion } from '../../engine/tween.js?v=0';
-import { disposeTree, blobShadow } from '../../engine/stage.js?v=0';
-import { SCENE, toyColor } from '../../theme.js?v=0';
-import { sfx } from '../../sfx.js?v=0';
-import { voice } from '../../engine/voice.js?v=0';
-import { makeSolid, setMood, blink } from '../../models/solids.js?v=0';
-import { puff } from '../../fx3d.js?v=0';
+import { CourseScene } from '../CourseScene.js?v=202610051406';
+import { FAMILY, familyOf, rolls, rollStyle } from '../../../shapes-logic.js?v=202610051406';
+import { tween, wait, motion } from '../../engine/tween.js?v=202610051406';
+import { disposeTree, blobShadow } from '../../engine/stage.js?v=202610051406';
+import { SCENE, toyColor } from '../../theme.js?v=202610051406';
+import { sfx } from '../../sfx.js?v=202610051406';
+import { voice } from '../../engine/voice.js?v=202610051406';
+import { makeSolid, setMood, blink } from '../../models/solids.js?v=202610051406';
+import { puff } from '../../fx3d.js?v=202610051406';
 
 // ---- the set: a ramp that runs from back-left toward the camera, then a landing mat ----
 const PSI = 0.5;                       // yaw of the downhill direction (0 = straight at the camera)

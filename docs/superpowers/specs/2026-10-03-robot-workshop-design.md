@@ -1,6 +1,6 @@
 # Robot Workshop 形狀機械人工場 — Design Spec
 
-Date: 2026-10-03 · Status: draft for owner review
+Date: 2026-10-03 · Status: built (branch `robot-workshop`, awaiting owner approval to merge)
 
 ## Goal
 

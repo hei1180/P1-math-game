@@ -23,12 +23,12 @@
 //  - Boss: nothing may assume 5 items (genCourse gives B3 4, B4 2, boss 3).
 // ---------------------------------------------------------------------------------------------
 import * as THREE from 'three';
-import { Scene } from '../engine/scenes.js?v=0';
-import { tween, wait } from '../engine/tween.js?v=0';
-import { SCENE } from '../theme.js?v=0';
-import { sfx } from '../sfx.js?v=0';
-import { confetti, sparkle } from '../fx3d.js?v=0';
-import { genCourse, courseByKey, starsFor, nextCourse, isCourseOpen, isZoneCleared, recordResult, PARTS } from '../../shapes-logic.js?v=0';
+import { Scene } from '../engine/scenes.js?v=202610051406';
+import { tween, wait } from '../engine/tween.js?v=202610051406';
+import { SCENE } from '../theme.js?v=202610051406';
+import { sfx } from '../sfx.js?v=202610051406';
+import { confetti, sparkle } from '../fx3d.js?v=202610051406';
+import { genCourse, courseByKey, starsFor, nextCourse, isCourseOpen, isZoneCleared, recordResult, PARTS } from '../../shapes-logic.js?v=202610051406';
 
 const BOSS = { key: 'boss', zone: null, zh: '測試跑道', en: 'Test Track' };
 

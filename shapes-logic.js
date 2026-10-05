@@ -192,9 +192,9 @@ export const PEG_GRID = 5; // pegs 0..4 in x and y
 // round socket. A key is 'x,y,q'. Tiles turn in 90° steps (r = 0..3, clockwise).
 const ALLQ = ['n', 'e', 's', 'w'];
 export const PIECES = {
-  sq:     { zh: '正方形', kind: 4, cells: [[0, 0, ALLQ]] },
-  rect:   { zh: '長方形', kind: 4, cells: [[0, 0, ALLQ], [1, 0, ALLQ]] },
-  bigsq:  { zh: '大正方形', kind: 4, cells: [[0, 0, ALLQ], [1, 0, ALLQ], [0, 1, ALLQ], [1, 1, ALLQ]] },
+  sq:     { zh: '四邊形', kind: 4, cells: [[0, 0, ALLQ]] },
+  rect:   { zh: '長四邊形', kind: 4, cells: [[0, 0, ALLQ], [1, 0, ALLQ]] },
+  bigsq:  { zh: '大四邊形', kind: 4, cells: [[0, 0, ALLQ], [1, 0, ALLQ], [0, 1, ALLQ], [1, 1, ALLQ]] },
   tri:    { zh: '三角形', kind: 3, cells: [[0, 0, ['s', 'w']]] },
   bigtri: { zh: '大三角形', kind: 3, cells: [[0, 1, ALLQ], [0, 0, ['s', 'w']], [1, 1, ['s', 'w']]] },
   circle: { zh: '圓形', kind: 'circle', cells: [[0, 0, ['c']]] },

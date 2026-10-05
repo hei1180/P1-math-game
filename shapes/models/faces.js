@@ -1,7 +1,7 @@
 // Faces for the five solid friends. One shared CanvasTexture per (family, mood), so a face costs no memory:
 // setMood / blink only swap the material's map. The ink colour is the same for every family (colour never codes the shape).
 import * as THREE from 'three';
-import { tween } from '../engine/tween.js?v=0';
+import { tween } from '../engine/tween.js?v=202610051406';
 
 export const MOODS = ['normal', 'happy', 'oops', 'dizzy'];
 const INK = '#1f2937', WHITE = '#ffffff';

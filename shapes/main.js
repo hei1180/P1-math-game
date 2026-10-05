@@ -1,16 +1,16 @@
 // Robot Workshop entry: DOM shell wiring, bridge to shared.js, three.js boot.
 import { signIn, onUser, player, settings, session, enterTestMode, initAudio, engine, resetEngine, registerHit, endFever,
-         startTimer, stopTimer, saveScore, renderLeaderboard, showRankPopup, mountTeacherModal, sharedSound, logAttempt, isTeacherEmail } from '../shared.js?v=0';
-import { recordResult, validateGalleryEntry, ZONES, lcg, SLOTS } from '../shapes-logic.js?v=0';
-import { loadProgress, saveProgress, loadGallery, saveGalleryEntry, setGalleryHidden } from '../shapes-progress.js?v=0';
-import { sfx } from './sfx.js?v=0';
-import { voice } from './engine/voice.js?v=0';
-import { motion } from './engine/tween.js?v=0';
-import { Stage } from './engine/stage.js?v=0';
-import { Input } from './engine/input.js?v=0';
-import { SceneManager } from './engine/scenes.js?v=0';
-import { ui } from './ui/overlay.js?v=0';
-import { SCENES } from './scenes/index.js?v=0';
+         startTimer, stopTimer, saveScore, renderLeaderboard, showRankPopup, mountTeacherModal, sharedSound, logAttempt, isTeacherEmail } from '../shared.js?v=202610051406';
+import { recordResult, validateGalleryEntry, ZONES, lcg, SLOTS } from '../shapes-logic.js?v=202610051406';
+import { loadProgress, saveProgress, loadGallery, saveGalleryEntry, setGalleryHidden } from '../shapes-progress.js?v=202610051406';
+import { sfx } from './sfx.js?v=202610051406';
+import { voice } from './engine/voice.js?v=202610051406';
+import { motion } from './engine/tween.js?v=202610051406';
+import { Stage } from './engine/stage.js?v=202610051406';
+import { Input } from './engine/input.js?v=202610051406';
+import { SceneManager } from './engine/scenes.js?v=202610051406';
+import { ui } from './ui/overlay.js?v=202610051406';
+import { SCENES } from './scenes/index.js?v=202610051406';
 
 const $ = id => document.getElementById(id);
 const params = new URLSearchParams(location.search);

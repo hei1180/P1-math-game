@@ -4,15 +4,15 @@
 // Mouths are labelled with text + side-count dots (never a colour code). Grading: the item's answer from genCourse (tileAnswer).
 // Bench scene: the camera looks down at ~55 degrees, everything lies flat.
 import * as THREE from 'three';
-import { CourseScene } from '../CourseScene.js?v=0';
-import { tween, wait, motion } from '../../engine/tween.js?v=0';
-import { voice } from '../../engine/voice.js?v=0';
-import { disposeTree } from '../../engine/stage.js?v=0';
-import { FONT, SCENE, toyColor } from '../../theme.js?v=0';
-import { sfx } from '../../sfx.js?v=0';
-import { sparkle } from '../../fx3d.js?v=0';
-import { makeTile } from '../../models/tiles.js?v=0';
-import { TILE_ANSWERS, ANSWER_TEXT } from '../../../shapes-logic.js?v=0';
+import { CourseScene } from '../CourseScene.js?v=202610051406';
+import { tween, wait, motion } from '../../engine/tween.js?v=202610051406';
+import { voice } from '../../engine/voice.js?v=202610051406';
+import { disposeTree } from '../../engine/stage.js?v=202610051406';
+import { FONT, SCENE, toyColor } from '../../theme.js?v=202610051406';
+import { sfx } from '../../sfx.js?v=202610051406';
+import { sparkle } from '../../fx3d.js?v=202610051406';
+import { makeTile } from '../../models/tiles.js?v=202610051406';
+import { TILE_ANSWERS, ANSWER_TEXT } from '../../../shapes-logic.js?v=202610051406';
 
 const ELEV = (55 * Math.PI) / 180, SIN = Math.sin(ELEV), COS = Math.cos(ELEV);
 const CN = ['零', '一', '二', '三', '四', '五', '六'];

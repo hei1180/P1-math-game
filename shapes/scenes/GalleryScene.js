@@ -4,14 +4,14 @@
 // Own entry comes first, marked 「我」. The teacher also gets 🙈 Hide / 👁 Show per entry (hidden ones look grey, for the teacher only).
 // No likes, no counts, no free text: the only text from other players is the name they already show on the leaderboard.
 import * as THREE from 'three';
-import { Scene } from '../engine/scenes.js?v=0';
-import { tween, cancelTweens } from '../engine/tween.js?v=0';
-import { disposeTree } from '../engine/stage.js?v=0';
-import { SLOTS, BASIC_PART, robotName, PEG_GRID, validateGalleryEntry } from '../../shapes-logic.js?v=0';
-import { makeRobot, PART_INFO } from '../models/robot.js?v=0';
-import { makePegboard, makeBand, makePiece } from '../models/tiles.js?v=0';
-import { SCENE, FONT, pieceColor } from '../theme.js?v=0';
-import { sfx } from '../sfx.js?v=0';
+import { Scene } from '../engine/scenes.js?v=202610051406';
+import { tween, cancelTweens } from '../engine/tween.js?v=202610051406';
+import { disposeTree } from '../engine/stage.js?v=202610051406';
+import { SLOTS, BASIC_PART, robotName, PEG_GRID, validateGalleryEntry } from '../../shapes-logic.js?v=202610051406';
+import { makeRobot, PART_INFO } from '../models/robot.js?v=202610051406';
+import { makePegboard, makeBand, makePiece } from '../models/tiles.js?v=202610051406';
+import { SCENE, FONT, pieceColor } from '../theme.js?v=202610051406';
+import { sfx } from '../sfx.js?v=202610051406';
 
 const SPACING = 2.6, MAX_CELLS = 12;
 const K = 2 * Math.tan((20 * Math.PI) / 180); // visible height = K × camera distance (fov 40)

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Teacher Dashboard 老師資料板</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="shared.css?v=202609271224">
+    <link rel="stylesheet" href="shared.css?v=202610051406">
     <style>
         /* This page scrolls (unlike the games) — undo shared.css's fixed-body lock. */
         body { position: static; overflow: auto; user-select: text; -webkit-user-select: text; background-color: #f8fafc; }
@@ -145,7 +145,7 @@
     </div>
 
     <script type="module">
-        import { signIn, onUser, db, auth, isTeacherEmail } from './shared.js?v=202609271224';
+        import { signIn, onUser, db, auth, isTeacherEmail } from './shared.js?v=202610051406';
         import {
             collection, getDocs, query, where, orderBy, Timestamp,
         } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js';
@@ -154,8 +154,8 @@
             MEDAL_ICON, WORLD_TOTAL_LEVELS,
             toCSV, overviewToCSVRows, OVERVIEW_HEADERS, attemptsToCSVRows, ATTEMPTS_HEADERS, csvFilename,
             GAME_LABEL,
-        } from './teacher-data.js?v=202609271224';
-        import { WORLDS, LEVEL_COUNT, levelKey } from './bonds-logic.js?v=202609271224';
+        } from './teacher-data.js?v=202610051406';
+        import { WORLDS, LEVEL_COUNT, levelKey } from './bonds-logic.js?v=202610051406';
 
 
         const $ = id => document.getElementById(id);

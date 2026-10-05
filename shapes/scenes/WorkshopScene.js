@@ -7,16 +7,16 @@
 //  'wide' both zones side by side (landscape), 'stack' zones in two rows of five (tablets), 'tall' a 3-column snake (phone portrait).
 // The robot's name chip, the trophy and home buttons are DOM (in #ui, like BootScene) so they stay big and crisp.
 import * as THREE from 'three';
-import { Scene } from '../engine/scenes.js?v=0';
-import { tween, wait, motion } from '../engine/tween.js?v=0';
-import { disposeTree, blobShadow } from '../engine/stage.js?v=0';
-import { voice } from '../engine/voice.js?v=0';
-import { FONT, SCENE, toyColor } from '../theme.js?v=0';
-import { sfx } from '../sfx.js?v=0';
-import { sparkle, confetti } from '../fx3d.js?v=0';
-import { makeRobot } from '../models/robot.js?v=0';
-import { makeSolid, blink } from '../models/solids.js?v=0';
-import { COURSES, ZONES, PARTS, lcg, nextCourse, robotName, isCourseOpen, isRushOpen, isBossOpen, isZoneOpen, isZoneCleared } from '../../shapes-logic.js?v=0';
+import { Scene } from '../engine/scenes.js?v=202610051406';
+import { tween, wait, motion } from '../engine/tween.js?v=202610051406';
+import { disposeTree, blobShadow } from '../engine/stage.js?v=202610051406';
+import { voice } from '../engine/voice.js?v=202610051406';
+import { FONT, SCENE, toyColor } from '../theme.js?v=202610051406';
+import { sfx } from '../sfx.js?v=202610051406';
+import { sparkle, confetti } from '../fx3d.js?v=202610051406';
+import { makeRobot } from '../models/robot.js?v=202610051406';
+import { makeSolid, blink } from '../models/solids.js?v=202610051406';
+import { COURSES, ZONES, PARTS, lcg, nextCourse, robotName, isCourseOpen, isRushOpen, isBossOpen, isZoneOpen, isZoneCleared } from '../../shapes-logic.js?v=202610051406';
 
 // ------------------------------------------------------------------ stations
 const ZONE_COLOR = { a: 0xf59e0b, b: 0x0ea5e9 };

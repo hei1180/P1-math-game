@@ -2,15 +2,15 @@
 // The board stands upright facing the camera (easiest to tap). Taps go to the invisible hit spheres of the pegs.
 // Grading is checkPeg only: 'crossing' / 'flat' are not mistakes (toast + clear), 'wrong-sides' is.
 import * as THREE from 'three';
-import { CourseScene } from '../CourseScene.js?v=0';
-import { makePegboard, makeBand } from '../../models/tiles.js?v=0';
-import { tween, wait } from '../../engine/tween.js?v=0';
-import { disposeTree } from '../../engine/stage.js?v=0';
-import { sfx } from '../../sfx.js?v=0';
-import { voice } from '../../engine/voice.js?v=0';
-import { toyColor, FONT } from '../../theme.js?v=0';
-import { sparkle } from '../../fx3d.js?v=0';
-import { checkPeg, simplify, ANSWER_TEXT, PEG_GRID } from '../../../shapes-logic.js?v=0';
+import { CourseScene } from '../CourseScene.js?v=202610051406';
+import { makePegboard, makeBand } from '../../models/tiles.js?v=202610051406';
+import { tween, wait } from '../../engine/tween.js?v=202610051406';
+import { disposeTree } from '../../engine/stage.js?v=202610051406';
+import { sfx } from '../../sfx.js?v=202610051406';
+import { voice } from '../../engine/voice.js?v=202610051406';
+import { toyColor, FONT } from '../../theme.js?v=202610051406';
+import { sparkle } from '../../fx3d.js?v=202610051406';
+import { checkPeg, simplify, ANSWER_TEXT, PEG_GRID } from '../../../shapes-logic.js?v=202610051406';
 
 const S = 0.9;                       // peg spacing
 const BOARD = (PEG_GRID + 0.2) * S;  // board edge length

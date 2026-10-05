@@ -4,16 +4,16 @@
 //    make a tower fall;
 //  - a wrong piece is dropped on the tower as a dynamic body, rolls / topples off with a crash and flies back to the tray.
 import * as THREE from 'three';
-import { CourseScene } from '../CourseScene.js?v=0';
-import { FAMILY, familyOf, canPlace, topIsFlat, bottomIsFlat } from '../../../shapes-logic.js?v=0';
-import { tween, wait, motion } from '../../engine/tween.js?v=0';
-import { disposeTree } from '../../engine/stage.js?v=0';
-import { createPhysics } from '../../engine/physics.js?v=0';
-import { SCENE, toyColor } from '../../theme.js?v=0';
-import { sfx } from '../../sfx.js?v=0';
-import { voice } from '../../engine/voice.js?v=0';
-import { makeSolid, setMood, physicsShapeOf } from '../../models/solids.js?v=0';
-import { puff } from '../../fx3d.js?v=0';
+import { CourseScene } from '../CourseScene.js?v=202610051406';
+import { FAMILY, familyOf, canPlace, topIsFlat, bottomIsFlat } from '../../../shapes-logic.js?v=202610051406';
+import { tween, wait, motion } from '../../engine/tween.js?v=202610051406';
+import { disposeTree } from '../../engine/stage.js?v=202610051406';
+import { createPhysics } from '../../engine/physics.js?v=202610051406';
+import { SCENE, toyColor } from '../../theme.js?v=202610051406';
+import { sfx } from '../../sfx.js?v=202610051406';
+import { voice } from '../../engine/voice.js?v=202610051406';
+import { makeSolid, setMood, physicsShapeOf } from '../../models/solids.js?v=202610051406';
+import { puff } from '../../fx3d.js?v=202610051406';
 
 const TABLE_Y = 0.6;                     // table top
 const TOWER_Z = -0.6;

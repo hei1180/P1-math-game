@@ -1,12 +1,12 @@
 // Dev-only gallery of every model (open with shapes.html?dev&scene=Sandbox): solids with faces, tiles, B4 pieces,
 // the house puzzle solved on its outline, wires, a pegboard with a band. One finger turns the whole table.
 import * as THREE from 'three';
-import { Scene } from '../engine/scenes.js?v=0';
-import { MODEL_IDS, posesOf, TILE_TEMPLATES, PIECE_IDS, puzzleById, LINES } from '../../shapes-logic.js?v=0';
-import { SCENE, toyColor } from '../theme.js?v=0';
-import { makeSolid, setMood, blink } from '../models/solids.js?v=0';
-import { MOODS } from '../models/faces.js?v=0';
-import { makeTile, makePiece, makeOutline, makeWire, makePegboard, makeBand, makeLaser, makeCurve } from '../models/tiles.js?v=0';
+import { Scene } from '../engine/scenes.js?v=202610051406';
+import { MODEL_IDS, posesOf, TILE_TEMPLATES, PIECE_IDS, puzzleById, LINES } from '../../shapes-logic.js?v=202610051406';
+import { SCENE, toyColor } from '../theme.js?v=202610051406';
+import { makeSolid, setMood, blink } from '../models/solids.js?v=202610051406';
+import { MOODS } from '../models/faces.js?v=202610051406';
+import { makeTile, makePiece, makeOutline, makeWire, makePegboard, makeBand, makeLaser, makeCurve } from '../models/tiles.js?v=202610051406';
 
 const VIEWS = {
   all:    { pos: [0, 18.5, 10.4],   look: [0, 0, -1.2] },

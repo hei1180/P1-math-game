@@ -10,7 +10,7 @@ import {
   COURSES, ZONES, LINES, genCourse, genRush3d, genRush2d,
   starsFor, PARTS, SLOTS, ROBOT_NAMES, robotName, emptyProgress, recordResult, mergeProgress,
   isZoneOpen, isCourseOpen, isZoneCleared, isRushOpen, isBossOpen, nextCourse,
-  validateGalleryEntry, shuffle, lcg,
+  validateGalleryEntry, shuffle, lcg, BASIC_PART, LOOKS, LOOK_INFO, ownedItems, unseenItems, markSeen,
 } from '../shapes-logic.js';
 
 const SEEDS = Array.from({ length: 40 }, (_, i) => i + 1);
@@ -284,6 +284,33 @@ test('mergeProgress: max stars, union parts, named robot wins', () => {
   assert.equal(mergeProgress(a, null), a);
 });
 
+test('looks: a colour and a face per first clear, derived from stars; seen tracking', () => {
+  for (const [k, ids] of Object.entries(LOOKS)) {
+    assert.ok(ZONES.a.keys.includes(k) || ZONES.b.keys.includes(k) || k === 'boss', k);
+    assert.deepEqual(ids.map(id => LOOK_INFO[id].slot), ['paint', 'face'], k);
+  }
+  assert.equal(LOOK_INFO[BASIC_PART.paint].slot, 'paint');
+  assert.equal(LOOK_INFO[BASIC_PART.face].slot, 'face');
+  const all = Object.values(LOOKS).flat();
+  assert.equal(new Set(all).size, all.length, 'no look given twice');
+  let r = recordResult(emptyProgress(), 'A1', 1);
+  assert.deepEqual(r.looks, LOOKS.A1);
+  assert.deepEqual(recordResult(r.progress, 'A1', 3).looks, [], 'only on the first clear');
+  assert.ok(LOOKS.A1.every(id => ownedItems(r.progress).includes(id)));
+  assert.ok(!ownedItems(r.progress).includes(LOOKS.A2[0]));
+  assert.deepEqual(unseenItems(emptyProgress()), [], 'basics are never new');
+  assert.deepEqual(unseenItems(r.progress).sort(), [PARTS.A1.id, ...LOOKS.A1].sort());
+  const seen = markSeen(r.progress, [PARTS.A1.id, LOOKS.A1[0]]);
+  assert.deepEqual(unseenItems(seen), [LOOKS.A1[1]]);
+  assert.equal(r.progress.seen.length, 0, 'markSeen does not mutate');
+  // a player from before looks existed: stars give the looks, and they show as new
+  const legacy = { stars: { A1: 2 }, parts: [PARTS.A1.id], robot: { name: null }, creations: [] };
+  assert.ok(ownedItems(legacy).includes('paint-red'));
+  assert.ok(unseenItems(legacy).includes('face-happy'));
+  assert.deepEqual(mergeProgress(seen, { ...legacy, seen: ['x'] }).seen.sort(), [...seen.seen, 'x'].sort());
+  assert.equal(mergeProgress(emptyProgress(), legacy).robot.face, BASIC_PART.face, 'old robots get the basic face');
+});
+
 test('unlocks: zones by teacher, courses in order, rush and boss', () => {
   const p = emptyProgress();
   assert.ok(!isZoneOpen(p, 'a', { a: false, b: true }, false));
@@ -319,6 +346,9 @@ test('validateGalleryEntry', () => {
   };
   assert.ok(validateGalleryEntry(ok));
   assert.ok(validateGalleryEntry({ ...ok, robot: { ...ok.robot, name: null } }));
+  const { face, ...noFace } = ok.robot;
+  assert.ok(validateGalleryEntry({ ...ok, robot: noFace }), 'entries saved before faces');
+  assert.ok(!validateGalleryEntry({ ...ok, robot: { ...ok.robot, face: 7 } }));
   assert.ok(!validateGalleryEntry({ ...ok, message: 'hi' }), 'no extra (free text) fields');
   assert.ok(!validateGalleryEntry({ ...ok, creations: Array(7).fill(ok.creations[0]) }));
   assert.ok(!validateGalleryEntry({ ...ok, creations: [{ kind: 'peg', pts: [0, 0, 9, 9] }] }), 'peg off the board');

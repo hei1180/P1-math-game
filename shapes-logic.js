@@ -362,25 +362,76 @@ export const PARTS = {
   B4: { id: 'wheels-flower',  slot: 'wheels',  zh: '花花輪' },
   boss: { id: 'badge-gold',   slot: 'badge',   zh: '金獎章' },
 };
-export const SLOTS = ['wheels', 'head', 'arms', 'antenna', 'paint', 'badge'];
-export const BASIC_PART = { wheels: 'wheels-basic', head: 'head-basic', arms: 'arms-basic', antenna: 'none', paint: 'paint-blue', badge: 'none' };
+export const SLOTS = ['wheels', 'head', 'arms', 'antenna', 'paint', 'badge', 'face'];
+export const BASIC_PART = { wheels: 'wheels-basic', head: 'head-basic', arms: 'arms-basic', antenna: 'none', paint: 'paint-blue', badge: 'none', face: 'face-smile' };
+/**
+ * Robot looks: a colour (paint slot) and a face (face slot) earned with each first clear, on top of PARTS.
+ * They are derived from stars (never stored), so players who cleared courses before looks existed own them too.
+ */
+export const LOOKS = {
+  A1: ['paint-red', 'face-happy'],
+  A2: ['paint-yellow', 'face-wink'],
+  A3: ['paint-green', 'face-surprised'],
+  A4: ['paint-orange', 'face-cool'],
+  B1: ['paint-pink', 'face-silly'],
+  B2: ['paint-purple', 'face-sleepy'],
+  B3: ['paint-white', 'face-love'],
+  B4: ['paint-black', 'face-star'],
+  boss: ['paint-gold', 'face-proud'],
+};
+/** zh names and slots of colours and faces (basic ones included). hex = paint colour. */
+export const LOOK_INFO = {
+  'paint-blue':   { zh: '藍色',   slot: 'paint', hex: 0x3b82f6 },
+  'paint-red':    { zh: '紅色',   slot: 'paint', hex: 0xef4444 },
+  'paint-yellow': { zh: '黃色',   slot: 'paint', hex: 0xfacc15 },
+  'paint-green':  { zh: '綠色',   slot: 'paint', hex: 0x22c55e },
+  'paint-orange': { zh: '橙色',   slot: 'paint', hex: 0xf97316 },
+  'paint-pink':   { zh: '粉紅色', slot: 'paint', hex: 0xf472b6 },
+  'paint-purple': { zh: '紫色',   slot: 'paint', hex: 0xa855f7 },
+  'paint-white':  { zh: '白色',   slot: 'paint', hex: 0xf1f5f9 },
+  'paint-black':  { zh: '黑色',   slot: 'paint', hex: 0x334155 },
+  'paint-gold':   { zh: '金色',   slot: 'paint', hex: 0xeab308 },
+  'face-smile':     { zh: '微笑',   slot: 'face' },
+  'face-happy':     { zh: '開心',   slot: 'face' },
+  'face-wink':      { zh: '眨眼',   slot: 'face' },
+  'face-surprised': { zh: '驚訝',   slot: 'face' },
+  'face-cool':      { zh: '戴墨鏡', slot: 'face' },
+  'face-silly':     { zh: '扮鬼臉', slot: 'face' },
+  'face-sleepy':    { zh: '想睡覺', slot: 'face' },
+  'face-love':      { zh: '心心眼', slot: 'face' },
+  'face-star':      { zh: '星星眼', slot: 'face' },
+  'face-proud':     { zh: '得意',   slot: 'face' },
+};
+/** Everything this player may put on the robot: basics, earned parts, and the looks of every cleared course. */
+export function ownedItems(progress) {
+  const looks = Object.entries(LOOKS).filter(([k]) => (progress.stars[k] || 0) >= 1).flatMap(([, ids]) => ids);
+  return [...new Set([...Object.values(BASIC_PART), ...(progress.parts || []), ...looks])];
+}
+/** Owned items the child has not looked at in the Garage yet (basics never count as new). */
+export function unseenItems(progress) {
+  const basic = new Set(Object.values(BASIC_PART)), seen = new Set(progress.seen || []);
+  return ownedItems(progress).filter(id => !basic.has(id) && !seen.has(id));
+}
+/** Mark items as seen (returns a new progress). */
+export const markSeen = (progress, ids) => ({ ...progress, seen: [...new Set([...(progress.seen || []), ...ids])] });
 export const ROBOT_NAMES = [
   { zh: '叮叮', en: 'Ding-ding' }, { zh: '閃閃', en: 'Shiny' }, { zh: '咚咚', en: 'Dong-dong' }, { zh: '嘟嘟', en: 'Doo-doo' },
   { zh: '星星', en: 'Star' }, { zh: '雷雷', en: 'Zap' }, { zh: '噗噗', en: 'Puff' }, { zh: '啾啾', en: 'Chirp' },
 ];
 /** name = { i: index into ROBOT_NAMES, n: 1..99 } → '叮叮 7'. */
 export const robotName = name => (name ? `${ROBOT_NAMES[name.i].zh} ${name.n}` : '');
-export const emptyProgress = () => ({ stars: {}, parts: [], robot: { name: null, ...BASIC_PART }, creations: [] });
+export const emptyProgress = () => ({ stars: {}, parts: [], robot: { name: null, ...BASIC_PART }, creations: [], seen: [] });
 
-/** Record a finished course. part = the part id earned on the first clear, else null. */
+/** Record a finished course. part = the part id earned on the first clear, else null; looks = colour + face ids earned then, else []. */
 export function recordResult(progress, key, stars) {
   const prev = progress.stars[key] || 0;
-  const p = { ...progress, stars: { ...progress.stars, [key]: Math.max(prev, stars) }, parts: progress.parts.slice(), robot: { ...progress.robot }, creations: (progress.creations || []).slice() };
+  const p = { ...progress, stars: { ...progress.stars, [key]: Math.max(prev, stars) }, parts: progress.parts.slice(), robot: { ...progress.robot }, creations: (progress.creations || []).slice(), seen: (progress.seen || []).slice() };
   let part = null;
   if (prev === 0 && PARTS[key] && !p.parts.includes(PARTS[key].id)) { part = PARTS[key].id; p.parts.push(part); }
-  return { progress: p, newBest: stars > prev, part };
+  const looks = prev === 0 && stars > 0 && LOOKS[key] ? LOOKS[key].slice() : [];
+  return { progress: p, newBest: stars > prev, part, looks };
 }
-/** Merge local and remote copies: best stars, union of parts, robot from b when b has one, creations from b when b has any. */
+/** Merge local and remote copies: best stars, union of parts and seen, robot from b when b has one, creations from b when b has any. */
 export function mergeProgress(a, b) {
   if (!b) return a;
   const stars = { ...a.stars };
@@ -388,7 +439,8 @@ export function mergeProgress(a, b) {
   const parts = [...new Set([...(a.parts || []), ...(b.parts || [])])];
   const robot = b.robot && b.robot.name ? { ...BASIC_PART, ...b.robot } : { ...BASIC_PART, ...a.robot };
   const creations = (b.creations && b.creations.length ? b.creations : a.creations || []).slice(0, 6);
-  return { stars, parts, robot, creations };
+  const seen = [...new Set([...(a.seen || []), ...(b.seen || [])])];
+  return { stars, parts, robot, creations, seen };
 }
 export const isZoneOpen = (progress, zone, unlock, testMode) => !!testMode || !!(unlock && unlock[zone]);
 export function isCourseOpen(progress, key, unlock, testMode) {
@@ -415,7 +467,7 @@ const isInt = (v, lo, hi) => Number.isInteger(v) && v >= lo && v <= hi;
 const isStr = (v, max) => typeof v === 'string' && v.length <= max;
 /**
  * Gallery entry written to robotGallery/{uid}. Firestore has no nested arrays, so peg points are flat [x0,y0,x1,y1,...].
- * { playerName, robot: { name:{i,n}, wheels, head, arms, antenna, paint, badge }, creations: [≤6], hidden }
+ * { playerName, robot: { name:{i,n}, wheels, head, arms, antenna, paint, badge, face? }, creations: [≤6], hidden }
  * creation: { kind:'peg', pts:[ints 0..4], ≤ 40 numbers } | { kind:'tiles', placed:[{ p, x 0..9, y 0..9, r 0..3 }] ≤ 30 }
  */
 export function validateGalleryEntry(e) {
@@ -426,7 +478,7 @@ export function validateGalleryEntry(e) {
   const r = e.robot;
   if (!r || typeof r !== 'object') return false;
   if (r.name !== null && !(r.name && isInt(r.name.i, 0, ROBOT_NAMES.length - 1) && isInt(r.name.n, 1, 99))) return false;
-  if (!SLOTS.every(s => isStr(r[s], 30))) return false;
+  if (!SLOTS.every(s => isStr(r[s], 30) || (s === 'face' && r[s] === undefined))) return false; // entries saved before faces have none
   if (!Array.isArray(e.creations) || e.creations.length > 6) return false;
   return e.creations.every(c => {
     if (c.kind === 'peg') return Array.isArray(c.pts) && c.pts.length % 2 === 0 && c.pts.length <= 40 && c.pts.every(v => isInt(v, 0, PEG_GRID - 1));

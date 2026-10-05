@@ -19,7 +19,7 @@ Read with the plan (`2026-10-03-robot-workshop.md`). Where this file and the pla
 
 ## Bridge (`shapes/main.js`)
 
-- `bridge.complete()` in test mode returns `part: null` unless `bridge.previewLocks = true`.
+- `bridge.complete()` keeps the result in `bridge.progress` in test mode too (memory only; leaving test mode reloads), so medals show. Returns `{ newBest, part, looks }` (`looks` = colour + face ids earned on a first clear).
 - `bridge.gallery.isTeacher` is true in dev. `bridge.gallery.setHidden` never writes in dev/test.
 - Dev: `?dev&scene=<Key>` (`&zone=b` for Rush), `&seed=N`. `window.__robot = { stage, scenes, bridge, go }`.
 - `#stage` and `#ui` are siblings inside `#stageWrap`.
@@ -44,3 +44,10 @@ Read with the plan (`2026-10-03-robot-workshop.md`). Where this file and the pla
 - **`makeBuildRobot(build, { rng })`** → faces +z, drives +x; `userData.drive(fail, { sign, on })` emits events (`go`, `clunk`, `oops`, `land`, `wave`, `finish`) for sounds; `userData.reset()` restores parts and position. `drive(null)` leaves it ~9 units right. No shadow.
 - **fx3d:** `confetti(stage, at, n, parent)`, `sparkle(stage, objOrVec, parent)`, `puff(stage, vec, parent)` — pass `this.root` as parent.
 - `SCENE.wall` added in `shapes/theme.js`.
+
+## Robot looks and "new" hints (shapes-logic.js, 2026-10-05)
+
+- `SLOTS` now ends with `'face'`; `BASIC_PART.face = 'face-smile'`. Colours are `paint-*` ids in the `paint` slot.
+- `LOOKS[courseKey] = [paintId, faceId]`, `LOOK_INFO[id] = { zh, slot, hex? }` (basic ones included). Looks are derived from stars, never stored.
+- `ownedItems(progress)` = basics + parts + looks of cleared courses. `unseenItems(progress)` = owned, non-basic, not in `progress.seen`. `markSeen(progress, ids)` returns a new progress.
+- `validateGalleryEntry` accepts robots without `face` (older entries).

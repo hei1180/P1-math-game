@@ -51,12 +51,11 @@ const bridge = {
     logAttempt({ game: 'shapes', mode, kind: 'level', stars, mistakes: extra.mistakes ?? null, durationSec: extra.durationSec ?? null, confusions: extra.confusions || [] });
     const r = recordResult(this.progress, key, stars);
     this.sitting.courses++;
-    if (session.testMode) {
-      if (this.previewLocks) this.progress = r.progress; // dev preview: keep in memory only, never saved
-      return { newBest: r.newBest, part: this.previewLocks ? r.part : null };
-    }
-    this.progress = r.progress; await saveProgress(player.uid, r.progress);
-    return { newBest: r.newBest, part: r.part };
+    this.progress = r.progress;
+    // Test mode keeps results in memory only (medals show while trying it out); leaving test mode reloads the page.
+    if (session.testMode) return { newBest: r.newBest, part: r.part, looks: r.looks };
+    await saveProgress(player.uid, r.progress);
+    return { newBest: r.newBest, part: r.part, looks: r.looks };
   },
 
   async saveRobot(robot) {

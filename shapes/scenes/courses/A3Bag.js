@@ -165,6 +165,7 @@ export class A3Bag extends CourseScene {
 
   async exit() {
     this.stage.awake('A3-idle', false);
+    this.dropBubble(); // the bubble lives in #ui outside the overlay's tracking: remove it when leaving mid-course
     await super.exit();
   }
 

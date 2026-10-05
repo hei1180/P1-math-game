@@ -201,8 +201,7 @@ export class A4Everyday extends CourseScene {
       onMove: pad => this.setHover(this.binAt(pad.position.x, pad.position.z - GRIP_DZ)),
       onEnd: (pad, pt, { cancelled }) => {
         this.setHover(null);
-        if (cancelled) return;                                   // the system took the touch away: not a drop
-        const bin = this.binAt(pad.position.x, pad.position.z - GRIP_DZ);
+        const bin = cancelled ? null : this.binAt(pad.position.x, pad.position.z - GRIP_DZ); // a cancelled touch is never a drop
         if (bin) this.choose(bin.userData.family);
         else if (this.wrap) tween(pad.position, { x: SPOT.x, y: this.padY, z: SPOT.z + GRIP_DZ }, { ms: 260 }); // let go in the open: slide back
       },

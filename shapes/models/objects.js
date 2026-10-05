@@ -162,7 +162,7 @@ const BUILD = {
       g.fillStyle = '#fff'; for (let i = 0; i < 16; i++) { g.beginPath(); g.arc(i * 32 + 16, h - 13, 5, 0, 7); g.fill(); }
     });
     const g = new THREE.Group();
-    g.add(at(mesh(geo('hat', () => faceFront(new THREE.ConeGeometry(0.4, 0.86, 44))), [texMat('hat', t), mat('hat-base', { color: 0x9d174d })]), 0, -0.07, 0));
+    g.add(at(mesh(geo('hat', () => faceFront(new THREE.ConeGeometry(0.4, 0.86, 44))), [texMat('hat', t), mat('hat-base', { color: 0x9d174d }), mat('hat-base', { color: 0x9d174d })] /* cone base cap = material 2 */), 0, -0.07, 0));
     g.add(at(mesh(geo('hat-pom', () => new THREE.SphereGeometry(0.1, 16, 12)), mat('hat-pom', { color: 0xfde047, roughness: 0.95 })), 0, 0.39, 0));
     return g;
   },

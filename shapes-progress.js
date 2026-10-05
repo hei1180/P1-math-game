@@ -24,13 +24,13 @@ export async function saveProgress(uid, progress) {
   catch (e) { console.warn('progress save failed', e); }
 }
 
-/** Students see visible entries only (max 60); the teacher sees every entry. Any error gives []. */
+/** Students see visible entries only (max 60); the teacher sees every entry. null when the load failed (offline etc.), [] when there is nothing. */
 export async function loadGallery({ teacher = false } = {}) {
   try {
     const col = collection(db, 'robotGallery');
     const snap = await getDocs(teacher ? col : query(col, where('hidden', '==', false), limit(60)));
     return snap.docs.map(d => ({ uid: d.id, ...d.data() }));
-  } catch (e) { console.warn('gallery offline', e); return []; }
+  } catch (e) { console.warn('gallery offline', e); return null; }
 }
 
 /** Write the player's own gallery entry. The existing `hidden` flag is kept (only the teacher changes it). */

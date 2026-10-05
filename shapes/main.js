@@ -102,7 +102,7 @@ const bridge = {
   gallery: {
     isTeacher: false,
     get enabled() { return settings.shapesGallery !== false; },
-    /** Visible entries (all entries for the teacher). [] when the gallery is off or offline. */
+    /** Visible entries (all entries for the teacher); [] when the gallery is off; null when the load failed (offline). */
     async load() { return bridge.gallery.enabled ? loadGallery({ teacher: bridge.gallery.isTeacher }) : []; },
     /** Write this player's robot and creations to the gallery (never in test mode or when signed out). */
     async publish() {

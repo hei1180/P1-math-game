@@ -7,12 +7,11 @@ import * as THREE from 'three';
 import { Scene } from '../engine/scenes.js?v=0';
 import { tween, cancelTweens } from '../engine/tween.js?v=0';
 import { disposeTree } from '../engine/stage.js?v=0';
-import { SLOTS, BASIC_PART, ROBOT_NAMES, robotName, PEG_GRID, validateGalleryEntry } from '../../shapes-logic.js?v=0';
-import { makeRobot } from '../models/robot.js?v=0';
+import { SLOTS, BASIC_PART, robotName, PEG_GRID, validateGalleryEntry } from '../../shapes-logic.js?v=0';
+import { makeRobot, PART_INFO } from '../models/robot.js?v=0';
 import { makePegboard, makeBand, makePiece } from '../models/tiles.js?v=0';
-import { SCENE, FONT } from '../theme.js?v=0';
+import { SCENE, FONT, pieceColor } from '../theme.js?v=0';
 import { sfx } from '../sfx.js?v=0';
-import { pieceColor } from './FreeBuildScene.js?v=0';
 
 const SPACING = 2.6, MAX_CELLS = 12;
 const K = 2 * Math.tan((20 * Math.PI) / 180); // visible height = K × camera distance (fov 40)
@@ -58,6 +57,9 @@ function drawSign(canvas, { name, robot, own, grey }) {
   if (robot) { g.font = `24px ${FONT}`; g.fillStyle = '#6b7280'; g.fillText(robot, left, 74); }
 }
 
+/** Only a part that belongs in that slot (other players' data is not trusted): anything else becomes the basic part. */
+const partFor = (slot, id) => (id === BASIC_PART[slot] || (PART_INFO[id] && PART_INFO[id].slot === slot) ? id : BASIC_PART[slot]);
+
 export class GalleryScene extends Scene {
   async enter() {
     const { ui, bridge } = this;
@@ -79,7 +81,7 @@ export class GalleryScene extends Scene {
     let list;
     try {
       list = await this.live(bridge.gallery.load());
-      if (!Array.isArray(list)) throw new Error('gallery.load did not give a list');
+      if (!Array.isArray(list)) throw new Error('gallery.load failed'); // null = the load failed; [] = nothing there
     } catch (e) {
       console.warn('gallery load failed', e);
       return this.fail();
@@ -87,8 +89,6 @@ export class GalleryScene extends Scene {
     const entries = this.prepare(list);
     if (!entries.length) {
       ui.hidePrompt();
-      // an offline load gives [] too (shapes-progress swallows the error), so tell the two apart when the browser knows
-      if (typeof navigator !== 'undefined' && navigator.onLine === false) return this.fail();
       await this.live(ui.card({ zh: '還未有作品', en: 'No work here yet', icon: '🖼️', buttons: [{ id: 'back', zh: '返回', en: 'Back' }] }));
       this.go('Workshop');
       return;
@@ -180,9 +180,9 @@ export class GalleryScene extends Scene {
   /** Put an entry on a podium: robot parts, sign, grey veil. */
   assign(cell, entry) {
     cell.entry = entry;
-    const key = SLOTS.map(s => entry.robot[s]).join('|');
+    const key = SLOTS.map(s => partFor(s, entry.robot[s])).join('|');
     if (key !== cell.key) {
-      for (const s of SLOTS) cell.robot.userData.setPart(s, entry.robot[s] || BASIC_PART[s]);
+      for (const s of SLOTS) cell.robot.userData.setPart(s, partFor(s, entry.robot[s]));
       cell.key = key;
     }
     this.paintCell(cell);
@@ -207,9 +207,9 @@ export class GalleryScene extends Scene {
     try {
       const ok = await this.live(this.bridge.gallery.setHidden(e.uid, !e.hidden));
       if (!ok) { sfx.bonk(); this.ui.toast('未能更改', 'Not changed', 1400); return; }
-      e.hidden = !e.hidden;
+      e.hidden = !e.hidden; // the entry object lives on even if the podium was re-used meanwhile
       sfx.pop();
-      this.paintCell(cell);
+      if (cell.entry === e) this.paintCell(cell);
     } catch (err) { console.warn('setHidden failed', err); sfx.bonk(); this.ui.toast('未能更改', 'Not changed', 1400); }
     finally { cell.busy = false; }
   }
@@ -223,6 +223,7 @@ export class GalleryScene extends Scene {
     const st = this.stage, aspect = st.width / Math.max(1, st.height);
     this.size = `${st.width}x${st.height}`;
     if (this.detail) { this.frameDetail(); return; }
+    this.s.scroll = Math.min(this.s.scroll, this.scrollMax()); // the row may fit better after a resize
     const d = Math.max((this.viewW() * (aspect < 1 ? 1.08 : 1.25)) / (K * aspect), 7); // a little wider than the podiums, so the signs and arms are not cropped
     st.setView([0, 3, d], [0, 0.9, 0]);
     this.lastScroll = null; // lay the row out again for the new width
@@ -304,19 +305,28 @@ export class GalleryScene extends Scene {
     this.strip.visible = false; this.stripes.visible = false;
     const aspect = this.stage.width / Math.max(1, this.stage.height);
     const cols = aspect < 1 ? 2 : 3, rows = aspect < 1 ? 3 : 2, slot = 2.9;
-    const table = new THREE.Mesh(new THREE.BoxGeometry(cols * slot + 0.6, 0.3, rows * slot + 0.6), new THREE.MeshLambertMaterial({ color: SCENE.metal }));
+    const signH = 1.2, depth = rows * slot + 0.6 + signH; // room at the front of the table for the name sign
+    const table = new THREE.Mesh(new THREE.BoxGeometry(cols * slot + 0.6, 0.3, depth), new THREE.MeshLambertMaterial({ color: SCENE.metal }));
     table.position.y = -0.15;
     this.detail.add(table);
-    this.detailBox = { w: cols * slot + 0.6, d: rows * slot + 0.6 };
+    this.detailBox = { w: cols * slot + 0.6, d: depth };
     entry.creations.forEach((c, i) => {
-      const x = ((i % cols) - (cols - 1) / 2) * slot, z = (Math.floor(i / cols) - (rows - 1) / 2) * slot;
+      const x = ((i % cols) - (cols - 1) / 2) * slot, z = (Math.floor(i / cols) - (rows - 1) / 2) * slot - signH / 2;
       const g = c.kind === 'peg' ? this.flatPeg(c) : this.flatTiles(c);
       g.position.x += x; g.position.z += z;
       this.detail.add(g);
     });
+    // the player's name lives on a sign lying on the table (the 🔈 button never reads another child's name aloud)
+    const canvas = document.createElement('canvas'); canvas.width = 256; canvas.height = 96;
+    drawSign(canvas, { name: entry.playerName, robot: entry.robot.name ? robotName(entry.robot.name) : '', own: entry.own, grey: false });
+    const tex = new THREE.CanvasTexture(canvas); tex.colorSpace = THREE.SRGBColorSpace;
+    const sign = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 2.6 * 96 / 256), new THREE.MeshBasicMaterial({ map: tex, transparent: true }));
+    sign.rotation.x = -Math.PI / 2; sign.position.set(0, 0.02, rows * slot / 2 + 0.15);
+    this.detail.add(sign);
     this.placeUi();
     this.ui.back(() => this.closeEntry());
-    this.ui.prompt(entry.playerName, entry.creations.length ? (entry.own ? '我的作品 My work' : '作品 Creations') : '還未有創作 No creations yet', { speak: false });
+    if (entry.creations.length) this.ui.prompt(entry.own ? '我的作品' : '作品', entry.own ? 'My work' : 'Creations', { speak: false });
+    else this.ui.prompt('還未有創作', 'No creations yet', { speak: false });
     this.frameDetail(500);
     this.stage.invalidate();
   }

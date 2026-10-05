@@ -58,8 +58,7 @@ export class GarageScene extends Scene {
     this.savedJson = JSON.stringify(this.cfg);
     this.tab = 'wheels';
     this.busy = false;
-    this.yaw = 0;
-    this.size = '';
+    this.side = null;
 
     // the owned set: basics + earned parts; test mode (teacher / dev) owns everything so every part can be tried
     this.owned = new Set(Object.values(BASIC_PART));
@@ -67,7 +66,7 @@ export class GarageScene extends Scene {
 
     this.buildRoom();
     this.buildTurntable();
-    input.spin(this.pivot, { speed: 0.012 });
+    this.buildTurnHandle();
 
     this.buildPanel();
     this.refreshName(true);
@@ -105,46 +104,79 @@ export class GarageScene extends Scene {
     this.root.add(pivot);
   }
 
-  /** The turntable only turns about the vertical axis (Input.spin also tilts, so keep just the yaw). */
-  update() {
-    const q = this.pivot.quaternion;
-    if (q.x !== 0 || q.z !== 0) {
-      const e = new THREE.Euler().setFromQuaternion(q, 'YXZ');
-      q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), e.y);
-    }
-    const sig = `${this.stage.width}x${this.stage.height}x${this.panel ? this.panel.offsetHeight : 0}`;
-    if (sig !== this.size) this.frame();
+  /**
+   * One finger anywhere on the robot or turntable turns it about the vertical axis: a big invisible box is dragged along a
+   * vertical plane, and its sideways travel is the turn (a clean yaw, never a tilt).
+   */
+  buildTurnHandle() {
+    const home = new THREE.Vector3(0, 1.4, 0);
+    const proxy = new THREE.Mesh(new THREE.BoxGeometry(3.6, 2.8, 3.6), new THREE.MeshBasicMaterial({ visible: false }));
+    proxy.position.copy(home);
+    this.root.add(proxy);
+    let start = 0;
+    this.input.drag(proxy, {
+      plane: new THREE.Plane(new THREE.Vector3(0, 0, 1), 0), lift: 0,
+      onStart: () => { start = this.pivot.rotation.y; },
+      onMove: o => { this.pivot.rotation.y = start + (o.position.x - home.x) * 1.6; this.stage.invalidate(); },
+      onEnd: o => { o.position.copy(home); },
+    });
   }
 
-  /** Put the robot in the free area above the panel, whatever the screen shape. */
+  /** Put the robot in the free area next to the panel (above it, or left of it on a short screen). Only runs when something resized. */
   frame() {
-    const st = this.stage, ph = this.panel ? this.panel.offsetHeight : 260;
-    this.size = `${st.width}x${st.height}x${ph}`;
-    const f = Math.min(0.62, ph / Math.max(1, st.height)), t = 0.16, aspect = st.width / Math.max(1, st.height); // t = the name sign at the top
-    const d = Math.max(3.9 / ((1 - f - t) * K), 3.6 / (K * aspect), 5);
-    const ly = 1.15 - ((f - t) / 2) * K * d; // look a little lower so the robot sits between the sign and the panel
-    st.setView([0, ly + 1.2, d], [0, ly, 0]);
+    const st = this.stage, W = st.width, H = st.height, aspect = W / Math.max(1, H);
+    const side = this.side, f = side ? 0 : Math.min(0.62, this.panel.offsetHeight / Math.max(1, H)), fw = side ? Math.min(0.6, this.panel.offsetWidth / Math.max(1, W)) : 0;
+    const t = 0.16; // the name sign at the top
+    const d = Math.max(3.9 / ((1 - f - t) * K), 3.6 / (K * aspect * (1 - fw)), 5);
+    const ly = 1.15 - ((f - t) / 2) * K * d, lx = (fw / 2) * K * d * aspect; // look past the robot so it sits in the free area
+    st.setView([lx, ly + 1.2, d], [lx, ly, 0]);
+  }
+
+  /** Bottom panel on a normal screen, a side panel on a short one (landscape phone). */
+  layoutPanel() {
+    const side = this.stage.height < 500;
+    if (side === this.side) return false;
+    this.side = side;
+    this.panel.style.cssText = `position:absolute;display:flex;flex-direction:column;gap:8px;box-sizing:border-box;background:rgba(255,251,235,.95);pointer-events:auto;font-family:${FONT};` + (side
+      ? 'right:0;top:110px;bottom:0;width:min(48%,400px);padding:8px;border-left:4px solid #fcd34d;border-radius:20px 0 0 0'
+      : 'left:0;right:0;bottom:0;max-width:720px;margin:0 auto;padding:8px 8px max(8px, env(safe-area-inset-bottom));border-top:4px solid #fcd34d;border-radius:20px 20px 0 0');
+    return true;
+  }
+
+  onResize() {
+    if (typeof this.stage.resize === 'function') this.stage.resize(); // measure first, then fit
+    this.layoutPanel();
+    this.frame();
   }
 
   /** The robot reacts (wave / hop / dance). Skipped while another reaction runs. */
   async react(kind) {
     if (this.busy || !this.alive) return;
     this.busy = true;
-    try { await this.live(this.robot.userData[kind]({ on: n => { if (n === 'beat') sfx.tick(Math.floor(Math.random() * 6)); else if (n === 'boing') sfx.boing(); } })); }
+    try { await this.live(this.robot.userData[kind]({ on: n => { if (!this.alive) return; if (n === 'beat') sfx.tick(Math.floor(Math.random() * 6)); else if (n === 'boing') sfx.boing(); } })); }
     finally { this.busy = false; }
   }
 
   // ---------------------------------------------------------------- panel
   buildPanel() {
-    const panel = this.panel = E('div', `position:absolute;left:0;right:0;bottom:0;display:flex;flex-direction:column;gap:8px;padding:8px 8px max(8px, env(safe-area-inset-bottom));background:rgba(255,251,235,.95);border-top:4px solid #fcd34d;border-radius:20px 20px 0 0;pointer-events:auto;font-family:${FONT};max-width:720px;margin:0 auto`);
-    this.tabsEl = E('div', 'display:flex;gap:4px');
+    const panel = this.panel = E('div');
+    this.tabsEl = E('div', 'display:flex;gap:4px;flex:none');
     this.bodyEl = E('div', 'display:flex;flex-direction:column;gap:8px;min-height:92px;justify-content:center');
-    this.saveBtn = button('background:#22c55e;color:#fff;border:4px solid #16a34a;font-size:20px;padding:4px 16px;min-height:56px', () => this.save());
+    const scroll = E('div', 'display:flex;flex-direction:column;gap:8px;flex:1 1 auto;min-height:0;overflow-y:auto');
+    scroll.append(this.tabsEl, this.bodyEl);
+    this.saveBtn = button('flex:none;background:#22c55e;color:#fff;border:4px solid #16a34a;font-size:20px;padding:4px 16px;min-height:56px', () => this.save());
     lines(this.saveBtn, '保存', 'Save', 'font-size:22px', 'font-size:11px;font-weight:400;opacity:.85');
-    panel.append(this.tabsEl, this.bodyEl, this.saveBtn);
-    document.getElementById('ui').appendChild(panel);
+    panel.append(scroll, this.saveBtn);
+    const root = document.getElementById('ui');
+    root.appendChild(panel);
+    this.layoutPanel();
     this.renderTabs(); this.renderBody();
+    // re-fit only when the screen or the panel changes size (no layout reads every frame)
+    this.ro = new ResizeObserver(() => { if (this.alive) this.onResize(); });
+    this.ro.observe(root); this.ro.observe(panel);
   }
+
+  async exit() { if (this.ro) this.ro.disconnect(); }
 
   renderTabs() {
     this.tabsEl.replaceChildren();
@@ -241,20 +273,27 @@ export class GarageScene extends Scene {
   // ---------------------------------------------------------------- save / leave
   dirty() { return JSON.stringify(this.cfg) !== this.savedJson; }
 
-  async save() {
-    if (this.saving) return;
-    this.saving = true;
+  /** One save at a time: a second call while one is in flight gets the same promise. */
+  save() {
+    if (!this.savePromise) this.savePromise = this.doSave().finally(() => { this.savePromise = null; if (this.alive) this.saveBtn.style.opacity = ''; });
+    return this.savePromise;
+  }
+
+  async doSave() {
+    const snapshot = JSON.stringify(this.cfg); // what is being saved; later edits made while it saves stay unsaved
     this.saveBtn.style.opacity = '0.6';
-    try {
-      try { await this.live(this.bridge.saveRobot({ ...this.cfg })); } catch (e) { console.error('saveRobot failed', e); this.ui.toast('未能儲存', 'Not saved', 1800); return false; }
-      this.savedJson = JSON.stringify(this.cfg);
-      sfx.fanfare();
-      confetti(this.stage, new THREE.Vector3(0, 2, 0.5), 40, this.root);
-      this.ui.toast('已保存！', 'Saved!', 1400);
-      while (this.busy) await this.live(wait(60)); // let a running hop / wave finish first
-      await this.react('dance');
-      return true;
-    } finally { this.saving = false; if (this.alive) this.saveBtn.style.opacity = ''; }
+    try { await this.live(this.bridge.saveRobot({ ...this.cfg })); } catch (e) { console.error('saveRobot failed', e); this.ui.toast('未能儲存', 'Not saved', 1800); return false; }
+    this.savedJson = snapshot;
+    this.celebrate().catch(console.error);
+    return true;
+  }
+
+  async celebrate() {
+    sfx.fanfare();
+    confetti(this.stage, new THREE.Vector3(0, 2, 0.5), 40, this.root);
+    this.ui.toast('已保存！', 'Saved!', 1400);
+    while (this.busy) await this.live(wait(60)); // let a running hop / wave finish first
+    await this.react('dance');
   }
 
   async askBack() {

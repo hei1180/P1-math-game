@@ -431,13 +431,15 @@ export function recordResult(progress, key, stars) {
   const looks = prev === 0 && stars > 0 && LOOKS[key] ? LOOKS[key].slice() : [];
   return { progress: p, newBest: stars > prev, part, looks };
 }
-/** Merge local and remote copies: best stars, union of parts and seen, robot from b when b has one, creations from b when b has any. */
+/** Merge local and remote copies: best stars, union of parts and seen, robot from b when b's is set up (named or changed), creations from b when b has any. */
 export function mergeProgress(a, b) {
   if (!b) return a;
   const stars = { ...a.stars };
   for (const [k, v] of Object.entries(b.stars || {})) stars[k] = Math.max(stars[k] || 0, v);
   const parts = [...new Set([...(a.parts || []), ...(b.parts || [])])];
-  const robot = b.robot && b.robot.name ? { ...BASIC_PART, ...b.robot } : { ...BASIC_PART, ...a.robot };
+  // a robot counts as set up once it has a name or any non-basic part, colour or face
+  const isSet = r => !!r && (!!r.name || SLOTS.some(k => r[k] && r[k] !== BASIC_PART[k]));
+  const robot = isSet(b.robot) ? { ...BASIC_PART, ...b.robot } : { ...BASIC_PART, ...a.robot };
   const creations = (b.creations && b.creations.length ? b.creations : a.creations || []).slice(0, 6);
   const seen = [...new Set([...(a.seen || []), ...(b.seen || [])])];
   return { stars, parts, robot, creations, seen };

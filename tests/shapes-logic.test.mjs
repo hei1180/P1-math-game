@@ -282,6 +282,8 @@ test('mergeProgress: max stars, union parts, named robot wins', () => {
   assert.deepEqual(mergeProgress({ ...a, creations: [peg] }, { ...b, creations: [] }).creations, [peg], 'local creations kept when remote has none');
   assert.deepEqual(mergeProgress(emptyProgress(), { ...b, creations: [peg] }).creations, [peg]);
   assert.equal(mergeProgress(a, null), a);
+  const unnamed = { ...b, robot: { ...emptyProgress().robot, paint: 'paint-red' } };
+  assert.equal(mergeProgress(emptyProgress(), unnamed).robot.paint, 'paint-red', 'an unnamed but changed robot is kept');
 });
 
 test('looks: a colour and a face per first clear, derived from stars; seen tracking', () => {

@@ -116,9 +116,24 @@ function makeLayout(name, hasGallery) {
 // ------------------------------------------------------------------ camera fit
 const fitCam = new THREE.PerspectiveCamera(40, 1, 0.1, 300);
 /** Smallest camera distance that shows every fit point inside the screen margins; also centres the view. */
+let safeBottomPx = null;
+/** env(safe-area-inset-bottom) in px, read once through a hidden probe. */
+function safeBottom() {
+  if (safeBottomPx === null) {
+    safeBottomPx = 0;
+    try {
+      const d = document.createElement('div');
+      d.style.cssText = 'position:absolute;visibility:hidden;pointer-events:none;padding-bottom:env(safe-area-inset-bottom,0px)';
+      document.body.appendChild(d);
+      safeBottomPx = parseFloat(getComputedStyle(d).paddingBottom) || 0;
+      d.remove();
+    } catch (e) { /* ignore */ }
+  }
+  return safeBottomPx;
+}
 function fitCamera(L, W, H) {
   const cam = fitCam; cam.aspect = W / H; cam.updateProjectionMatrix();
-  const lim = { x: 1 - 28 / W, top: 1 - (2 * L.topPx) / H, bot: -(1 - (2 * L.botPx) / H) };
+  const lim = { x: 1 - 28 / W, top: 1 - (2 * L.topPx) / H, bot: -(1 - (2 * (L.botPx + safeBottom())) / H) };
   const dir = new THREE.Vector3(0, Math.sin(L.pitch), Math.cos(L.pitch));
   const look = new THREE.Vector3(L.cx, 0.3, L.cz), v = new THREE.Vector3();
   let d = 20, box = null;
@@ -175,9 +190,14 @@ function signTexture(st, W, H, locked) {
   else { g.font = `${bd * 0.6}px ${EMOJI_FONT}`; g.globalAlpha = locked ? 0.55 : 1; g.fillText(st.badge, bx, by + 3); g.globalAlpha = 1; }
   const tx = 22 + bd + 14, tw = W - tx - 24, cx = tx + tw / 2;
   g.fillStyle = locked ? '#6b7280' : '#1f2937';
-  const zs = fitText(g, st.zh, tw, H * 0.4); g.font = `bold ${zs}px ${FONT}`; g.fillText(st.zh, cx, H * 0.36);
+  const two = st.zh.length >= 6; // a long name (生活中的立體) goes on two lines instead of shrinking
+  if (two) {
+    const h = Math.ceil(st.zh.length / 2), a = st.zh.slice(0, h), b = st.zh.slice(h);
+    const zs = Math.min(fitText(g, a, tw, H * 0.3), fitText(g, b, tw, H * 0.3)); g.font = `bold ${zs}px ${FONT}`;
+    g.fillText(a, cx, H * 0.26); g.fillText(b, cx, H * 0.53);
+  } else { const zs = fitText(g, st.zh, tw, H * 0.4); g.font = `bold ${zs}px ${FONT}`; g.fillText(st.zh, cx, H * 0.36); }
   g.fillStyle = locked ? '#9ca3af' : '#6b7280';
-  const es = fitText(g, st.en, tw, H * 0.2, 'normal'); g.font = `${es}px ${FONT}`; g.fillText(st.en, cx, H * 0.74);
+  const es = fitText(g, st.en, tw, two ? H * 0.17 : H * 0.2, 'normal'); g.font = `${es}px ${FONT}`; g.fillText(st.en, cx, two ? H * 0.8 : H * 0.74);
   return texOf(c);
 }
 
@@ -418,7 +438,8 @@ export class WorkshopScene extends Scene {
 
   buildPads(w, L) {
     const r = L.padR, rimGeo = new THREE.CylinderGeometry(r + 0.1, r + 0.14, 0.12, 36), topGeo = new THREE.CylinderGeometry(r, r, 0.04, 36);
-    const rimOpen = lam(0x475569), rimLocked = lam(0x6b7280);
+    const rimOpen = lam(0x475569), rimLocked = lam(0x6b7280), rimBoss = lam(0xf1f5f9); // the boss pad needs a light rim on the dark road
+    const f = this.fit, tanH = Math.tan((20 * Math.PI) / 180), cam = f.pos, sinP = Math.sin(L.pitch);
     const signW = L.signW, signH = L.signH, signGeo = new THREE.PlaneGeometry(signW, signH);
     const fp = signH * Math.sin(L.pitch);
     const lockTex = emojiTex('🔒'), medalTex = [null, emojiTex('🥉'), emojiTex('🥈'), emojiTex('🥇')];
@@ -426,12 +447,18 @@ export class WorkshopScene extends Scene {
     for (const p of L.pads) {
       const st = STATIONS[p.key], state = this.padState(p.key);
       const g = new THREE.Group(); g.position.set(p.x, 0, p.z); g.userData.padKey = p.key;
-      const rim = new THREE.Mesh(rimGeo, state.open ? rimOpen : rimLocked); rim.position.y = 0.06;
+      const rim = new THREE.Mesh(rimGeo, st.kind === 'boss' ? rimBoss : state.open ? rimOpen : rimLocked); rim.position.y = 0.06;
       const top = new THREE.Mesh(topGeo, state.open ? lam(st.color, { emissive: st.color, emissiveIntensity: 0.25 }) : lam(0x9ca3af));
       top.position.y = PAD_H - 0.02;
       const sign = new THREE.Mesh(signGeo, new THREE.MeshBasicMaterial({ map: signTexture(st, 512, Math.round(512 * signH / signW), !state.open), transparent: true }));
       this.tilt(sign, signH, L); sign.position.z = r + 0.14 + fp / 2;
-      g.add(rim, top, sign);
+      // invisible, larger tap target: at least ~56 px tall on screen at this pad's distance from the camera
+      const dist = Math.hypot(cam.x - p.x, cam.y, cam.z - p.z), pxPerUnit = (this.stage.height / 2) / (dist * tanH);
+      let near = Infinity; for (const q of L.pads) if (q !== p) near = Math.min(near, Math.hypot(q.x - p.x, q.z - p.z));
+      const hitR = Math.min(Math.max(r + 0.1, 34 / (pxPerUnit * sinP)), near * 0.6 - 0.05);
+      const hit = new THREE.Mesh(new THREE.CylinderGeometry(hitR, hitR, 0.12, 24), new THREE.MeshBasicMaterial({ visible: false }));
+      hit.position.y = 0.08;
+      g.add(rim, top, sign, hit);
       const pad = { key: p.key, x: p.x, z: p.z, group: g, top, state, medal: null, lock: null, glow: state.open };
       if (!state.open) {
         const lock = new THREE.Sprite(new THREE.SpriteMaterial({ map: lockTex, transparent: true, depthTest: false }));
@@ -445,9 +472,9 @@ export class WorkshopScene extends Scene {
   medalSize() { return this.layout.padR * 1.5; }
   setMedal(pad, stars) {
     if (pad.medal) { pad.group.remove(pad.medal); pad.medal.material.dispose(); }
-    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.tex.medal[stars], transparent: true, depthTest: false }));
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.tex.medal[stars], transparent: true, depthWrite: false }));
     const sz = this.medalSize();
-    s.scale.set(sz, sz, 1); s.position.set(this.layout.padR * 0.85, 1.15, -this.layout.padR * 0.2); s.renderOrder = 5;
+    s.scale.set(sz, sz, 1); s.position.set(this.layout.padR + 0.1, 1.15, -this.layout.padR * 0.2); s.renderOrder = 5;
     pad.group.add(s); pad.medal = s;
     return s;
   }
@@ -476,10 +503,10 @@ export class WorkshopScene extends Scene {
       return b;
     };
     const trophy = mk('absolute left-2 top-2 w-12 h-12 rounded-xl bg-white/90 text-2xl border-2 border-yellow-400', '🏆', '排行榜 Leaderboard');
-    trophy.addEventListener('click', () => this.bridge.showLeaderboard('a'));
+    trophy.addEventListener('click', () => { if (!this.busy) this.bridge.showLeaderboard('a'); });
     const home = mk('absolute top-2 w-12 h-12 rounded-xl bg-white/90 text-2xl border-2 border-gray-300', '🏠', '返回遊戲 Back to games');
     home.style.left = '60px';
-    home.addEventListener('click', () => { location.href = 'index.html'; });
+    home.addEventListener('click', () => { if (!this.busy) location.href = 'index.html'; });
     const chip = mk('absolute left-1/2 rounded-2xl bg-white/95 border-4 border-emerald-300 px-4 py-1 leading-tight text-gray-800', '', '我的機械人 My Robot');
     chip.style.transform = 'translateX(-50%)'; chip.style.bottom = 'max(8px, env(safe-area-inset-bottom))'; chip.style.minHeight = '52px'; chip.style.minWidth = '120px';
     chip.addEventListener('click', () => { if (!this.busy) this.onPad('garage'); });
@@ -490,6 +517,7 @@ export class WorkshopScene extends Scene {
     if (name) { zh.textContent = `🤖 ${robotName(name)}`; en.textContent = '我的機械人 My Robot'; }
     else { zh.textContent = '🤖 幫我改名'; en.textContent = 'Name me'; }
     chip.append(zh, en);
+    chip.setAttribute('aria-label', name ? `${robotName(name)} 我的機械人 My Robot` : '幫我改名 Name me');
     const wrap = document.createElement('div');
     wrap.className = 'absolute inset-0'; wrap.style.pointerEvents = 'none';
     wrap.append(trophy, home, chip);
@@ -522,6 +550,7 @@ export class WorkshopScene extends Scene {
     if (!pad.state.open) {
       sfx.bonk();
       const [zh, en] = LOCK[pad.state.reason] || LOCK.teacher;
+      try { voice.say(zh); } catch (e) { /* ignore */ } // children this age can't read the reason yet
       this.busy = true;
       await this.live(this.ui.card({ zh, en, icon: '🔒', buttons: [{ id: 'ok', zh: '知道了', en: 'OK' }] }));
       this.busy = false;
@@ -566,7 +595,7 @@ export class WorkshopScene extends Scene {
     await this.live(tween(r.rotation, { y: r.rotation.y + d }, { ms: 200, ease: 'inOutCubic' }));
     const wheels = rig && rig.children.find(c => c.userData && c.userData.spins), spins = (wheels && wheels.userData.spins) || [];
     const ms = 1500;
-    const bob = (async () => { for (let i = 0; i < 4 && rig; i++) { await tween(rig.position, { y: 0.07 }, { ms: ms / 8 }); await tween(rig.position, { y: 0 }, { ms: ms / 8 }); } })();
+    const bob = (async () => { for (let i = 0; i < 4 && rig; i++) { await this.live(tween(rig.position, { y: 0.07 }, { ms: ms / 8 })); await this.live(tween(rig.position, { y: 0 }, { ms: ms / 8 })); } })();
     await this.live(Promise.all([
       tween(r.position, { x: pad.x, z: pad.z }, { ms, ease: 'inOutCubic' }),
       ...spins.map(s => tween(s.rotation, { x: s.rotation.x + dist / 0.3 }, { ms, ease: 'inOutCubic' })),
@@ -624,7 +653,7 @@ export class WorkshopScene extends Scene {
     }));
     on = false;
     if (id === 'done') { location.href = 'index.html'; await new Promise(() => {}); }
-    await dancer;
+    dancer.catch(() => {}); // the current dance cycle (about a second) just finishes by itself
     this.busy = was;
   }
 }

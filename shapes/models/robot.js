@@ -2,16 +2,18 @@
 // makeBuildRobot = the Boss test-drive robot, assembled from solids + a tile window, with scripted drives.
 // All geometry / materials / textures are cached and flagged userData.shared, so disposeTree never frees them.
 import * as THREE from 'three';
-import { PARTS, SLOTS, BASIC_PART, posesOf, familyOf, shuffle, TILE_TEMPLATES, templateById } from '../../shapes-logic.js?v=202610051406';
+import { PARTS, SLOTS, BASIC_PART, LOOK_INFO, posesOf, familyOf, shuffle, TILE_TEMPLATES, templateById } from '../../shapes-logic.js?v=202610051406';
 import { TOY_COLORS } from '../theme.js?v=202610051406';
 import { tween, cancelTweens, motion } from '../engine/tween.js?v=202610051406';
 import { disposeTree } from '../engine/stage.js?v=202610051406';
 import * as Solids from './solids.js?v=202610051406';
 import * as Tiles from './tiles.js?v=202610051406';
+import { makePatch } from './faces.js?v=202610051406';
 
 // ------------------------------------------------------------------ part names
 export const PART_INFO = {};
 for (const p of Object.values(PARTS)) PART_INFO[p.id] = { zh: p.zh, slot: p.slot };
+for (const [id, l] of Object.entries(LOOK_INFO)) if (!PART_INFO[id]) PART_INFO[id] = { zh: l.zh, slot: l.slot }; // colours + faces
 const BASIC_ZH = { 'wheels-basic': '普通輪', 'head-basic': '普通頭', 'arms-basic': '普通手', 'paint-blue': '藍色', none: '沒有' };
 for (const [slot, id] of Object.entries(BASIC_PART)) {
   // 'none' is the basic value of two slots (antenna, badge), so it carries no single slot
@@ -67,6 +69,14 @@ const starShape = (R, r) => {
 };
 
 // ------------------------------------------------------------------ materials
+const RAINBOW = ['#ef4444', '#f97316', '#facc15', '#22c55e', '#06b6d4', '#3b82f6', '#a855f7'];
+/** CSS colour for a paint swatch in the DOM (rainbow = a gradient). */
+export function paintCss(id) {
+  if (id === 'paint-rainbow') return `linear-gradient(135deg, ${RAINBOW.join(', ')})`;
+  const l = LOOK_INFO[id] && LOOK_INFO[id].hex !== undefined ? LOOK_INFO[id] : LOOK_INFO['paint-blue'];
+  return '#' + l.hex.toString(16).padStart(6, '0');
+}
+
 const M = {
   tyre: () => mat('tyre', { color: 0x1f2937, roughness: 0.9 }),
   hub: () => mat('hub', { color: 0xcbd5e1, metalness: 0.5, roughness: 0.35 }),
@@ -76,16 +86,19 @@ const M = {
   leaf: () => mat('leaf', { color: 0x16a34a }),
   petal: () => mat('petal', { color: 0xf472b6 }),
   glow: () => mat('glow', { color: 0xfde047, emissive: 0xfacc15, emissiveIntensity: 0.9 }),
+  /** Every paint-* colour (LOOK_INFO hex) plus rainbow; unknown ids → blue. */
   paint(id) {
     if (id === 'paint-rainbow') {
       const t = tex('rainbow', 8, 128, (g, w, h) => {
         const gr = g.createLinearGradient(0, 0, 0, h);
-        ['#ef4444', '#f97316', '#facc15', '#22c55e', '#06b6d4', '#3b82f6', '#a855f7'].forEach((c, i, a) => gr.addColorStop(i / (a.length - 1), c));
+        RAINBOW.forEach((c, i, a) => gr.addColorStop(i / (a.length - 1), c));
         g.fillStyle = gr; g.fillRect(0, 0, w, h);
       });
       return mat('paint-rainbow', { map: t, roughness: 0.4 });
     }
-    return mat('paint-blue', { color: 0x3b82f6, roughness: 0.4 });
+    const info = LOOK_INFO[id] && LOOK_INFO[id].slot === 'paint' && LOOK_INFO[id].hex !== undefined ? LOOK_INFO[id] : LOOK_INFO['paint-blue'];
+    const key = info === LOOK_INFO['paint-blue'] ? 'paint-blue' : id;
+    return mat(key, { color: info.hex, roughness: 0.4, metalness: key === 'paint-gold' ? 0.45 : 0.05 });
   },
 };
 
@@ -149,42 +162,171 @@ function buildArm(id, s) {
 }
 const ARM_REST = 0.2;
 
-const faceTex = (key, draw) => tex('face-' + key, 256, 160, draw);
-const FACE = {
-  basic: () => faceTex('basic', (g, w, h) => {
-    g.fillStyle = '#fff'; for (const x of [78, 178]) { g.beginPath(); g.ellipse(x, 66, 30, 34, 0, 0, 7); g.fill(); }
-    g.fillStyle = '#111827'; for (const x of [82, 174]) { g.beginPath(); g.arc(x, 72, 16, 0, 7); g.fill(); }
-    g.fillStyle = '#fff'; for (const x of [88, 180]) { g.beginPath(); g.arc(x, 64, 5, 0, 7); g.fill(); }
-    g.strokeStyle = '#111827'; g.lineWidth = 9; g.lineCap = 'round'; g.beginPath(); g.arc(128, 96, 36, 0.25, Math.PI - 0.25); g.stroke();
-    g.fillStyle = 'rgba(244,114,182,.7)'; for (const x of [30, 226]) { g.beginPath(); g.ellipse(x, 106, 16, 10, 0, 0, 7); g.fill(); }
-  }),
-  tv: () => faceTex('tv', (g, w, h) => {
-    g.fillStyle = '#052e16'; g.fillRect(0, 0, w, h);
-    g.strokeStyle = '#4ade80'; g.lineWidth = 11; g.lineCap = 'round';
-    for (const x of [78, 178]) { g.beginPath(); g.arc(x, 76, 24, Math.PI * 1.1, Math.PI * 1.9); g.stroke(); }
-    g.beginPath(); g.arc(128, 90, 40, 0.3, Math.PI - 0.3); g.stroke();
-    g.fillStyle = 'rgba(74,222,128,.12)'; for (let y = 0; y < h; y += 8) g.fillRect(0, y, w, 3);
-  }),
+// ------------------------------------------------------------------ robot faces (face slot)
+// Each face is drawn once on a 256×160 canvas (cached, shared). 'sticker' = transparent with a white rim, so it reads on every
+// paint colour (basic head, dome); 'tv' = the same face on a lit screen (TV head).
+const INK = '#1f2937', PINK = 'rgba(244,114,182,.75)', RED = '#f87171';
+const FW = 256, FH = 160, EL = 80, ER = 176, EY = 64;
+const FACE_IDS = Object.keys(LOOK_INFO).filter(id => LOOK_INFO[id].slot === 'face');
+const faceId = id => (FACE_IDS.includes(id) ? id : BASIC_PART.face);
+
+const ink = (g, w) => { g.strokeStyle = INK; g.lineWidth = w; g.lineCap = 'round'; g.lineJoin = 'round'; };
+const dot = (g, x, y, r, fill) => { g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fillStyle = fill; g.fill(); };
+function roundEye(g, x, y, rx = 25, ry = 29, pr = 14, dx = 3, dy = 6) {
+  g.beginPath(); g.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2); g.fillStyle = '#fff'; g.fill(); ink(g, 5); g.stroke();
+  dot(g, x + dx, y + dy, pr, INK); dot(g, x + dx + pr * 0.4, y + dy - pr * 0.45, pr * 0.36, '#fff');
+}
+const arcLine = (g, x, y, r, a0, a1, w = 9) => { g.beginPath(); g.arc(x, y, r, a0, a1); ink(g, w); g.stroke(); };
+const happyEye = (g, x) => arcLine(g, x, EY + 10, 22, Math.PI * 1.12, Math.PI * 1.88);
+const smile = g => arcLine(g, 128, 88, 34, 0.25, Math.PI - 0.25);
+const cheeks = g => { g.fillStyle = PINK; for (const x of [38, 218]) { g.beginPath(); g.ellipse(x, 106, 16, 10, 0, 0, Math.PI * 2); g.fill(); } };
+function openMouth(g, y = 92, r = 32) { // a big "D" with a tongue
+  g.save(); g.beginPath(); g.arc(128, y, r, 0, Math.PI); g.closePath(); g.fillStyle = INK; g.fill(); g.clip();
+  g.beginPath(); g.ellipse(128, y + r, r * 0.62, r * 0.48, 0, 0, Math.PI * 2); g.fillStyle = RED; g.fill(); g.restore();
+  g.beginPath(); g.arc(128, y, r, 0, Math.PI); g.closePath(); ink(g, 5); g.stroke();
+}
+function starPath(g, x, y, R, r) {
+  g.beginPath();
+  for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + (i * Math.PI) / 5, k = i % 2 ? r : R; g.lineTo(x + Math.cos(a) * k, y + Math.sin(a) * k); }
+  g.closePath();
+}
+function heartPath(g, x, y, s) {
+  g.beginPath(); g.moveTo(x, y + s * 0.95);
+  g.bezierCurveTo(x - s * 1.25, y + s * 0.15, x - s * 0.95, y - s * 0.95, x, y - s * 0.4);
+  g.bezierCurveTo(x + s * 0.95, y - s * 0.95, x + s * 1.25, y + s * 0.15, x, y + s * 0.95);
+  g.closePath();
+}
+
+const FACE_DRAW = {
+  'face-smile': g => { roundEye(g, EL, EY); roundEye(g, ER, EY); smile(g); cheeks(g); },
+  'face-happy': g => { happyEye(g, EL); happyEye(g, ER); openMouth(g); cheeks(g); },
+  'face-wink': g => {
+    roundEye(g, EL, EY); happyEye(g, ER); smile(g); cheeks(g);
+    starPath(g, 228, 30, 14, 6); g.fillStyle = '#facc15'; g.fill(); ink(g, 3); g.stroke();
+  },
+  'face-surprised': g => {
+    roundEye(g, EL, EY + 2, 27, 31, 9, 0, 0); roundEye(g, ER, EY + 2, 27, 31, 9, 0, 0);
+    for (const x of [EL, ER]) arcLine(g, x, 34, 24, Math.PI * 1.2, Math.PI * 1.8, 6);
+    g.beginPath(); g.ellipse(128, 118, 14, 18, 0, 0, Math.PI * 2); g.fillStyle = INK; g.fill();
+    g.beginPath(); g.ellipse(128, 126, 8, 6, 0, 0, Math.PI * 2); g.fillStyle = RED; g.fill();
+  },
+  'face-cool': g => {
+    ink(g, 7); g.beginPath(); g.moveTo(40, 50); g.lineTo(216, 50); g.stroke();
+    for (const x of [EL, ER]) {
+      g.beginPath(); g.moveTo(x - 38, 46); g.lineTo(x + 38, 46); g.quadraticCurveTo(x + 36, 92, x, 90); g.quadraticCurveTo(x - 36, 92, x - 38, 46); g.closePath();
+      g.fillStyle = '#111827'; g.fill(); ink(g, 4); g.stroke();
+      g.save(); g.clip(); g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = 7; g.beginPath(); g.moveTo(x - 4, 44); g.lineTo(x - 26, 92); g.stroke(); g.restore();
+    }
+    arcLine(g, 138, 90, 30, 0.35, Math.PI - 0.7);
+  },
+  'face-silly': g => {
+    ink(g, 9);
+    g.beginPath(); g.moveTo(60, 48); g.lineTo(94, 64); g.lineTo(60, 80); g.stroke();
+    g.beginPath(); g.moveTo(196, 48); g.lineTo(162, 64); g.lineTo(196, 80); g.stroke();
+    g.beginPath(); g.moveTo(108, 112); g.lineTo(108, 130); g.arc(128, 130, 20, Math.PI, 0, true); g.lineTo(148, 112); g.closePath();
+    g.fillStyle = RED; g.fill(); ink(g, 5); g.stroke();
+    ink(g, 4); g.beginPath(); g.moveTo(128, 120); g.lineTo(128, 138); g.stroke();
+    arcLine(g, 128, 78, 40, 0.22, Math.PI - 0.22);
+    cheeks(g);
+  },
+  'face-sleepy': g => {
+    for (const x of [EL, ER]) arcLine(g, x, EY - 8, 22, Math.PI * 0.15, Math.PI * 0.85, 8);
+    g.beginPath(); g.ellipse(128, 112, 11, 8, 0, 0, Math.PI * 2); ink(g, 6); g.stroke();
+    g.fillStyle = '#3b82f6'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.font = 'bold 34px system-ui,sans-serif'; g.fillText('Z', 214, 40);
+    g.font = 'bold 24px system-ui,sans-serif'; g.fillText('z', 240, 16);
+    cheeks(g);
+  },
+  'face-love': g => {
+    for (const x of [EL, ER]) {
+      heartPath(g, x, EY, 28); g.fillStyle = '#ef4444'; g.fill(); ink(g, 4); g.stroke();
+      dot(g, x - 10, EY - 8, 5, 'rgba(255,255,255,.85)');
+    }
+    openMouth(g, 98, 24); cheeks(g);
+  },
+  'face-star': g => {
+    for (const x of [EL, ER]) { starPath(g, x, EY, 33, 15); g.fillStyle = '#facc15'; g.fill(); ink(g, 4); g.stroke(); dot(g, x - 6, EY - 6, 4, '#fff'); }
+    openMouth(g, 98, 28);
+  },
+  'face-proud': g => {
+    for (const [x, k] of [[EL, -1], [ER, 1]]) {
+      g.save(); g.beginPath(); g.moveTo(x - 25, EY); g.lineTo(x + 25, EY); g.arc(x, EY, 25, 0, Math.PI); g.closePath();
+      g.fillStyle = '#fff'; g.fill(); g.clip(); dot(g, x + 2, EY + 12, 12, INK); dot(g, x + 7, EY + 8, 4, '#fff'); g.restore();
+      g.beginPath(); g.moveTo(x - 25, EY); g.lineTo(x + 25, EY); g.arc(x, EY, 25, 0, Math.PI); g.closePath(); ink(g, 5); g.stroke();
+      ink(g, 7); g.beginPath(); g.moveTo(x - 22 * k, EY - 26); g.lineTo(x + 20 * k, EY - 34); g.stroke();
+    }
+    ink(g, 9); g.beginPath(); g.moveTo(98, 104); g.quadraticCurveTo(130, 124, 164, 96); g.stroke();
+    cheeks(g);
+  },
 };
+
+/** The bare face (transparent canvas). */
+function faceCanvas(id) {
+  const c = document.createElement('canvas'); c.width = FW; c.height = FH;
+  FACE_DRAW[faceId(id)](c.getContext('2d'));
+  return c;
+}
+/** 'sticker' (white rim, transparent) or 'tv' (on a lit screen). Cached + shared. */
+function faceTexture(id, variant = 'sticker') {
+  id = faceId(id);
+  if (variant === 'tv') {
+    return tex(`face-tv:${id}`, FW, 188, (g, w, h) => {
+      const gr = g.createRadialGradient(w / 2, h / 2, 10, w / 2, h / 2, w * 0.7);
+      gr.addColorStop(0, '#ecfdf5'); gr.addColorStop(1, '#a7f3d0');
+      g.fillStyle = gr; g.fillRect(0, 0, w, h);
+      g.drawImage(faceCanvas(id), 0, (h - FH) / 2);
+      g.fillStyle = 'rgba(6,95,70,.07)'; for (let y = 0; y < h; y += 8) g.fillRect(0, y, w, 3);
+    });
+  }
+  return tex(`face:${id}`, FW, FH, g => {
+    const src = faceCanvas(id), sil = document.createElement('canvas'); sil.width = FW; sil.height = FH;
+    const sg = sil.getContext('2d'); sg.drawImage(src, 0, 0); sg.globalCompositeOperation = 'source-in'; sg.fillStyle = '#fff'; sg.fillRect(0, 0, FW, FH);
+    for (let i = 0; i < 16; i++) { const a = (i / 16) * Math.PI * 2; g.drawImage(sil, Math.cos(a) * 5, Math.sin(a) * 5); } // white rim
+    g.drawImage(src, 0, 0);
+  });
+}
+function faceMat(id, variant) {
+  id = faceId(id);
+  if (variant === 'tv') { const t = faceTexture(id, 'tv'); return mat(`face-tv:${id}`, { map: t, emissiveMap: t, emissive: 0xffffff, emissiveIntensity: 0.55, roughness: 0.3 }); }
+  return mat(`face:${id}`, { map: faceTexture(id), transparent: true, depthWrite: false, roughness: 0.8, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+}
+const faceIcons = new Map();
+/** A PNG data URL of a face (for DOM buttons). */
+export function faceIcon(id) {
+  id = faceId(id);
+  if (!faceIcons.has(id)) faceIcons.set(id, faceTexture(id).image.toDataURL('image/png'));
+  return faceIcons.get(id);
+}
+
 const HEAD_TOP = { 'head-basic': 0.6, 'head-tv': 0.68, 'head-dome': 0.52 };
 
-function buildHead(id, paint) {
+/** Head group; userData.face = the face mesh, userData.faceVariant = 'sticker' | 'tv' (setPart('face') swaps its material). */
+function buildHead(id, paint, face) {
   const g = new THREE.Group();
+  let fm, variant = 'sticker';
   if (id === 'head-tv') {
+    variant = 'tv';
     g.add(at(mesh(geo('tv', () => roundedBox(0.86, 0.68, 0.52, 0.09)), M.dark()), 0, 0.34, 0));
-    const scr = mesh(geo('tv-screen', () => new THREE.PlaneGeometry(0.68, 0.5)), mat('tv-screen', { map: FACE.tv(), emissiveMap: FACE.tv(), emissive: 0xffffff, emissiveIntensity: 0.6 }));
-    g.add(at(scr, 0, 0.35, 0.262));
+    fm = at(mesh(geo('tv-screen', () => new THREE.PlaneGeometry(0.68, 0.5)), faceMat(face, variant)), 0, 0.35, 0.262);
     for (const [x, y] of [[0.36, 0.1], [0.36, 0.2]]) g.add(at(mesh(geo('knob', () => new THREE.CylinderGeometry(0.03, 0.03, 0.04, 10).rotateZ(Math.PI / 2)), M.gold()), x + 0.07, y + 0.3, 0));
   } else if (id === 'head-dome') {
     g.add(at(mesh(geo('dome-base', () => new THREE.CylinderGeometry(0.42, 0.44, 0.12, 28)), M.metal()), 0, 0.06, 0));
     g.add(at(mesh(geo('dome-inner', () => new THREE.SphereGeometry(0.25, 20, 14)), mat('dome-inner', { color: 0xfde68a })), 0, 0.37, 0));
-    for (const x of [-0.1, 0.1]) g.add(at(mesh(geo('dome-eye', () => new THREE.SphereGeometry(0.045, 10, 8)), mat('eye', { color: 0x111827 })), x, 0.42, 0.22));
-    const sm = at(mesh(geo('dome-smile', () => new THREE.TorusGeometry(0.07, 0.014, 6, 14, Math.PI)), mat('eye', { color: 0x111827 })), 0, 0.33, 0.235); sm.rotation.z = Math.PI; g.add(sm);
+    // the face is a patch curved round the front of the inner ball (radius 0.25, centre y 0.37)
+    const patch = geo('dome-face', () => makePatch((u, v) => {
+      const lon = u * 0.95, lat = v * 0.6, r = 0.25;
+      return [r * Math.cos(lat) * Math.sin(lon), r * Math.sin(lat), r * Math.cos(lat) * Math.cos(lon)];
+    }, 14, 10));
+    fm = at(mesh(patch, faceMat(face, variant)), 0, 0.37, 0);
+    fm.renderOrder = 1;
     g.add(at(mesh(geo('dome-glass', () => new THREE.SphereGeometry(0.42, 28, 14, 0, Math.PI * 2, 0, Math.PI / 2)), mat('dome-glass', { color: 0xbae6fd, transparent: true, opacity: 0.38, roughness: 0.05, depthWrite: false })), 0, 0.12, 0));
   } else {
     g.add(at(mesh(geo('head', () => roundedBox(0.76, 0.6, 0.6, 0.14)), M.paint(paint)), 0, 0.3, 0));
-    g.add(at(mesh(geo('face-plane', () => new THREE.PlaneGeometry(0.58, 0.36)), mat('face-basic', { map: FACE.basic(), transparent: true, roughness: 0.8 })), 0, 0.3, 0.301));
+    fm = at(mesh(geo('face-plane', () => new THREE.PlaneGeometry(0.64, 0.4)), faceMat(face, variant)), 0, 0.3, 0.302);
+    fm.renderOrder = 1;
   }
+  g.add(fm);
+  g.userData.face = fm; g.userData.faceVariant = variant;
   return g;
 }
 
@@ -208,15 +350,17 @@ function buildBadge(id) {
 }
 
 /**
- * The child's robot; origin on the floor between the wheels, facing +z. config = { wheels, head, arms, antenna, paint, badge }
- * (missing or unknown slots use BASIC_PART). userData:
+ * The child's robot; origin on the floor between the wheels, facing +z. config = { wheels, head, arms, antenna, paint, badge, face }
+ * (missing or unknown slots use BASIC_PART; the face shows on every head, on the screen of the TV head). userData:
  * - setPart(slot, partId): swaps one slot. The stage renders on demand, so the CALLER must call stage.invalidate() afterwards.
  * - walkTo(x, z), dance(opts), wave(opts), hop(opts) -> Promise. opts.on(name) is optional and called for sound:
- *   walkTo none; wave 'wave'; hop 'boing' at take-off and 'land'; dance 'beat' on each of its 5 steps.
+ *   walkTo none; wave 'wave'; hop 'boing' at take-off and 'land'; dance 'beat' on each of its steps (opts.steps, default 5).
+ * - setPart('face', id) only swaps the face material (no rebuild).
  * Shared materials: scenes must clone before tinting. No shadow is added (the scene adds its own blobShadow).
  */
 export function makeRobot(config = {}) {
-  const cfg = { ...BASIC_PART }; for (const s of SLOTS) if (config[s] && PART_INFO[config[s]]) cfg[s] = config[s];
+  const fits = (slot, id) => id === BASIC_PART[slot] || (!!PART_INFO[id] && PART_INFO[id].slot === slot);
+  const cfg = { ...BASIC_PART }; for (const s of SLOTS) if (config[s] && fits(s, config[s])) cfg[s] = config[s];
   const root = new THREE.Group(), rig = new THREE.Group(), slots = {}, ref = { armL: null, armR: null, spins: [], pending: 0 };
   root.add(rig);
 
@@ -229,7 +373,8 @@ export function makeRobot(config = {}) {
   const put = (slot, g) => { if (slots[slot]) rig.remove(slots[slot]); slots[slot] = g; if (g) rig.add(g); };
   function rebuild(slot) {
     if (slot === 'wheels') { const g = buildWheels(cfg.wheels); ref.spins = g.userData.spins; put('wheels', g); }
-    else if (slot === 'head') { const g = at(buildHead(cfg.head, cfg.paint), 0, 1.2, 0); put('head', g); rebuild('antenna'); }
+    else if (slot === 'head') { const g = at(buildHead(cfg.head, cfg.paint, cfg.face), 0, 1.2, 0); put('head', g); rebuild('antenna'); }
+    else if (slot === 'face') { const h = slots.head; if (h) h.userData.face.material = faceMat(cfg.face, h.userData.faceVariant); } // no rebuild: swap the face only
     else if (slot === 'arms') { const g = new THREE.Group(), l = buildArm(cfg.arms, -1), r = buildArm(cfg.arms, 1); g.add(l, r); ref.armL = l; ref.armR = r; put('arms', g); }
     else if (slot === 'antenna') put('antenna', buildAntenna(cfg.antenna, cfg.head));
     else if (slot === 'badge') put('badge', buildBadge(cfg.badge));
@@ -268,9 +413,9 @@ export function makeRobot(config = {}) {
     await T(rig.scale, { x: 1, y: 1, z: 1 }, 110, 'outBack');
   }
 
-  async function dance({ on } = {}) {
+  async function dance({ on, steps = 5 } = {}) {
     const L = ref.armL, Rr = ref.armR;
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < steps; i++) {
       const k = i % 2 ? 1 : -1;
       if (on) on('beat');
       await Promise.all([
@@ -287,7 +432,7 @@ export function makeRobot(config = {}) {
     robot: true,
     setPart(slot, partId) {
       if (!SLOTS.includes(slot)) return;
-      cfg[slot] = PART_INFO[partId] ? partId : BASIC_PART[slot];
+      cfg[slot] = fits(slot, partId) ? partId : BASIC_PART[slot];
       rebuild(slot);
     },
     walkTo, dance, wave, hop,

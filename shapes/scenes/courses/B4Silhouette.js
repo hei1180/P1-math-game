@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import { CourseScene } from '../CourseScene.js?v=0';
 import { makePiece, makeOutline } from '../../models/tiles.js?v=0';
-import { tween, wait, cancelTweens } from '../../engine/tween.js?v=0';
+import { tween, wait, cancelTweens, motion } from '../../engine/tween.js?v=0';
 import { disposeTree } from '../../engine/stage.js?v=0';
 import { sfx } from '../../sfx.js?v=0';
 import { voice } from '../../engine/voice.js?v=0';
@@ -14,7 +14,7 @@ import { PIECES, puzzleById, footprint, checkDrop, isPuzzleDone } from '../../..
 
 const CELL = 1;
 const GAP = 0.45;        // space between tray slots
-const TILT = 0.3;        // camera tilt from straight down (rad)
+const TILT = 0.15;       // camera tilt from straight down (rad)
 const MOVE_MIN = 0.2;    // a press that moved less than this is a tap (select), not a drop
 
 export class B4Silhouette extends CourseScene {
@@ -42,7 +42,7 @@ export class B4Silhouette extends CourseScene {
     b.type = 'button';
     b.setAttribute('aria-label', '轉一轉 Turn');
     b.className = 'bubbly-btn';
-    b.style.cssText = `position:absolute;display:none;min-width:84px;height:56px;padding:0 14px;border-radius:28px;border:4px solid #34d399;background:#fff;color:#1f2937;font-weight:700;font-size:22px;font-family:${FONT};pointer-events:auto;touch-action:manipulation;box-shadow:0 2px 8px rgba(0,0,0,.25)`;
+    b.style.cssText = `position:absolute;display:none;left:50%;bottom:12px;transform:translateX(-50%);min-width:96px;height:56px;padding:0 18px;border-radius:28px;border:4px solid #34d399;background:#fff;color:#1f2937;font-weight:700;font-size:22px;font-family:${FONT};pointer-events:auto;touch-action:manipulation;box-shadow:0 2px 8px rgba(0,0,0,.25)`;
     b.textContent = '⟳ 轉';
     b.addEventListener('click', () => { this.doTurn(); });
     if (root) root.appendChild(b);
@@ -70,20 +70,19 @@ export class B4Silhouette extends CourseScene {
   }
   hideBar() { if (this.bar) { this.bar.remove(); this.bar = null; } }
 
-  /** Put the ⟳ button just above-right of the selected piece (clamped on screen); hide it when nothing can turn. */
+  /**
+   * The ⟳ 轉 button sits at a fixed spot (bottom centre, nothing under it) and turns the selected piece.
+   * It is dimmed while no tray piece is selected, and hidden while the picture celebrates.
+   */
   placeTurnButton() {
     const b = this.turnBtn, pc = this.sel;
     if (!b) return;
-    if (!pc || pc.placed || this.dragging || this.finished || !this.alive) { b.style.display = 'none'; return; }
-    const { cols } = pc.mesh.userData, p = pc.holder.position;
-    const s = this.stage.toScreen(new THREE.Vector3(p.x + cols * CELL, 0, p.z));
-    const w = this.stage.width, h = this.stage.height;
-    const x = Math.min(Math.max(s.x + 4, 4), w - 92), y = Math.min(Math.max(s.y - 28, 4), h - 64);
+    if (this.finished || !this.alive || !this.pcs.length) { b.style.display = 'none'; return; }
+    const on = !!pc && !pc.placed && !this.dragging;
     b.style.display = 'block';
-    b.style.left = x + 'px'; b.style.top = y + 'px';
+    b.style.opacity = on ? '1' : '0.45';
   }
   update() {
-    if (this.turnBtn && this.turnBtn.style.display !== 'none') this.placeTurnButton();
     const { width: w, height: h } = this.stage;
     if (this.lay && (w !== this._fw || h !== this._fh)) this.frame();
   }
@@ -104,7 +103,7 @@ export class B4Silhouette extends CourseScene {
   /** Tray beside the outline or below it, whichever lets the cells be bigger on this screen. */
   chooseLayout(sizes, ob) {
     const { width: w, height: h } = this.stage;
-    const top = Math.min(185, h * 0.3), bottom = Math.min(40, h * 0.08);
+    const top = Math.min(185, h * 0.3), bottom = Math.min(84, h * 0.12);
     const availW = Math.max(60, w - 16), availH = Math.max(60, h - top - bottom);
     const maxS = Math.max(...sizes);
     let best = null;
@@ -129,7 +128,7 @@ export class B4Silhouette extends CourseScene {
     const { width: w, height: h, camera } = this.stage;
     if (!lay || !w || !h) return;
     this._fw = w; this._fh = h;
-    const top = Math.min(185, h * 0.3), bottom = Math.min(40, h * 0.08);
+    const top = Math.min(185, h * 0.3), bottom = Math.min(84, h * 0.12);
     const ppu = Math.max(20, Math.min((w - 16) / (lay.width + 0.8), (h - top - bottom) / ((lay.height + 0.8) * 0.95)) * 0.95);
     const dist = h / ppu / 2 / Math.tan((camera.fov * Math.PI) / 360);
     const tz = -(top - bottom) / 2 / ppu;       // moving the look-at point away pushes the layout down the screen
@@ -152,6 +151,7 @@ export class B4Silhouette extends CourseScene {
     this.input.enabled = true;
     const puzzle = this.puzzle = puzzleById(item.puzzle);
     this.item = item;
+    this.pending = null;
 
     const outline = this.outline = makeOutline(puzzle, { cell: CELL });
     const ob = outline.userData;
@@ -199,11 +199,13 @@ export class B4Silhouette extends CourseScene {
       }));
     }
     this.frame();
+    this.placeTurnButton();
     this.stage.invalidate();
 
     this.ui.prompt(`拼出${puzzle.zh}`, `Fill the ${puzzle.en} shape with the pieces`);
     this.done = new Promise(res => { this.resolveDone = res; });
     await this.live(this.done);
+    await this.live(this.pending);                   // a hint may still be showing
     await this.live(this.celebrate());
   }
 
@@ -345,10 +347,12 @@ export class B4Silhouette extends CourseScene {
       if (isPuzzleDone(this.puzzle, this.covered)) { this.finished = true; this.placeTurnButton(); this.resolveDone(); }
       return;
     }
+    // Does not fit: it counts (wrong() bonks at once) and the piece goes back to the tray. The 2nd wrong answer's hint runs in the
+    // background so the pointer is free again; playItem waits for it (this.pending) before the puzzle can end.
     this.ui.toast('放不下，試試轉一轉', "Doesn't fit. Try turning it", 1600);
-    await this.goHome(pc);                           // does not fit: back to the tray, and it counts
-    this.placeTurnButton();
-    await this.live(this.wrong(this.item, PIECES[pc.id].zh, this.puzzle.zh));
+    const w = this.wrong(this.item, PIECES[pc.id].zh, this.puzzle.zh).catch(console.error);
+    this.pending = Promise.all([this.pending, w]);
+    await this.goHome(pc);
     this.placeTurnButton();
   }
 
@@ -377,8 +381,9 @@ export class B4Silhouette extends CourseScene {
     this.stuff.add(art);
     for (const pc of this.pcs) art.add(pc.holder);
     for (const pc of this.pcs) {
+      pc.mesh.material.emissiveIntensity = 0;
       pc.mesh.material.emissive.setHex(0xffffff);
-      tween(pc.mesh.material, { emissiveIntensity: 0.4 }, { ms: 300 });
+      tween(pc.mesh.material, { emissiveIntensity: 0.35 }, { ms: 500 });
     }
     sparkle(this.stage, this.outline, this.root);
     const zh = `做好了！${pz.zh}`;
@@ -405,7 +410,7 @@ export class B4Silhouette extends CourseScene {
       art.add(flame);
       sfx.whoosh();
       await this.live(tween(flame.scale, { x: 1, y: 1, z: 1 }, { ms: 250, ease: 'outBack' }));
-      for (const dx of [0.07, -0.07, 0.07, 0]) await this.live(tween(art.position, { x: dx }, { ms: 60, ease: 'linear' }));
+      if (!motion.less) for (const dx of [0.07, -0.07, 0.07, 0]) await this.live(tween(art.position, { x: dx }, { ms: 60, ease: 'linear' }));
       await this.live(tween(art.position, { y: 4, z: -12 }, { ms: 1300, ease: 'inOutCubic' }));   // blast off
     } else if (pz.id === 'face') {
       const eye = this.pcs.filter(p => p.id === 'circle')[1] || this.pcs.find(p => p.id === 'circle');
@@ -432,14 +437,16 @@ export class B4Silhouette extends CourseScene {
   // ---------- hint (2nd wrong drop): the next solution piece blinks at its spot, turned the right way ----------
   async hint(item) {
     const pz = this.puzzle;
+    if (this.finished) return;
     const free = s => footprint(s.p, s.x, s.y, s.r).every(k => !this.covered.has(k));
     const avail = s => this.pcs.some(pc => pc.id === s.p && !pc.placed);
     let next = pz.solution.find(s => free(s) && avail(s));
     if (!next) {                                     // the pieces placed so far block every solution spot: start over
+      if (this.dragging || this.finished) return;
       this.ui.toast('再試一次', 'Try again', 1200);
       for (const pc of [...this.pcs].filter(p => p.placed)) { this.unplace(pc); await this.goHome(pc); }
       next = pz.solution.find(s => free(s) && avail(s));
-      if (!next) return;
+      if (!next || this.finished) return;
     }
     const w = this.worldOf(next.x, next.y);
     const g = makePiece(next.p, { color: 0xffffff, cell: CELL, r: next.r });
@@ -451,7 +458,7 @@ export class B4Silhouette extends CourseScene {
     if (pc) this.select(pc);
     this.ui.toast(`試試放這裏：${PIECES[next.p].zh}`, 'Try this one here', 2400);
     voice.say(`試試放這裏：${PIECES[next.p].zh}`);
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 3 && !this.finished; i++) {
       await this.live(tween(g.material, { opacity: 0.2 }, { ms: 360, ease: 'linear' }));
       await this.live(tween(g.material, { opacity: 0.95 }, { ms: 360, ease: 'linear' }));
     }

@@ -138,9 +138,10 @@ export class B3Pegboard extends CourseScene {
       let done = false;
       try { done = await this.live(this.handle(ev, item)); } finally { if (!done) this.busy = false; }
       if (done) break;
-    }
-    this.hideBar();
+    }                                                // (the Save button, if shown, stays until the next item replaces the bar)
   }
+
+  async finish() { this.hideBar(); await super.finish(); }
 
   async handle(ev, item) {
     if (ev.type === 'undo') {
@@ -151,7 +152,7 @@ export class B3Pegboard extends CourseScene {
       if (this.seq.length) sfx.whoosh();
       this.seq = []; this.closed = false; this.refresh(); return false;
     }
-    if (this.closed) return false;           // a closed band: Undo first
+    if (this.closed) { this.closed = false; this.refresh(); }   // a closed band after wrong sides: a peg tap reopens it
     const [x, y] = ev.peg, last = this.seq[this.seq.length - 1], first = this.seq[0];
     if (last && last[0] === x && last[1] === y) return false;
     if (first && first[0] === x && first[1] === y && this.seq.length >= 2) {
@@ -212,8 +213,8 @@ export class B3Pegboard extends CourseScene {
     const zh = `${n} 條邊，${ANSWER_TEXT[n].zh}`;
     this.ui.toast(zh, `${n} sides`, 1800);
     await this.live(Promise.all([voice.say(zh), wait(900)]));
-    await this.live(wait(saved ? 700 : 2400));        // time to tap Save, then on
     for (const m of lit) { this.board.remove(m); disposeTree(m); }
+    await this.live(wait(saved ? 700 : 3600));        // time to tap Save; the button stays until the next item starts
   }
 
   // ---------- hint (2nd wrong answer): a ghost sample shape with that many sides ----------

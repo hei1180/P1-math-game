@@ -1,17 +1,17 @@
 // Rod Town entry: DOM shell wiring, bridge to shared.js, Phaser boot.
 import { signIn, onUser, player, settings, session, enterTestMode, initAudio, engine, resetEngine, registerHit, endFever,
-         startTimer, stopTimer, saveScore, renderLeaderboard, showRankPopup, mountTeacherModal, sharedSound, logAttempt } from '../shared.js?v=202610081243';
-import { recordResult } from '../bonds-logic.js?v=202610081243';
-import { loadProgress, saveProgress, today } from '../bonds-progress.js?v=202610081243';
-import { sfx } from './sfx.js?v=202610081243';
-import { fx } from './fx.js?v=202610081243';
-import { scaleConfig, installHiDPI } from './hidpi.js?v=202610081243';
-import { BootScene } from './scenes/BootScene.js?v=202610081243';
-import { MapScene } from './scenes/MapScene.js?v=202610081243';
-import { LevelScene } from './scenes/LevelScene.js?v=202610081243';
-import { HouseScene } from './scenes/HouseScene.js?v=202610081243';
-import { RushScene } from './scenes/RushScene.js?v=202610081243';
-import { SandboxScene } from './scenes/SandboxScene.js?v=202610081243';
+         startTimer, stopTimer, saveScore, renderLeaderboard, showRankPopup, mountTeacherModal, sharedSound, logAttempt } from '../shared.js?v=202610081258';
+import { recordResult } from '../bonds-logic.js?v=202610081258';
+import { loadProgress, saveProgress, today } from '../bonds-progress.js?v=202610081258';
+import { sfx } from './sfx.js?v=202610081258';
+import { fx } from './fx.js?v=202610081258';
+import { scaleConfig, installHiDPI } from './hidpi.js?v=202610081258';
+import { BootScene } from './scenes/BootScene.js?v=202610081258';
+import { MapScene } from './scenes/MapScene.js?v=202610081258';
+import { LevelScene } from './scenes/LevelScene.js?v=202610081258';
+import { HouseScene } from './scenes/HouseScene.js?v=202610081258';
+import { RushScene } from './scenes/RushScene.js?v=202610081258';
+import { SandboxScene } from './scenes/SandboxScene.js?v=202610081258';
 
 const $ = id => document.getElementById(id);
 // Rush feedback comes from Rod Town's own synth (soft bonk, no buzzer) and obeys its 🔇 button,

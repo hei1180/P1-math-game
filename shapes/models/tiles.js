@@ -2,8 +2,8 @@
 // Geometries are cached (userData.shared). Tiles, pieces and outlines lie in the XZ plane, template/cell y (down) = world +z.
 // Wires stand in the XY plane facing +z (rotate x by -PI/2 to lay one flat).
 import * as THREE from 'three';
-import { templateById, PIECES, footprint, PEG_GRID, LINES } from '../../shapes-logic.js?v=202610081243';
-import { toyColor, SCENE } from '../theme.js?v=202610081243';
+import { templateById, PIECES, footprint, PEG_GRID, LINES } from '../../shapes-logic.js?v=202610081258';
+import { toyColor, SCENE } from '../theme.js?v=202610081258';
 
 const cache = new Map();
 function cached(key, make) {

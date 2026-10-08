@@ -2,12 +2,12 @@
 // Geometries are cached (userData.shared) so scene switches never dispose them.
 // Group layout: group > holder (rotated for pose 'side') > [body, face]; plus an optional blob shadow on the floor.
 import * as THREE from 'three';
-import { familyOf, posesOf, MODELS } from '../../shapes-logic.js?v=202610081243';
-import { toyColor } from '../theme.js?v=202610081243';
-import { blobShadow } from '../engine/stage.js?v=202610081243';
-import { makePatch, addFace } from './faces.js?v=202610081243';
+import { familyOf, posesOf, MODELS } from '../../shapes-logic.js?v=202610081258';
+import { toyColor } from '../theme.js?v=202610081258';
+import { blobShadow } from '../engine/stage.js?v=202610081258';
+import { makePatch, addFace } from './faces.js?v=202610081258';
 
-export { setMood, blink } from './faces.js?v=202610081243';
+export { setMood, blink } from './faces.js?v=202610081258';
 
 const TAU = Math.PI * 2;
 const SPECS = {};

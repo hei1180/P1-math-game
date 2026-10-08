@@ -1,7 +1,7 @@
 // WebGL stage: one renderer, camera, lights and the page's single rAF loop.
 import * as THREE from 'three';
-import { SCENE } from '../theme.js?v=202610051459';
-import { tween, tickTweens, cancelTweens } from './tween.js?v=202610051459';
+import { SCENE } from '../theme.js?v=202610081243';
+import { tween, tickTweens, cancelTweens } from './tween.js?v=202610081243';
 
 // Free GPU memory for an object tree (geometries, materials, textures).
 // Anything with userData.shared === true (cached by a model module) is left alone.

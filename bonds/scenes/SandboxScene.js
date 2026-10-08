@@ -1,12 +1,12 @@
 // Dev sandbox for the Rod / Tray / Board objects: bonds.html?dev&sandbox
 // Test hooks: scene.ask(type, n, a) sets a specific question; scene.board, scene.tray, scene.q, scene.mistakes.
-import { genBuild, genBreak, trayFor, makeTenMove } from '../../bonds-logic.js?v=202610051459';
-import { FONT, WORLD_THEME } from '../theme.js?v=202610051459';
-import { fx } from '../fx.js?v=202610051459';
-import { sfx } from '../sfx.js?v=202610051459';
-import { Board } from '../ui/Board.js?v=202610051459';
-import { Tray } from '../ui/Tray.js?v=202610051459';
-import { DPR } from '../ui/Rod.js?v=202610051459';
+import { genBuild, genBreak, trayFor, makeTenMove } from '../../bonds-logic.js?v=202610081243';
+import { FONT, WORLD_THEME } from '../theme.js?v=202610081243';
+import { fx } from '../fx.js?v=202610081243';
+import { sfx } from '../sfx.js?v=202610081243';
+import { Board } from '../ui/Board.js?v=202610081243';
+import { Tray } from '../ui/Tray.js?v=202610081243';
+import { DPR } from '../ui/Rod.js?v=202610081243';
 
 const RIGHT_DOM = 190; // DOM test badge + mute + admin buttons, top-right
 

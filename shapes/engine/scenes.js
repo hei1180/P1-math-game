@@ -1,7 +1,7 @@
 // Scene base class and manager. ctx = { stage, input, ui, bridge, go }.
 import * as THREE from 'three';
-import { disposeTree } from './stage.js?v=202610051459';
-import { cancelTweens } from './tween.js?v=202610051459';
+import { disposeTree } from './stage.js?v=202610081243';
+import { cancelTweens } from './tween.js?v=202610081243';
 
 export class Scene {
   constructor(ctx) {

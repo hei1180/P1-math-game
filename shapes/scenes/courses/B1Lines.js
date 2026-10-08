@@ -4,14 +4,14 @@
 // Item 5: how many straight lines join the two points? One. Then a demo: many curves can.
 // Bench scene: the camera looks down at ~55 degrees. Grading is by the item answers from genCourse (shapes-logic.js).
 import * as THREE from 'three';
-import { CourseScene } from '../CourseScene.js?v=202610051459';
-import { tween, wait, motion } from '../../engine/tween.js?v=202610051459';
-import { voice } from '../../engine/voice.js?v=202610051459';
-import { FONT, SCENE, toyColor } from '../../theme.js?v=202610051459';
-import { sfx } from '../../sfx.js?v=202610051459';
-import { disposeTree } from '../../engine/stage.js?v=202610051459';
-import { makeWire, makeLaser, makeCurve } from '../../models/tiles.js?v=202610051459';
-import { LINES, shuffle } from '../../../shapes-logic.js?v=202610051459';
+import { CourseScene } from '../CourseScene.js?v=202610081243';
+import { tween, wait, motion } from '../../engine/tween.js?v=202610081243';
+import { voice } from '../../engine/voice.js?v=202610081243';
+import { FONT, SCENE, toyColor } from '../../theme.js?v=202610081243';
+import { sfx } from '../../sfx.js?v=202610081243';
+import { disposeTree } from '../../engine/stage.js?v=202610081243';
+import { makeWire, makeLaser, makeCurve } from '../../models/tiles.js?v=202610081243';
+import { LINES, shuffle } from '../../../shapes-logic.js?v=202610081243';
 
 const ELEV = (55 * Math.PI) / 180, SIN = Math.sin(ELEV), COS = Math.cos(ELEV);
 const Y_AXIS = new THREE.Vector3(0, 1, 0);

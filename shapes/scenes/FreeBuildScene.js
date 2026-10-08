@@ -6,14 +6,14 @@
 // 保存 Save → bridge.saveCreation({ kind:'peg', pts } | { kind:'tiles', placed }); a 7th save asks before dropping the oldest.
 // The panel sits at the bottom, or at the right on a short screen (landscape phone) so the board keeps its size. No keyboard, no free text.
 import * as THREE from 'three';
-import { Scene } from '../engine/scenes.js?v=202610051459';
-import { tween } from '../engine/tween.js?v=202610051459';
-import { disposeTree } from '../engine/stage.js?v=202610051459';
-import { PEG_GRID, PIECE_IDS, PIECES, footprint, countSides, checkPeg } from '../../shapes-logic.js?v=202610051459';
-import { makePegboard, makeBand, makePiece } from '../models/tiles.js?v=202610051459';
-import { SCENE, FONT, pieceColor } from '../theme.js?v=202610051459';
-import { sfx } from '../sfx.js?v=202610051459';
-import { confetti } from '../fx3d.js?v=202610051459';
+import { Scene } from '../engine/scenes.js?v=202610081243';
+import { tween } from '../engine/tween.js?v=202610081243';
+import { disposeTree } from '../engine/stage.js?v=202610081243';
+import { PEG_GRID, PIECE_IDS, PIECES, footprint, countSides, checkPeg } from '../../shapes-logic.js?v=202610081243';
+import { makePegboard, makeBand, makePiece } from '../models/tiles.js?v=202610081243';
+import { SCENE, FONT, pieceColor } from '../theme.js?v=202610081243';
+import { sfx } from '../sfx.js?v=202610081243';
+import { confetti } from '../fx3d.js?v=202610081243';
 
 const GRID = 10, MAX_PIECES = 30, MAX_PEGS = 20, MAX_SAVED = 6; // limits follow validateGalleryEntry
 const K = 2 * Math.tan((20 * Math.PI) / 180); // visible height = K × camera distance (fov 40)

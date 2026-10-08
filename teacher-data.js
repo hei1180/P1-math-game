@@ -2,8 +2,8 @@
 // already-fetched Firestore docs (or plain test fixtures) and returns plain objects/strings.
 // Firestore Timestamp objects (with a .toDate() method) are supported via toDate() below,
 // so callers can pass raw snapshot data straight through.
-import { GAME_LABEL, modeLabel, gameOf } from './labels.js?v=202610081243';
-import { WORLDS, LEVEL_COUNT, levelKey } from './bonds-logic.js?v=202610081243';
+import { GAME_LABEL, modeLabel, gameOf } from './labels.js?v=202610081258';
+import { WORLDS, LEVEL_COUNT, levelKey } from './bonds-logic.js?v=202610081258';
 
 export { GAME_LABEL, modeLabel, gameOf };
 
@@ -105,6 +105,10 @@ export function worldClearCounts(levels = {}) {
 
 export const WORLD_TOTAL_LEVELS = LEVEL_COUNT + 1; // + boss
 
+/** Robot Workshop courses shown in the overview, in order. attempt mode = 'shapes' + key. */
+export const SHAPES_COURSES = ['A1', 'A2', 'A3', 'A4', 'B1', 'B2', 'B3', 'B4', 'Boss'];
+export const OVERVIEW_GAMES = ['market', 'numbers', 'bonds', 'shapes'];
+
 // ---------- Overview tab ----------
 
 /**
@@ -145,6 +149,27 @@ export function buildOverviewRows({ attempts = [], scores = [], bondsProgress = 
 
     const levels = (bp && bp.levels) || {};
 
+    // Per game: attempts / minutes / last played in range, and whether the student has any data there at all.
+    const byGame = {};
+    for (const g of OVERVIEW_GAMES) byGame[g] = { attempts: 0, minutes: 0, lastPlayed: null, active: false };
+    const shapesStars = Object.fromEntries(SHAPES_COURSES.map((k) => [k, null]));
+    for (const a of aList) {
+      const g = byGame[a.game || gameOf(a.mode)];
+      if (!g) continue;
+      g.attempts++;
+      g.active = true;
+      g.minutes += (Number(a.durationSec) || 0) / 60;
+      const t = toDate(a.ts);
+      if (t && (!g.lastPlayed || t > g.lastPlayed)) g.lastPlayed = t;
+      if ((a.game || gameOf(a.mode)) === 'shapes' && a.kind === 'level' && a.stars != null) {
+        const key = String(a.mode).replace(/^shapes/, '');
+        if (key in shapesStars && a.stars > (shapesStars[key] || 0)) shapesStars[key] = a.stars;
+      }
+    }
+    for (const g of OVERVIEW_GAMES) byGame[g].minutes = byGame[g].minutes ? Math.round(byGame[g].minutes * 10) / 10 : 0;
+    for (const sc of sList) { const g = byGame[gameOf(sc && sc.mode)]; if (g) g.active = true; }
+    if (Object.values(levels).some((v) => v > 0)) byGame.bonds.active = true;
+
     rows.push({
       uid,
       name: student.name,
@@ -160,6 +185,9 @@ export function buildOverviewRows({ attempts = [], scores = [], bondsProgress = 
       bondsMedals: countMedals(levels),
       bondsCleared: worldClearCounts(levels),
       rush: { w1: bestByMode.bonds1 ?? null, w2: bestByMode.bonds2 ?? null, w3: bestByMode.bonds3 ?? null, w4: bestByMode.bonds4 ?? null },
+      byGame,
+      shapesStars,
+      shapesRush: { a: bestByMode.shapes3d ?? null, b: bestByMode.shapes2d ?? null },
     });
   }
   rows.sort((a, b) => a.name.localeCompare(b.name));
@@ -259,29 +287,11 @@ export function toCSV(headers, rows) {
   return '﻿' + lines.join('\r\n');
 }
 
-export const OVERVIEW_HEADERS = [
-  'Name 姓名', 'Email', 'Last played 最後遊玩', 'Attempts 次數 (range)', 'Minutes 分鐘',
-  'Market Easy', 'Market Medium', 'Market Hard',
-  'Number Lv1', 'Number Lv2', 'Number Lv3', 'Number Lv4',
-  'Bonds 🥇', 'Bonds 🥈', 'Bonds 🥉',
-  'W1 cleared', 'W2 cleared', 'W3 cleared', 'W4 cleared',
-  'Rush W1', 'Rush W2', 'Rush W3', 'Rush W4',
-  'UID',
-];
+/** The "All" overview is a summary only; each game's scores and levels are in its own sub-tab (teacher.html builds those CSVs). */
+export const OVERVIEW_HEADERS = ['Name 姓名', 'Email', 'Last played 最後遊玩', 'Minutes 分鐘', 'UID'];
 
 export function overviewToCSVRows(rows) {
-  return rows.map((r) => [
-    r.name, r.email,
-    r.lastPlayed ? r.lastPlayed.toISOString() : '',
-    r.attemptsInRange, r.totalMinutes,
-    r.market.easy ?? '', r.market.medium ?? '', r.market.hard ?? '',
-    r.numbers.num1 ?? '', r.numbers.num2 ?? '', r.numbers.num3 ?? '', r.numbers.num4 ?? '',
-    r.bondsMedals.gold, r.bondsMedals.silver, r.bondsMedals.bronze,
-    `${r.bondsCleared.w1}/${WORLD_TOTAL_LEVELS}`, `${r.bondsCleared.w2}/${WORLD_TOTAL_LEVELS}`,
-    `${r.bondsCleared.w3}/${WORLD_TOTAL_LEVELS}`, `${r.bondsCleared.w4}/${WORLD_TOTAL_LEVELS}`,
-    r.rush.w1 ?? '', r.rush.w2 ?? '', r.rush.w3 ?? '', r.rush.w4 ?? '',
-    r.uid,
-  ]);
+  return rows.map((r) => [r.name, r.email, r.lastPlayed ? r.lastPlayed.toISOString() : '', r.totalMinutes, r.uid]);
 }
 
 export const ATTEMPTS_HEADERS = [

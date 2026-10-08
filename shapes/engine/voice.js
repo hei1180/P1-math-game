@@ -1,5 +1,5 @@
 // zh-HK speech via speechSynthesis; silent when no voice or muted.
-import { sfx } from '../sfx.js?v=202610081243';
+import { sfx } from '../sfx.js?v=202610081258';
 
 const synth = typeof window !== 'undefined' ? window.speechSynthesis : null;
 let picked = null, current = null; // current: keep a reference so the utterance is not garbage-collected mid-speech

@@ -1,8 +1,8 @@
 // Robot Workshop progress: Firestore shapesProgress/{uid} + localStorage mirror, merged on load.
 // Gallery entries live in robotGallery/{uid} (see validateGalleryEntry in shapes-logic.js).
-import { db, player } from './shared.js?v=202610081243';
+import { db, player } from './shared.js?v=202610081258';
 import { doc, getDoc, setDoc, getDocs, collection, query, where, limit, updateDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js';
-import { emptyProgress, mergeProgress, validateGalleryEntry } from './shapes-logic.js?v=202610081243';
+import { emptyProgress, mergeProgress, validateGalleryEntry } from './shapes-logic.js?v=202610081258';
 
 const lsKey = uid => `shapesProgress:${uid}`;
 const readLocal = uid => { try { return JSON.parse(localStorage.getItem(lsKey(uid)) || 'null'); } catch (e) { return null; } };

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Teacher Dashboard 老師資料板</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="shared.css?v=202610081243">
+    <link rel="stylesheet" href="shared.css?v=202610081258">
     <style>
         /* This page scrolls (unlike the games) — undo shared.css's fixed-body lock. */
         body { position: static; overflow: auto; user-select: text; -webkit-user-select: text; background-color: #f8fafc; }
@@ -81,10 +81,11 @@
 
         <!-- ===== Overview tab ===== -->
         <div id="tab-overview" class="tab-panel">
+            <div id="gameTabs" class="flex flex-wrap gap-2 mb-3"></div>
             <div class="flex flex-wrap items-center gap-3 mb-3">
                 <input id="overviewSearch" type="text" placeholder="🔍 搜尋姓名 Search name…" class="border-2 border-gray-300 rounded-lg px-3 py-2 flex-1 min-w-[180px] max-w-xs">
                 <button id="downloadOverviewBtn" class="bubbly-btn bg-green-500 text-white font-bold px-4 py-2 rounded-xl text-sm">⬇️ Download CSV</button>
-                <span class="text-xs text-gray-400">Click a column header to sort · click a name for details</span>
+                <span class="text-xs text-gray-400">Click a column header to sort · click a name for details · numbers are best scores / stars (levels: within the date range)</span>
             </div>
             <div class="td-scroll bg-white">
                 <table class="td-table w-full text-sm" id="overviewTable">
@@ -145,17 +146,17 @@
     </div>
 
     <script type="module">
-        import { signIn, onUser, db, auth, isTeacherEmail } from './shared.js?v=202610081243';
+        import { signIn, onUser, db, auth, isTeacherEmail } from './shared.js?v=202610081258';
         import {
             collection, getDocs, query, where, orderBy, Timestamp,
         } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js';
         import {
             buildOverviewRows, buildAttemptRows, filterAttemptRows, sortRows,
-            MEDAL_ICON, WORLD_TOTAL_LEVELS,
+            MEDAL_ICON, WORLD_TOTAL_LEVELS, SHAPES_COURSES,
             toCSV, overviewToCSVRows, OVERVIEW_HEADERS, attemptsToCSVRows, ATTEMPTS_HEADERS, csvFilename,
             GAME_LABEL,
-        } from './teacher-data.js?v=202610081243';
-        import { WORLDS, LEVEL_COUNT, levelKey } from './bonds-logic.js?v=202610081243';
+        } from './teacher-data.js?v=202610081258';
+        import { WORLDS, LEVEL_COUNT, levelKey } from './bonds-logic.js?v=202610081258';
 
 
         const $ = id => document.getElementById(id);
@@ -169,6 +170,7 @@
             overviewRows: [], attemptRows: [],
             overviewSort: { path: 'name', dir: 1 },
             overviewSearch: '',
+            gameTab: 'all',
             filters: { game: '', uid: '' },
             studentUid: null,
         };
@@ -257,95 +259,96 @@
         function renderTab() { renderOverview(); renderAttempts(); renderStudent(); }
 
         // ---------- Overview ----------
-        const OVERVIEW_COLS = [
-            { path: 'name', label: '姓名<br>Name' },
-            { path: 'email', label: 'Email' },
-            { path: 'lastPlayed', label: '最後遊玩<br>Last played' },
-            { path: 'attemptsInRange', label: '次數<br>Attempts' },
-            { path: 'totalMinutes', label: '分鐘<br>Minutes' },
-            { path: 'market.easy', label: 'Market<br>Easy' },
-            { path: 'market.medium', label: 'Market<br>Medium' },
-            { path: 'market.hard', label: 'Market<br>Hard' },
-            { path: 'numbers.num1', label: 'Number<br>Lv1' },
-            { path: 'numbers.num2', label: 'Number<br>Lv2' },
-            { path: 'numbers.num3', label: 'Number<br>Lv3' },
-            { path: 'numbers.num4', label: 'Number<br>Lv4' },
-            { path: 'bondsMedals.gold', label: '🥇🥈🥉<br>Medals', noSort: true },
-            { path: 'bondsCleared.w1', label: `W1<br>/${WORLD_TOTAL_LEVELS}` },
-            { path: 'bondsCleared.w2', label: `W2<br>/${WORLD_TOTAL_LEVELS}` },
-            { path: 'bondsCleared.w3', label: `W3<br>/${WORLD_TOTAL_LEVELS}` },
-            { path: 'bondsCleared.w4', label: `W4<br>/${WORLD_TOTAL_LEVELS}` },
-            { path: 'rush.w1', label: 'Rush<br>W1' },
-            { path: 'rush.w2', label: 'Rush<br>W2' },
-            { path: 'rush.w3', label: 'Rush<br>W3' },
-            { path: 'rush.w4', label: 'Rush<br>W4' },
-        ];
-
-        function buildOverviewHead() {
-            $('overviewHead').innerHTML = OVERVIEW_COLS.map(c => {
-                const active = state.overviewSort.path === c.path;
-                const arrow = active ? (state.overviewSort.dir === 1 ? ' ▲' : ' ▼') : '';
-                return `<th class="${c.noSort ? 'no-sort' : ''}" data-path="${c.path}" data-nosort="${!!c.noSort}">${c.label}${arrow}</th>`;
-            }).join('');
-            $('overviewHead').querySelectorAll('th').forEach(th => {
-                if (th.dataset.nosort === 'true') return;
-                th.addEventListener('click', () => {
-                    const path = th.dataset.path;
-                    if (state.overviewSort.path === path) state.overviewSort.dir *= -1;
-                    else state.overviewSort = { path, dir: 1 };
-                    renderOverview();
-                });
-            });
-        }
-        buildOverviewHead();
-
-        $('overviewSearch').addEventListener('input', () => { state.overviewSearch = $('overviewSearch').value.trim().toLowerCase(); renderOverview(); });
-
         function fmtDateTime(d) {
             if (!d) return '—';
             const pad = n => String(n).padStart(2, '0');
             return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
         }
         function medalStr(m) { return `${MEDAL_ICON.gold}${m.gold} ${MEDAL_ICON.silver}${m.silver} ${MEDAL_ICON.bronze}${m.bronze}`; }
+        const dash = v => v ?? '—';
+        const starStr = n => n ? '⭐'.repeat(n) : '—';
+
+        // A column: label, sort path, text(r) (CSV + default cell). html(r) overrides the cell.
+        const nameCol = { path: 'name', label: '姓名<br>Name', text: r => r.name, html: r => `<span class="name-link" data-uid="${esc(r.uid)}">${esc(r.name)}</span>` };
+        const emailCol = { path: 'email', label: 'Email', text: r => r.email, html: r => `<span class="text-gray-500">${esc(r.email)}</span>` };
+        const lastCol = g => ({ path: g ? `byGame.${g}.lastPlayed` : 'lastPlayed', label: '最後遊玩<br>Last played', text: r => fmtDateTime(g ? r.byGame[g].lastPlayed : r.lastPlayed) });
+        const minCol = g => ({ path: g ? `byGame.${g}.minutes` : 'totalMinutes', label: '分鐘<br>Minutes', text: r => g ? r.byGame[g].minutes : r.totalMinutes });
+        const col = (path, label, text, html) => ({ path, label, text, html });
+
+        // Overview = who played and for how long; every game's scores live in its own sub-tab.
+        const GAME_TABS = [
+            { key: 'all', label: '全部 All', cols: [nameCol, emailCol, lastCol(null), minCol(null)] },
+            { key: 'market', label: GAME_LABEL.market, cols: [nameCol, lastCol('market'), minCol('market'),
+                col('market.easy', 'Market<br>Easy', r => dash(r.market.easy)),
+                col('market.medium', 'Market<br>Medium', r => dash(r.market.medium)),
+                col('market.hard', 'Market<br>Hard', r => dash(r.market.hard))] },
+            { key: 'numbers', label: GAME_LABEL.numbers, cols: [nameCol, lastCol('numbers'), minCol('numbers'),
+                ...[1, 2, 3, 4].map(n => col(`numbers.num${n}`, `Number<br>Lv${n}`, r => dash(r.numbers[`num${n}`])))] },
+            { key: 'bonds', label: GAME_LABEL.bonds, cols: [nameCol, lastCol('bonds'), minCol('bonds'),
+                col('bondsMedals.gold', '🥇🥈🥉<br>Medals', r => medalStr(r.bondsMedals)),
+                ...[1, 2, 3, 4].map(w => col(`bondsCleared.w${w}`, `W${w}<br>/${WORLD_TOTAL_LEVELS}`, r => `${r.bondsCleared['w' + w]}/${WORLD_TOTAL_LEVELS}`)),
+                ...[1, 2, 3, 4].map(w => col(`rush.w${w}`, `Rush<br>W${w}`, r => dash(r.rush['w' + w])))] },
+            { key: 'shapes', label: GAME_LABEL.shapes, cols: [nameCol, lastCol('shapes'), minCol('shapes'),
+                ...SHAPES_COURSES.map(k => col(`shapesStars.${k}`, `${k}<br>⭐`, r => starStr(r.shapesStars[k]))),
+                col('shapesRush.a', 'Rush<br>立體', r => dash(r.shapesRush.a)),
+                col('shapesRush.b', 'Rush<br>平面', r => dash(r.shapesRush.b))] },
+        ];
+        const gameTab = () => GAME_TABS.find(t => t.key === state.gameTab) || GAME_TABS[0];
+
+        function buildGameTabs() {
+            $('gameTabs').innerHTML = GAME_TABS.map(t =>
+                `<button data-game="${t.key}" class="tab-btn px-4 py-2 rounded-xl font-bold text-sm ${t.key === state.gameTab ? 'active' : ''}" style="${t.key === state.gameTab ? 'border:2px solid #c7d2fe' : ''}">${t.label}</button>`).join('');
+            $('gameTabs').querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+                state.gameTab = b.dataset.game;
+                state.overviewSort = { path: 'name', dir: 1 };
+                buildGameTabs(); renderOverview();
+            }));
+        }
+
+        function buildOverviewHead() {
+            $('overviewHead').innerHTML = gameTab().cols.map(c => {
+                const active = state.overviewSort.path === c.path;
+                const arrow = active ? (state.overviewSort.dir === 1 ? ' ▲' : ' ▼') : '';
+                return `<th data-path="${c.path}">${c.label}${arrow}</th>`;
+            }).join('');
+            $('overviewHead').querySelectorAll('th').forEach(th => th.addEventListener('click', () => {
+                const path = th.dataset.path;
+                if (state.overviewSort.path === path) state.overviewSort.dir *= -1;
+                else state.overviewSort = { path, dir: 1 };
+                renderOverview();
+            }));
+        }
+
+        $('overviewSearch').addEventListener('input', () => { state.overviewSearch = $('overviewSearch').value.trim().toLowerCase(); renderOverview(); });
+
+        /** Rows for the current sub-tab: searched, only students with data in that game, sorted. */
+        function overviewRowsNow() {
+            const g = gameTab().key;
+            let rows = state.overviewRows;
+            if (g !== 'all') rows = rows.filter(r => r.byGame[g].active);
+            if (state.overviewSearch) rows = rows.filter(r => r.name.toLowerCase().includes(state.overviewSearch) || (r.email || '').toLowerCase().includes(state.overviewSearch));
+            return sortRows(rows, state.overviewSort.path, state.overviewSort.dir);
+        }
 
         function renderOverview() {
             buildOverviewHead();
-            let rows = state.overviewRows;
-            if (state.overviewSearch) rows = rows.filter(r => r.name.toLowerCase().includes(state.overviewSearch) || (r.email || '').toLowerCase().includes(state.overviewSearch));
-            rows = sortRows(rows, state.overviewSort.path, state.overviewSort.dir);
-            $('overviewBody').innerHTML = rows.map(r => `
-                <tr>
-                    <td><span class="name-link" data-uid="${esc(r.uid)}">${esc(r.name)}</span></td>
-                    <td class="text-gray-500">${esc(r.email)}</td>
-                    <td>${fmtDateTime(r.lastPlayed)}</td>
-                    <td>${r.attemptsInRange}</td>
-                    <td>${r.totalMinutes}</td>
-                    <td>${r.market.easy ?? '—'}</td>
-                    <td>${r.market.medium ?? '—'}</td>
-                    <td>${r.market.hard ?? '—'}</td>
-                    <td>${r.numbers.num1 ?? '—'}</td>
-                    <td>${r.numbers.num2 ?? '—'}</td>
-                    <td>${r.numbers.num3 ?? '—'}</td>
-                    <td>${r.numbers.num4 ?? '—'}</td>
-                    <td class="medal-cell">${medalStr(r.bondsMedals)}</td>
-                    <td>${r.bondsCleared.w1}/${WORLD_TOTAL_LEVELS}</td>
-                    <td>${r.bondsCleared.w2}/${WORLD_TOTAL_LEVELS}</td>
-                    <td>${r.bondsCleared.w3}/${WORLD_TOTAL_LEVELS}</td>
-                    <td>${r.bondsCleared.w4}/${WORLD_TOTAL_LEVELS}</td>
-                    <td>${r.rush.w1 ?? '—'}</td>
-                    <td>${r.rush.w2 ?? '—'}</td>
-                    <td>${r.rush.w3 ?? '—'}</td>
-                    <td>${r.rush.w4 ?? '—'}</td>
-                </tr>`).join('') || `<tr><td colspan="${OVERVIEW_COLS.length}" class="text-center text-gray-400 py-6">No students in range 沒有資料</td></tr>`;
+            const cols = gameTab().cols, rows = overviewRowsNow();
+            $('overviewBody').innerHTML = rows.map(r =>
+                `<tr>${cols.map(c => `<td>${c.html ? c.html(r) : esc(c.text(r))}</td>`).join('')}</tr>`
+            ).join('') || `<tr><td colspan="${cols.length}" class="text-center text-gray-400 py-6">No students in range 沒有資料</td></tr>`;
             $('overviewBody').querySelectorAll('.name-link').forEach(el => el.addEventListener('click', () => openStudent(el.dataset.uid)));
         }
 
         $('downloadOverviewBtn').addEventListener('click', () => {
-            let rows = state.overviewRows;
-            if (state.overviewSearch) rows = rows.filter(r => r.name.toLowerCase().includes(state.overviewSearch) || (r.email || '').toLowerCase().includes(state.overviewSearch));
-            rows = sortRows(rows, state.overviewSort.path, state.overviewSort.dir);
-            downloadCSV(toCSV(OVERVIEW_HEADERS, overviewToCSVRows(rows)), csvFilename('overview'));
+            const t = gameTab(), rows = overviewRowsNow();
+            if (t.key === 'all') return downloadCSV(toCSV(OVERVIEW_HEADERS, overviewToCSVRows(rows)), csvFilename('overview'));
+            const cols = [emailCol, ...t.cols];
+            const heads = [...cols.map(c => c.label.replace(/<br>/g, ' ')), 'UID'];
+            downloadCSV(toCSV(heads, rows.map(r => [...cols.map(c => c.text(r)), r.uid])), csvFilename('overview-' + t.key));
         });
+
+        buildGameTabs();
+        buildOverviewHead();
 
         // ---------- Attempts ----------
         function populateFilterOptions() {
@@ -485,7 +488,7 @@
                 for (let i = 0; i < nAttempts; i++) {
                     const daysAgo = rand(0, 40);
                     const ts = fakeTimestamp(new Date(Date.now() - daysAgo * 86400000 - rand(0, 80000) * 1000));
-                    const pool = pick(['market', 'numbers', 'bonds-level', 'bonds-rush']);
+                    const pool = pick(['market', 'numbers', 'bonds-level', 'bonds-rush', 'shapes-level', 'shapes-rush']);
                     let attempt;
                     if (pool === 'market') {
                         const mode = pick(marketModes);
@@ -505,6 +508,16 @@
                         const stars = mistakes === 0 ? 3 : mistakes <= 2 ? 2 : 1;
                         attempt = { uid: s.uid, name: s.name, email: s.email, game: 'bonds', mode, kind: 'level', score: null, accuracy: null, maxCombo: null, stars, mistakes, durationSec: rand(20, 90), ts, day: '' };
                         levels[mode] = Math.max(levels[mode] || 0, stars);
+                    } else if (pool === 'shapes-level') {
+                        const mode = 'shapes' + pick(['A1', 'A2', 'A3', 'A4', 'B1', 'B2', 'B3', 'B4', 'Boss']);
+                        const mistakes = rand(0, 4);
+                        attempt = { uid: s.uid, name: s.name, email: s.email, game: 'shapes', mode, kind: 'level', score: null, accuracy: null, maxCombo: null, stars: mistakes === 0 ? 3 : mistakes <= 2 ? 2 : 1, mistakes, durationSec: rand(30, 120), ts, day: '' };
+                    } else if (pool === 'shapes-rush') {
+                        const mode = pick(['shapes3d', 'shapes2d']);
+                        const score = rand(8, 90);
+                        attempt = { uid: s.uid, name: s.name, email: s.email, game: 'shapes', mode, kind: 'timed', score, accuracy: rand(50, 100), maxCombo: rand(1, 8), stars: null, mistakes: null, durationSec: 60, ts, day: '' };
+                        const key = `${s.uid}_${mode}`;
+                        if (!scoreBest.has(key) || scoreBest.get(key).score < score) scoreBest.set(key, { uid: s.uid, playerName: s.name, email: s.email, mode, score });
                     } else {
                         const mode = pick(rushModes);
                         const score = rand(10, 120);

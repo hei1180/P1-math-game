@@ -2,13 +2,13 @@
 // makeBuildRobot = the Boss test-drive robot, assembled from solids + a tile window, with scripted drives.
 // All geometry / materials / textures are cached and flagged userData.shared, so disposeTree never frees them.
 import * as THREE from 'three';
-import { PARTS, SLOTS, BASIC_PART, LOOK_INFO, posesOf, familyOf, shuffle, TILE_TEMPLATES, templateById } from '../../shapes-logic.js?v=202610081243';
-import { TOY_COLORS } from '../theme.js?v=202610081243';
-import { tween, cancelTweens, motion } from '../engine/tween.js?v=202610081243';
-import { disposeTree } from '../engine/stage.js?v=202610081243';
-import * as Solids from './solids.js?v=202610081243';
-import * as Tiles from './tiles.js?v=202610081243';
-import { makePatch } from './faces.js?v=202610081243';
+import { PARTS, SLOTS, BASIC_PART, LOOK_INFO, posesOf, familyOf, shuffle, TILE_TEMPLATES, templateById } from '../../shapes-logic.js?v=202610081258';
+import { TOY_COLORS } from '../theme.js?v=202610081258';
+import { tween, cancelTweens, motion } from '../engine/tween.js?v=202610081258';
+import { disposeTree } from '../engine/stage.js?v=202610081258';
+import * as Solids from './solids.js?v=202610081258';
+import * as Tiles from './tiles.js?v=202610081258';
+import { makePatch } from './faces.js?v=202610081258';
 
 // ------------------------------------------------------------------ part names
 export const PART_INFO = {};

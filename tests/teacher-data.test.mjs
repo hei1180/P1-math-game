@@ -208,3 +208,29 @@ test('csvFilename matches p1maths-<tab>-YYYYMMDD.csv', () => {
   const name = csvFilename('overview');
   assert.match(name, /^p1maths-overview-\d{8}\.csv$/);
 });
+
+test('buildOverviewRows splits attempts per game and picks best Robot Workshop stars / rush', () => {
+  const ts = (d) => new Date(d);
+  const rows = buildOverviewRows({
+    attempts: [
+      { uid: 'u1', name: 'Amy', game: 'shapes', mode: 'shapesA1', kind: 'level', stars: 2, durationSec: 60, ts: ts('2026-09-24T09:00:00Z') },
+      { uid: 'u1', name: 'Amy', game: 'shapes', mode: 'shapesA1', kind: 'level', stars: 3, durationSec: 60, ts: ts('2026-09-25T09:00:00Z') },
+      { uid: 'u1', name: 'Amy', game: 'shapes', mode: 'shapesBoss', kind: 'level', stars: 1, durationSec: 30, ts: ts('2026-09-23T09:00:00Z') },
+      { uid: 'u1', name: 'Amy', game: 'market', mode: 'easy', kind: 'timed', score: 40, durationSec: 30, ts: ts('2026-09-26T09:00:00Z') },
+    ],
+    scores: [{ uid: 'u1', playerName: 'Amy', mode: 'shapes3d', score: 17 }, { uid: 'u2', playerName: 'Ben', mode: 'num1', score: 5 }],
+    bondsProgress: [],
+  });
+  const amy = rows.find((r) => r.uid === 'u1'), ben = rows.find((r) => r.uid === 'u2');
+  assert.equal(amy.byGame.shapes.attempts, 3);
+  assert.equal(amy.byGame.shapes.minutes, 2.5);
+  assert.equal(amy.byGame.shapes.lastPlayed.getTime(), ts('2026-09-25T09:00:00Z').getTime());
+  assert.equal(amy.byGame.market.attempts, 1);
+  assert.equal(amy.byGame.bonds.active, false);
+  assert.equal(amy.shapesStars.A1, 3);
+  assert.equal(amy.shapesStars.Boss, 1);
+  assert.equal(amy.shapesStars.B2, null);
+  assert.equal(amy.shapesRush.a, 17);
+  assert.equal(ben.byGame.numbers.active, true);
+  assert.equal(ben.byGame.shapes.active, false);
+});

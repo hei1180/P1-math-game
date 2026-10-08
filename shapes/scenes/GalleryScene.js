@@ -1,5 +1,5 @@
 // Gallery 展覽廳: the whole class's robots on podiums in a row, each with a name sign (the player name, as on the leaderboard).
-// Swipe (or ◀ ▶) to look along the row; tap a robot to see that player's saved creations laid flat on a table.
+// Swipe (or ◀ ▶) to look along the row. (Tap-to-see-creations is off while Free Build is off.)
 // Only ~12 podiums ever exist: they are re-used as the row scrolls (the robots swap parts, the signs are redrawn), so memory stays flat.
 // Own entry comes first, marked 「我」. The teacher also gets 🙈 Hide / 👁 Show per entry (hidden ones look grey, for the teacher only).
 // No likes, no counts, no free text: the only text from other players is the name they already show on the leaderboard.
@@ -96,7 +96,7 @@ export class GalleryScene extends Scene {
     this.entries = entries;
     this.buildRoom();
     this.buildUi();
-    ui.prompt('展覽廳', 'Gallery: swipe to look, tap a robot', { speak: false });
+    ui.prompt('展覽廳', 'Gallery: swipe to look at everyone\'s robots', { speak: false });
     this.frame();
     this.layout();
     this.stage.invalidate();
@@ -149,7 +149,7 @@ export class GalleryScene extends Scene {
       onMove: obj => { if (!this.detail) this.s.scroll = clamp(start - obj.position.x, 0, this.scrollMax()); },
       onEnd: obj => { obj.position.set(0, 0, -1.4); },
     });
-    this.input.onTap(() => [...this.active.values()].map(c => c.group), g => { const c = this.pool.find(p => p.group === g); if (c && c.entry && !this.detail) this.openEntry(c.entry); });
+    // Tapping a robot (openEntry: the player's Free Build creations) is off while Free Build is off.
   }
 
   makeCell() {
@@ -370,7 +370,7 @@ export class GalleryScene extends Scene {
     this.root.remove(this.detail); disposeTree(this.detail); this.detail = null;
     this.strip.visible = true; this.stripes.visible = true;
     this.ui.back(() => this.go('Workshop'));
-    this.ui.prompt('展覽廳', 'Gallery: swipe to look, tap a robot', { speak: false });
+    this.ui.prompt('展覽廳', 'Gallery: swipe to look at everyone\'s robots', { speak: false });
     this.frame();
     this.layout();
   }

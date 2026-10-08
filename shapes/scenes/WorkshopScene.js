@@ -57,17 +57,17 @@ function targetOf(key) {
 // ------------------------------------------------------------------ floor plans
 const PAD_H = 0.14; // top surface of a pad
 
-/** hasGallery false: the front row has two pads. Returns pad positions, banners, scenery spots and the points the camera must fit. */
+/** hasGallery false: the front row has one pad. Returns pad positions, banners, scenery spots and the points the camera must fit. */
 function makeLayout(name, hasGallery) {
   const L = { name, pads: [], banners: [], friends: [], props: [] };
-  const front = ['garage', 'free', ...(hasGallery ? ['gallery'] : [])];
+  const front = ['garage', ...(hasGallery ? ['gallery'] : [])]; // Free Build pad is off for now (FreeBuildScene stays in the code)
   if (name === 'wide') {
     Object.assign(L, { padR: 0.8, signW: 2.05, signH: 0.95, pitch: (48 * Math.PI) / 180, topPx: 12, botPx: 66, floor: [-12, 12, -7.3, 6.8], wallZ: -7.6, roadW: 7 });
     const sp = 2.2, rowZ = 0;
     ZONES.a.keys.concat('rush-a').forEach((k, i) => L.pads.push({ key: k, x: -10.2 + i * sp, z: rowZ }));
     ZONES.b.keys.concat('rush-b').forEach((k, i) => L.pads.push({ key: k, x: 1.4 + i * sp, z: rowZ }));
     L.pads.push({ key: 'boss', x: 0, z: -5.1 });
-    const xs = hasGallery ? [-4.4, 0, 4.4] : [-2.2, 2.2];
+    const xs = hasGallery ? [-2.2, 2.2] : [0];
     front.forEach((k, i) => L.pads.push({ key: k, x: xs[i], z: 4.5 }));
     L.banners.push({ zone: 'a', x: -5.8, z: -2.5, w: 5.6 }, { zone: 'b', x: 5.8, z: -2.5, w: 5.6 });
     L.paths = [[-10.2, 0, -1.4, 0], [1.4, 0, 10.2, 0]];
@@ -81,7 +81,7 @@ function makeLayout(name, hasGallery) {
     ZONES.a.keys.concat('rush-a').forEach((k, i) => L.pads.push({ key: k, x: (i - 2) * sp, z: -6 }));
     ZONES.b.keys.concat('rush-b').forEach((k, i) => L.pads.push({ key: k, x: (i - 2) * sp, z: -0.4 }));
     L.pads.push({ key: 'boss', x: 0, z: -11.6 });
-    const xs = hasGallery ? [-3.4, 0, 3.4] : [-1.7, 1.7];
+    const xs = hasGallery ? [-1.7, 1.7] : [0];
     front.forEach((k, i) => L.pads.push({ key: k, x: xs[i], z: 3.9 }));
     L.banners.push({ zone: 'a', x: 0, z: -8.1, w: 5.4 }, { zone: 'b', x: 0, z: -2.5, w: 5.4 });
     L.paths = [[-2 * sp, -6, 2 * sp, -6], [-2 * sp, -0.4, 2 * sp, -0.4]];
@@ -96,7 +96,7 @@ function makeLayout(name, hasGallery) {
     snake(ZONES.a.keys.concat('rush-a'), -8.6);
     snake(ZONES.b.keys.concat('rush-b'), 0.4);
     L.pads.push({ key: 'boss', x: 0, z: -14.2 });
-    const xs = hasGallery ? [-sp, 0, sp] : [-1.7, 1.7];
+    const xs = hasGallery ? [-1.7, 1.7] : [0];
     front.forEach((k, i) => L.pads.push({ key: k, x: xs[i], z: 8 }));
     L.banners.push({ zone: 'a', x: 0, z: -11.3, w: 5.4 }, { zone: 'b', x: 0, z: -1.9, w: 5.4 });
     L.paths = [[-sp, -8.6, sp, -8.6], [sp, -8.6, sp, -5.2], [sp, -5.2, 0, -5.2], [-sp, 0.4, sp, 0.4], [sp, 0.4, sp, 3.8], [sp, 3.8, 0, 3.8]];
@@ -327,7 +327,7 @@ export class WorkshopScene extends Scene {
     } else if (st.kind === 'boss') {
       open = isBossOpen(p, u, test);
       if (!open) reason = u.a && u.b ? 'clear' : 'teacher';
-    } else if (st.kind === 'free' || st.kind === 'gallery') {
+    } else if (st.kind === 'gallery') {
       open = !!test || !!(u.a || u.b);
       if (!open) reason = 'teacher';
     }

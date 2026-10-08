@@ -1,10 +1,11 @@
 # P1 Maths games
 
-Three browser games for Primary 1, hosted on GitHub Pages, Google login via Firebase.
+Four browser games for Primary 1, hosted on GitHub Pages, Google login via Firebase.
 
 - `index.html` — hub + 🍎 Math Market (counting with ten-frames)
 - `numbers.html` — 🔢 Number Shop 數字小店 (compare 比較, odd/even 奇偶, number line 數線, odd/even line 奇偶數線)
 - `bonds.html` — 🚂 Rod Town 數棒鎮 (合成與分解 number bonds 2-18 with Cuisenaire rods, ten-frames, bond diagrams and equations; 4 worlds × 6 levels + a Number House boss, timed Rush per world). Phaser 3.90 from jsDelivr; code in `bonds/`, pure logic in `bonds-logic.js`, progress in `bonds-progress.js` (Firestore `bondsProgress/{uid}` + localStorage)
+- `shapes.html` — 🤖 Robot Workshop 形狀機械人工場 (1S1 立體圖形 and 1S2 平面圖形; a toy-factory game with sorting, stacking, pin-board and building scenes, a test-track boss and timed Rush). three.js 0.186.1 + cannon-es 0.20.0 from jsDelivr; code in `shapes/`, rules and grading in `shapes-logic.js`, progress in `shapes-progress.js` (Firestore `shapesProgress/{uid}`), class gallery in Firestore `robotGallery/{uid}`
 - `shared.js` / `shared.css` — login, fever/combo, leaderboard, teacher panel, theme
 - `juice.js` — tap/answer animations
 - `numbers-logic.js`, `trophy.js` — pure logic, unit tested
@@ -18,6 +19,11 @@ Rod Town rows in the same panel:
 - **Rod Town Rush time (s)** — length of each world's Rush (default 60). Rush for a world opens once its Number House is beaten; leaderboard tabs `bonds1`-`bonds4`.
 - **Less motion** — no screen shake, camera zoom or confetti, shorter animations (applies to every device at once; the device's own reduce-motion setting is honoured too).
 
+Robot Workshop rows in the same panel:
+- **Zone A 立體 3-D / Zone B 平面 2-D** — tick to open each zone for the class. Both off by default.
+- **Robot Workshop Rush time (s)** — length of the Rush (default 60).
+- **Class gallery 班級展覽廳** — on by default; untick to hide the shared gallery of robots.
+
 Children's Rod Town progress (stars, stickers, daily streak) is kept per Google account. Test mode opens everything and saves nothing.
 
 ## Develop
@@ -25,11 +31,13 @@ Children's Rod Town progress (stars, stickers, daily streak) is kept per Google 
     python3 -m http.server 8000   # open http://localhost:8000/
     npm test                      # node --test tests/
 
-Asset links carry `?v=<stamp>` for cache busting; bump the stamp in the HTML pages, `shared.js`, `bonds-progress.js` and `bonds/**` on each deploy (`./bump.sh` does it).
+Asset links carry `?v=<stamp>` for cache busting; bump the stamp in the HTML pages, `shared.js`, `bonds-progress.js`, `bonds/**`, `shapes-logic.js`, `shapes-progress.js` and `shapes/**` on each deploy (`./bump.sh` does it).
 
 Google login does not work from file://. Use localhost or the GitHub Pages URL.
 
 Rod Town without logging in: open `http://localhost:8000/bonds.html?dev` (localhost only). It skips login and starts in test mode as player "Dev". The console hook `window.__rodTown` has `go(scene, data)` (e.g. `__rodTown.go('Level', { w: 4, level: 1 })`, scenes `Map`, `Level`, `House`, `Rush`) and `bridge`; set `__rodTown.bridge.previewLocks = true` to see locks, fog and stickers as a student would (progress kept in memory only). `bonds.html?dev&sandbox` opens the rod/board sandbox.
+
+Robot Workshop without logging in: open `http://localhost:8000/shapes.html?dev` (also works on private LAN addresses 192.168.x / 10.x / 172.16-31.x, so you can try it on an iPad). It skips login and starts in test mode as player "Dev". Add `&scene=A1` to start a scene directly and `&seed=7` for repeatable rounds.
 
 Design spec and plan: `docs/superpowers/`.
 

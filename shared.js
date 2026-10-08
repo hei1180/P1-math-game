@@ -3,8 +3,8 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
 import { getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
 import { getFirestore, collection, doc, getDoc, setDoc, getDocs, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
-import { DEFAULT_TROPHY, TROPHY_ICON, TROPHY_LABEL, trophyFor, validateCutoffs } from './trophy.js?v=202609271224';
-import { gameOf, modeLabel } from './labels.js?v=202609271224';
+import { DEFAULT_TROPHY, TROPHY_ICON, TROPHY_LABEL, trophyFor, validateCutoffs } from './trophy.js?v=202610081243';
+import { gameOf, modeLabel } from './labels.js?v=202610081243';
 
 export { TROPHY_ICON, TROPHY_LABEL };
 
@@ -37,10 +37,12 @@ export const NUM_KEYS = ['num1', 'num2', 'num3', 'num4'];
 const defaultNumUnlock = () => Object.fromEntries(NUM_KEYS.map(k => [k, false]));
 export const BONDS_KEYS = ['w1', 'w2', 'w3', 'w4'];
 const defaultBondsUnlock = () => Object.fromEntries(BONDS_KEYS.map(k => [k, false]));
-export const DEFAULT_SETTINGS = { timeLimit: 30, unlockMedium: false, unlockHard: false, numTimeLimit: 30, numUnlock: defaultNumUnlock(), bondsUnlock: defaultBondsUnlock(), bondsTimeLimit: 60, lessMotion: false, trophy: { ...DEFAULT_TROPHY }, sheetUrl: '' };
+export const SHAPES_KEYS = ['a', 'b'];
+const defaultShapesUnlock = () => Object.fromEntries(SHAPES_KEYS.map(k => [k, false]));
+export const DEFAULT_SETTINGS = { timeLimit: 30, unlockMedium: false, unlockHard: false, numTimeLimit: 30, numUnlock: defaultNumUnlock(), bondsUnlock: defaultBondsUnlock(), bondsTimeLimit: 60, shapesUnlock: defaultShapesUnlock(), shapesTimeLimit: 60, shapesGallery: true, lessMotion: false, trophy: { ...DEFAULT_TROPHY }, sheetUrl: '' };
 
 export const player = { name: 'Guest', uid: null, email: '', highScores: {} };
-export const settings = { ...DEFAULT_SETTINGS, numUnlock: defaultNumUnlock(), bondsUnlock: defaultBondsUnlock(), trophy: { ...DEFAULT_TROPHY } };
+export const settings = { ...DEFAULT_SETTINGS, numUnlock: defaultNumUnlock(), bondsUnlock: defaultBondsUnlock(), shapesUnlock: defaultShapesUnlock(), trophy: { ...DEFAULT_TROPHY } };
 
 /** Teacher test mode: this browser tab only, all levels open, nothing saved. Cleared when the tab closes. */
 const TEST_KEY = 'p1maths.testMode';
@@ -213,6 +215,7 @@ export async function loadSettings() {
       settings.trophy = validateCutoffs(d.trophy) ? { ...d.trophy } : { ...DEFAULT_TROPHY };
       settings.numUnlock = { ...defaultNumUnlock(), ...(d.numUnlock || {}) };
       settings.bondsUnlock = { ...defaultBondsUnlock(), ...(d.bondsUnlock || {}) };
+      settings.shapesUnlock = { ...defaultShapesUnlock(), ...(d.shapesUnlock || {}) };
       settings.sheetUrl = typeof d.sheetUrl === 'string' ? d.sheetUrl.trim() : '';
     }
   } catch (e) { console.warn('settings offline', e); }
@@ -232,10 +235,10 @@ export async function loadMyHighScores() {
   } catch (e) { console.warn('scores offline', e); }
 }
 
-/** Timer length (s) behind a timed mode key: Market, Number Shop or Rod Town Rush. */
+/** Timer length (s) behind a timed mode key: Market, Number Shop, Rod Town or Robot Workshop Rush. */
 function timeLimitOf(modeKey) {
   const g = gameOf(modeKey);
-  return g === 'numbers' ? settings.numTimeLimit : g === 'bonds' ? settings.bondsTimeLimit : settings.timeLimit;
+  return g === 'numbers' ? settings.numTimeLimit : g === 'bonds' ? settings.bondsTimeLimit : g === 'shapes' ? settings.shapesTimeLimit : settings.timeLimit;
 }
 
 /**
@@ -271,7 +274,7 @@ export const __attemptSink = { write: null };
  * One document per finished game in `attempts` (contract: docs/superpowers/specs/2026-09-25-teacher-data-design.md),
  * plus a fire-and-forget row to the teacher's Google Sheet when settings.sheetUrl is an https URL.
  * Skipped in test mode or when nobody is signed in. Never throws.
- * fields: { game?, mode, kind: 'timed' | 'level', score?, accuracy?, maxCombo?, stars?, mistakes?, durationSec? }
+ * fields: { game?, mode, kind: 'timed' | 'level', score?, accuracy?, maxCombo?, stars?, mistakes?, durationSec?, confusions?: [{item, picked}] }
  */
 export async function logAttempt(fields) {
   try {
@@ -282,6 +285,9 @@ export async function logAttempt(fields) {
       game: fields.game || gameOf(mode), mode, modeLabel: modeLabel(mode), kind: fields.kind,
     };
     for (const k of ATTEMPT_NUMBERS) row[k] = Number.isFinite(fields[k]) ? fields[k] : null;
+    if (Array.isArray(fields.confusions) && fields.confusions.length) {
+      row.confusions = fields.confusions.filter(c => c && c.item != null && c.picked != null).slice(0, 5).map(c => ({ item: String(c.item).slice(0, 30), picked: String(c.picked).slice(0, 30) }));
+    }
     row.ts = serverTimestamp();
     row.day = localDay();
     if (typeof __attemptSink.write === 'function') { __attemptSink.write(row); return; }
@@ -431,6 +437,15 @@ const TEACHER_MODAL_HTML = `
         <label class="flex items-center gap-2 font-bold text-gray-700 mt-3">Rush time (s)<input type="number" id="settingBondsTime" min="10" max="300" class="border-2 border-gray-300 p-1 rounded-lg w-20 text-center font-bold outline-none"></label>
         <label class="flex items-center gap-2 font-bold text-gray-700 mt-2 cursor-pointer"><input type="checkbox" id="settingLessMotion" class="w-6 h-6 accent-gray-500 rounded"> Less motion 減少動畫</label>
       </div>
+      <div class="bg-emerald-50 p-4 rounded-xl mb-4 border-2 border-emerald-200">
+        <div class="font-bold text-gray-700 mb-2">Robot Workshop 形狀機械人工場</div>
+        <div class="grid grid-cols-2 gap-2">
+          <label class="flex items-center gap-2 font-bold text-gray-700 cursor-pointer"><input type="checkbox" id="settingShapesA" class="w-6 h-6 accent-emerald-500 rounded"> A 立體 3-D</label>
+          <label class="flex items-center gap-2 font-bold text-gray-700 cursor-pointer"><input type="checkbox" id="settingShapesB" class="w-6 h-6 accent-emerald-500 rounded"> B 平面 2-D</label>
+        </div>
+        <label class="flex items-center gap-2 font-bold text-gray-700 mt-3">Rush time (s)<input type="number" id="settingShapesTime" min="10" max="300" class="border-2 border-gray-300 p-1 rounded-lg w-20 text-center font-bold outline-none"></label>
+        <label class="flex items-center gap-2 font-bold text-gray-700 mt-2 cursor-pointer"><input type="checkbox" id="settingShapesGallery" class="w-6 h-6 accent-emerald-500 rounded"> Class gallery 班級展覽廳</label>
+      </div>
       <div class="grid grid-cols-2 gap-3 mb-4">
         <label class="text-sm font-bold text-gray-700 text-center">Market time (s)<input type="number" id="settingTime" min="10" max="300" class="border-4 border-gray-300 p-2 rounded-xl w-full text-center text-xl font-bold outline-none"></label>
         <label class="text-sm font-bold text-gray-700 text-center">Number Shop time (s)<input type="number" id="settingNumTime" min="10" max="300" class="border-4 border-gray-300 p-2 rounded-xl w-full text-center text-xl font-bold outline-none"></label>
@@ -483,6 +498,7 @@ export function mountTeacherModal(onSaved) {
     NUM_KEYS.forEach((k, i) => { $('settingNum' + (i + 1)).checked = !!settings.numUnlock[k]; });
     BONDS_KEYS.forEach((k, i) => { $('settingBonds' + (i + 1)).checked = !!settings.bondsUnlock[k]; });
     $('settingBondsTime').value = settings.bondsTimeLimit; $('settingLessMotion').checked = !!settings.lessMotion;
+    $('settingShapesA').checked = !!settings.shapesUnlock.a; $('settingShapesB').checked = !!settings.shapesUnlock.b; $('settingShapesTime').value = settings.shapesTimeLimit; $('settingShapesGallery').checked = settings.shapesGallery !== false;
     $('settingTime').value = settings.timeLimit; $('settingNumTime').value = settings.numTimeLimit;
     $('settingSheetUrl').value = settings.sheetUrl || '';
     $('settingBronze').value = settings.trophy.bronze; $('settingSilver').value = settings.trophy.silver; $('settingGold').value = settings.trophy.gold;
@@ -498,6 +514,7 @@ export function mountTeacherModal(onSaved) {
       numUnlock: Object.fromEntries(NUM_KEYS.map((k, i) => [k, $('settingNum' + (i + 1)).checked])),
       bondsUnlock: Object.fromEntries(BONDS_KEYS.map((k, i) => [k, $('settingBonds' + (i + 1)).checked])),
       bondsTimeLimit: parseInt($('settingBondsTime').value) || 60,
+      shapesUnlock: { a: $('settingShapesA').checked, b: $('settingShapesB').checked }, shapesTimeLimit: parseInt($('settingShapesTime').value) || 60, shapesGallery: $('settingShapesGallery').checked,
       lessMotion: $('settingLessMotion').checked,
       trophy, sheetUrl
     };

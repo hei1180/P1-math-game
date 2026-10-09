@@ -972,6 +972,14 @@ export function chestCoins(key, stars) {
 export const FLOOR_BONUS = 10;
 /** Free look on the first clear of each floor (floor 4's comes with the boss). */
 export const FLOOR_LOOK = { 1: 'helmetHorned', 2: 'petSlime', 3: 'helmetCrown', 4: 'petDragon' };
+/**
+ * Costume pieces inside some end chests: fixed rooms, given on the first clear only (replays give coins).
+ * Chest-only items (SHOP price null, earnedBy 'chest'); the chest shows the piece's silhouette before it opens.
+ */
+export const CHEST_LOOKS = {
+  F1R3: 'helmetCap', F1R5: 'petChick', F2R3: 'helmetFlower', F2R5: 'petBunny',
+  F3R3: 'helmetPirate', F3R5: 'petFrog', F4R3: 'helmetGold',
+};
 /** 'gold' all 3★, 'silver' average ≥ 2★, 'bronze' finished, null not cleared. */
 export function floorMedal(progress, floor) {
   const keys = roomsOf(floor), st = keys.map(k => (progress.stars || {})[k] || 0);
@@ -1008,6 +1016,14 @@ export const SHOP = [
   { id: 'petCat',       slot: 'pet',    zh: '小貓',   en: 'Cat',         price: 25 },
   { id: 'petOwlet',     slot: 'pet',    zh: '小貓頭鷹', en: 'Owlet',     price: 30 },
   { id: 'petDragon',    slot: 'pet',    zh: '小龍',   en: 'Baby dragon', price: null, earnedBy: 'boss' },
+  // chest-only pieces (CHEST_LOOKS)
+  { id: 'helmetCap',    slot: 'helmet', zh: '紅帽子', en: 'Red cap',     price: null, earnedBy: 'chest' },
+  { id: 'helmetFlower', slot: 'helmet', zh: '花環',   en: 'Flower crown', price: null, earnedBy: 'chest' },
+  { id: 'helmetPirate', slot: 'helmet', zh: '海盜帽', en: 'Pirate hat',  price: null, earnedBy: 'chest' },
+  { id: 'helmetGold',   slot: 'helmet', zh: '金頭盔', en: 'Gold helm',   price: null, earnedBy: 'chest' },
+  { id: 'petChick',     slot: 'pet',    zh: '小雞',   en: 'Chick',       price: null, earnedBy: 'chest' },
+  { id: 'petBunny',     slot: 'pet',    zh: '小兔',   en: 'Bunny',       price: null, earnedBy: 'chest' },
+  { id: 'petFrog',      slot: 'pet',    zh: '小青蛙', en: 'Frog',        price: null, earnedBy: 'chest' },
 ];
 export const LATER_SLOTS = ['cape', 'badge', 'trail'];
 
@@ -1018,7 +1034,7 @@ const norm = p => ({
   equipped: { ...emptyEquipped(), ...((p && p.equipped) || {}) }, floorBonus: ((p && p.floorBonus) || []).slice(),
 });
 
-/** Buy a shop item. reason: 'notForSale' (unknown or boss-only), 'owned', 'price' (not enough coins). */
+/** Buy a shop item. reason: 'notForSale' (unknown, boss or chest only), 'owned', 'price' (not enough coins). */
 export function buy(progress, id) {
   const item = SHOP.find(s => s.id === id);
   if (!item || item.price === null) return { ok: false, progress, reason: 'notForSale' };
@@ -1052,8 +1068,9 @@ export const isFloorCleared = (p, floor) => roomsOf(floor).every(k => ((p && p.s
 
 /**
  * Record a finished room. Best stars kept; coins added. The first clear of a whole floor adds
- * FLOOR_BONUS once (floorBonus list) and FLOOR_LOOK[floor]; the boss's first clear adds petDragon.
- * @returns {{progress, newBest:boolean, floorCleared:number|null, bonus:number}}
+ * FLOOR_BONUS once (floorBonus list) and FLOOR_LOOK[floor]; the boss's first clear adds petDragon;
+ * the first clear of a CHEST_LOOKS room adds that costume piece (chestLook).
+ * @returns {{progress, newBest:boolean, floorCleared:number|null, bonus:number, chestLook:string|null}}
  */
 export function recordResult(progress, key, stars, coins = 0) {
   const p = norm(progress);
@@ -1062,6 +1079,8 @@ export function recordResult(progress, key, stars, coins = 0) {
   p.coins += coins;
   const addLook = id => { if (id && !p.looks.includes(id)) p.looks.push(id); };
   if (key === 'F4R5' && prev === 0 && stars > 0) addLook('petDragon');
+  const chestLook = prev === 0 && stars > 0 && CHEST_LOOKS[key] && !p.looks.includes(CHEST_LOOKS[key]) ? CHEST_LOOKS[key] : null;
+  addLook(chestLook);
   const room = roomByKey(key);
   let floorCleared = null, bonus = 0;
   if (room && isFloorCleared(p, room.floor) && !p.floorBonus.includes(room.floor)) {
@@ -1071,7 +1090,7 @@ export function recordResult(progress, key, stars, coins = 0) {
     p.floorBonus.push(room.floor);
     addLook(FLOOR_LOOK[room.floor]);
   }
-  return { progress: p, newBest: stars > prev, floorCleared, bonus };
+  return { progress: p, newBest: stars > prev, floorCleared, bonus, chestLook };
 }
 
 /** Merge two copies (e.g. Firestore + localStorage): stars max per room, coins max, looks and floorBonus union, hero/equipped b's if set. */

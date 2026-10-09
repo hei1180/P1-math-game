@@ -172,6 +172,9 @@ The base body is a neutral knight so every child can see themself in it. The chi
 | Helmet | 5 (plain helm, horned helm, crown, wizard hat, hood) | 10–25 coins |
 | Pet that follows | slime, ghost, cat, owlet | 15–30 coins |
 | Pet: baby dragon | only from beating the floor-4 boss | not for sale |
+| Chest pieces | found in the end chest of F1R3 紅帽子 cap, F1R5 小雞 chick, F2R3 花環 flower crown, F2R5 小兔 bunny, F3R3 海盜帽 pirate hat, F3R5 小青蛙 frog, F4R3 金頭盔 gold helm | not for sale |
+
+**Chest pieces:** fixed rooms, given on the **first clear only** (replays give coins as usual), so every child gets the same pieces the same way; nothing random. Before it opens, the chest shows the piece's silhouette 「寶箱裏有新裝備！」; it opens with a fanfare and the child can 「穿上」 it at once or keep playing.
 
 **Later (slots reserved, not in the first build):** cape, shield badge, walk trail. Coins saved meanwhile stay; nothing is lost.
 

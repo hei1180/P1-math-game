@@ -5,7 +5,7 @@ import {
   relation, slotRelation, sentenceText, truthOf, sentencesFor,
   validateClue, checkAnswer, checkSolve, confusionOf,
   FLOORS, ROOMS, roomByKey, roomsOf, nextRoom, DEFAULT_LEVEL, levelFor, genRoom, genRush,
-  hintStep, mistakesFor, starsFor, coinsPerAnswer, chestCoins, FLOOR_BONUS, FLOOR_LOOK, floorMedal,
+  hintStep, mistakesFor, starsFor, coinsPerAnswer, chestCoins, FLOOR_BONUS, FLOOR_LOOK, CHEST_LOOKS, floorMedal,
   SKINS, HAIR_STYLES, HAIR_COLOURS, TUNICS, HERO_NAMES, heroName, SHOP, LATER_SLOTS, buy, equip,
   emptyProgress, recordResult, mergeProgress,
   isFloorCleared, isFloorOpen, isRoomOpen, isRushOpen,
@@ -319,7 +319,7 @@ test('15 recordResult: best stars, coins, floor bonus and look once', () => {
 });
 
 test('16 shop: buy and equip', () => {
-  assert.equal(SHOP.filter(s => s.slot === 'helmet').length, 5);
+  assert.equal(SHOP.filter(s => s.slot === 'helmet' && s.price !== null).length, 5);
   assert.equal(SHOP.filter(s => s.slot === 'pet' && s.price !== null).length, 4);
   assert.ok(SHOP.every(s => s.price === null || (s.price >= 10 && s.price <= 30)));
   assert.deepEqual(LATER_SLOTS, ['cape', 'badge', 'trail']);
@@ -426,4 +426,26 @@ test('20 KINDS: art keys and kinds used by the generators', () => {
   const r = lcg(3);
   assert.ok([1, 2, 3].includes(pick([1, 2, 3], r)));
   assert.deepEqual(shuffle([1, 2, 3, 4], lcg(1)).sort(), [1, 2, 3, 4]);
+});
+
+test('21 chest costume pieces: fixed rooms, first clear only, not for sale', () => {
+  assert.deepEqual(Object.keys(CHEST_LOOKS), ['F1R3', 'F1R5', 'F2R3', 'F2R5', 'F3R3', 'F3R5', 'F4R3']);
+  for (const [key, id] of Object.entries(CHEST_LOOKS)) {
+    assert.ok(chestCoins(key, 1) > 0, key + ' has an end chest');
+    const item = SHOP.find(s => s.id === id);
+    assert.ok(item, id + ' in SHOP');
+    assert.equal(item.price, null);
+    assert.equal(item.earnedBy, 'chest');
+    assert.ok(['helmet', 'pet'].includes(item.slot));
+    assert.equal(buy({ ...emptyProgress(), coins: 999 }, id).reason, 'notForSale');
+  }
+  let r = recordResult(emptyProgress(), 'F1R3', 1, 7);
+  assert.equal(r.chestLook, 'helmetCap');
+  assert.ok(r.progress.looks.includes('helmetCap'));
+  const again = recordResult(r.progress, 'F1R3', 3, 11);
+  assert.equal(again.chestLook, null, 'replay gives coins only');
+  assert.equal(again.progress.looks.filter(l => l === 'helmetCap').length, 1);
+  assert.equal(recordResult(emptyProgress(), 'F1R4', 3, 11).chestLook, null);
+  const worn = equip(r.progress, 'helmet', 'helmetCap');
+  assert.equal(worn.equipped.helmet, 'helmetCap');
 });

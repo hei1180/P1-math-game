@@ -125,7 +125,8 @@ starsFor(mistakes) -> 3|2|1          // 0 → 3, 1–2 → 2, else 1
 coinsPerAnswer(key) -> 0|1           // R1, R2 and wave rooms: 1; others 0
 chestCoins(key, stars) -> n          // R3–R5 and floor 4 rooms (not waves): 5 + 2*stars; else 0
 FLOOR_BONUS = 10
-FLOOR_LOOK = { 1:'helmetHorned', 2:'petSlime', 3:'helmetCrown', 4:'petDragon' }   // free look on first floor clear (spec §4); floor 4's comes with the boss
+FLOOR_LOOK = { 1:'helmetHorned', 2:'petSlime', 3:'helmetCrown', 4:'petDragon' }
+CHEST_LOOKS = { F1R3:'helmetCap', F1R5:'petChick', F2R3:'helmetFlower', F2R5:'petBunny', F3R3:'helmetPirate', F3R5:'petFrog', F4R3:'helmetGold' }   // chest-only (SHOP price null, earnedBy 'chest'), first clear only   // free look on first floor clear (spec §4); floor 4's comes with the boss
 floorMedal(progress, floor) -> 'gold'|'silver'|'bronze'|null
 
 // hero, shop
@@ -138,7 +139,7 @@ equip(progress, slot, id|null) -> progress         // must own it (or null)
 
 // progress
 emptyProgress() -> { stars:{}, coins:0, hero:null, looks:[], equipped:{helmet:null,pet:null,cape:null,badge:null,trail:null}, floorBonus:[] }
-recordResult(progress, key, stars, coins) -> { progress, newBest, floorCleared: floor|null, bonus }
+recordResult(progress, key, stars, coins) -> { progress, newBest, floorCleared: floor|null, bonus, chestLook: id|null }
      // best stars kept; coins added; first clear of a whole floor adds FLOOR_BONUS once (floorBonus list) and,
      // and adds FLOOR_LOOK[floor] to looks (floor 4: when its last room, the boss, is first cleared)
 mergeProgress(a, b) -> progress     // stars max per room; coins max; looks union; floorBonus union; hero/equipped: b's if set else a's
@@ -227,7 +228,7 @@ bridge.progress
 bridge.rng()                                 // Math.random, or lcg(seed) with ?seed=
 bridge.levelFor(key)                         // levelFor(key, lastMistakes[prevKey], lastLevel[prevKey]) from this sitting; ?level= overrides
 bridge.addCoins(n)                           // live counter only; saved with complete()
-bridge.complete(key, stars, { mistakes, hints, durationSec, confusions, coins }) -> Promise<{ newBest, floorCleared, bonus }>
+bridge.complete(key, stars, { mistakes, hints, durationSec, confusions, coins }) -> Promise<{ newBest, floorCleared, bonus, chestLook }>
                                              // logAttempt({game:'dungeon', mode:'dungeon'+key, kind:'level', stars, mistakes, durationSec, confusions});
                                              // recordResult; save unless test mode
 bridge.saveLook(progressPatchFn) -> Promise  // hero / buy / equip changes, then save

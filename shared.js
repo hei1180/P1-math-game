@@ -39,10 +39,14 @@ export const BONDS_KEYS = ['w1', 'w2', 'w3', 'w4'];
 const defaultBondsUnlock = () => Object.fromEntries(BONDS_KEYS.map(k => [k, false]));
 export const SHAPES_KEYS = ['a', 'b'];
 const defaultShapesUnlock = () => Object.fromEntries(SHAPES_KEYS.map(k => [k, false]));
+export const DUNGEON_KEYS = ['f1', 'f2', 'f3', 'f4'];
+const defaultDungeonUnlock = () => Object.fromEntries(DUNGEON_KEYS.map(k => [k, false]));
 export const DEFAULT_SETTINGS = { timeLimit: 30, unlockMedium: false, unlockHard: false, numTimeLimit: 30, numUnlock: defaultNumUnlock(), bondsUnlock: defaultBondsUnlock(), bondsTimeLimit: 60, shapesUnlock: defaultShapesUnlock(), shapesTimeLimit: 60, shapesGallery: true, lessMotion: false, trophy: { ...DEFAULT_TROPHY }, sheetUrl: '' };
+Object.assign(DEFAULT_SETTINGS, { dungeonUnlock: defaultDungeonUnlock(), dungeonTimeLimit: 60 });
 
 export const player = { name: 'Guest', uid: null, email: '', highScores: {} };
 export const settings = { ...DEFAULT_SETTINGS, numUnlock: defaultNumUnlock(), bondsUnlock: defaultBondsUnlock(), shapesUnlock: defaultShapesUnlock(), trophy: { ...DEFAULT_TROPHY } };
+settings.dungeonUnlock = defaultDungeonUnlock();
 
 /** Teacher test mode: this browser tab only, all levels open, nothing saved. Cleared when the tab closes. */
 const TEST_KEY = 'p1maths.testMode';
@@ -216,6 +220,7 @@ export async function loadSettings() {
       settings.numUnlock = { ...defaultNumUnlock(), ...(d.numUnlock || {}) };
       settings.bondsUnlock = { ...defaultBondsUnlock(), ...(d.bondsUnlock || {}) };
       settings.shapesUnlock = { ...defaultShapesUnlock(), ...(d.shapesUnlock || {}) };
+      settings.dungeonUnlock = { ...defaultDungeonUnlock(), ...(d.dungeonUnlock || {}) };
       settings.sheetUrl = typeof d.sheetUrl === 'string' ? d.sheetUrl.trim() : '';
     }
   } catch (e) { console.warn('settings offline', e); }
@@ -235,10 +240,10 @@ export async function loadMyHighScores() {
   } catch (e) { console.warn('scores offline', e); }
 }
 
-/** Timer length (s) behind a timed mode key: Market, Number Shop, Rod Town or Robot Workshop Rush. */
+/** Timer length (s) behind a timed mode key: Market, Number Shop, Rod Town, Robot Workshop or Treasure Dungeon Rush. */
 function timeLimitOf(modeKey) {
   const g = gameOf(modeKey);
-  return g === 'numbers' ? settings.numTimeLimit : g === 'bonds' ? settings.bondsTimeLimit : g === 'shapes' ? settings.shapesTimeLimit : settings.timeLimit;
+  return g === 'numbers' ? settings.numTimeLimit : g === 'bonds' ? settings.bondsTimeLimit : g === 'shapes' ? settings.shapesTimeLimit : g === 'dungeon' ? settings.dungeonTimeLimit : settings.timeLimit;
 }
 
 /**
@@ -446,6 +451,17 @@ const TEACHER_MODAL_HTML = `
         <label class="flex items-center gap-2 font-bold text-gray-700 mt-3">Rush time (s)<input type="number" id="settingShapesTime" min="10" max="300" class="border-2 border-gray-300 p-1 rounded-lg w-20 text-center font-bold outline-none"></label>
         <label class="flex items-center gap-2 font-bold text-gray-700 mt-2 cursor-pointer"><input type="checkbox" id="settingShapesGallery" class="w-6 h-6 accent-emerald-500 rounded"> Class gallery 班級展覽廳</label>
       </div>
+      <div class="bg-amber-50 p-4 rounded-xl mb-4 border-2 border-amber-200">
+        <div class="font-bold text-gray-700 mb-2">Treasure Dungeon 尋寶地下城</div>
+        <div class="grid grid-cols-2 gap-2">
+          <label class="flex items-center gap-2 font-bold text-gray-700 cursor-pointer"><input type="checkbox" id="settingDungeonF1" class="w-6 h-6 accent-amber-500 rounded"> Floor 1 左右</label>
+          <label class="flex items-center gap-2 font-bold text-gray-700 cursor-pointer"><input type="checkbox" id="settingDungeonF2" class="w-6 h-6 accent-amber-500 rounded"> Floor 2 前後</label>
+          <label class="flex items-center gap-2 font-bold text-gray-700 cursor-pointer"><input type="checkbox" id="settingDungeonF3" class="w-6 h-6 accent-amber-500 rounded"> Floor 3 上下</label>
+          <label class="flex items-center gap-2 font-bold text-gray-700 cursor-pointer"><input type="checkbox" id="settingDungeonF4" class="w-6 h-6 accent-amber-500 rounded"> Floor 4 綜合</label>
+        </div>
+        <label class="flex items-center gap-2 font-bold text-gray-700 mt-3">Rush time (s)<input type="number" id="settingDungeonTime" min="10" max="300" class="border-2 border-gray-300 p-1 rounded-lg w-20 text-center font-bold outline-none"></label>
+        <div class="text-xs text-gray-500 mt-2">Before Floor 1: 老師話 left/right game (textbook p72). Before Floor 2: line-up activity (p73).</div>
+      </div>
       <div class="grid grid-cols-2 gap-3 mb-4">
         <label class="text-sm font-bold text-gray-700 text-center">Market time (s)<input type="number" id="settingTime" min="10" max="300" class="border-4 border-gray-300 p-2 rounded-xl w-full text-center text-xl font-bold outline-none"></label>
         <label class="text-sm font-bold text-gray-700 text-center">Number Shop time (s)<input type="number" id="settingNumTime" min="10" max="300" class="border-4 border-gray-300 p-2 rounded-xl w-full text-center text-xl font-bold outline-none"></label>
@@ -499,6 +515,7 @@ export function mountTeacherModal(onSaved) {
     BONDS_KEYS.forEach((k, i) => { $('settingBonds' + (i + 1)).checked = !!settings.bondsUnlock[k]; });
     $('settingBondsTime').value = settings.bondsTimeLimit; $('settingLessMotion').checked = !!settings.lessMotion;
     $('settingShapesA').checked = !!settings.shapesUnlock.a; $('settingShapesB').checked = !!settings.shapesUnlock.b; $('settingShapesTime').value = settings.shapesTimeLimit; $('settingShapesGallery').checked = settings.shapesGallery !== false;
+    DUNGEON_KEYS.forEach((k, i) => { $('settingDungeonF' + (i + 1)).checked = !!settings.dungeonUnlock[k]; }); $('settingDungeonTime').value = settings.dungeonTimeLimit;
     $('settingTime').value = settings.timeLimit; $('settingNumTime').value = settings.numTimeLimit;
     $('settingSheetUrl').value = settings.sheetUrl || '';
     $('settingBronze').value = settings.trophy.bronze; $('settingSilver').value = settings.trophy.silver; $('settingGold').value = settings.trophy.gold;
@@ -515,6 +532,7 @@ export function mountTeacherModal(onSaved) {
       bondsUnlock: Object.fromEntries(BONDS_KEYS.map((k, i) => [k, $('settingBonds' + (i + 1)).checked])),
       bondsTimeLimit: parseInt($('settingBondsTime').value) || 60,
       shapesUnlock: { a: $('settingShapesA').checked, b: $('settingShapesB').checked }, shapesTimeLimit: parseInt($('settingShapesTime').value) || 60, shapesGallery: $('settingShapesGallery').checked,
+      dungeonUnlock: Object.fromEntries(DUNGEON_KEYS.map((k, i) => [k, $('settingDungeonF' + (i + 1)).checked])), dungeonTimeLimit: parseInt($('settingDungeonTime').value) || 60,
       lessMotion: $('settingLessMotion').checked,
       trophy, sheetUrl
     };

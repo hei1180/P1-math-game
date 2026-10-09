@@ -107,7 +107,27 @@ export const WORLD_TOTAL_LEVELS = LEVEL_COUNT + 1; // + boss
 
 /** Robot Workshop courses shown in the overview, in order. attempt mode = 'shapes' + key. */
 export const SHAPES_COURSES = ['A1', 'A2', 'A3', 'A4', 'B1', 'B2', 'B3', 'B4', 'Boss'];
-export const OVERVIEW_GAMES = ['market', 'numbers', 'bonds', 'shapes'];
+export const OVERVIEW_GAMES = ['market', 'numbers', 'bonds', 'shapes', 'dungeon'];
+
+/** Treasure Dungeon rooms shown in the overview, in order. attempt mode = 'dungeon' + key; Rush = 'dungeonRush'. */
+export const DUNGEON_ROOMS = [
+  'F1R1', 'F1R2', 'F1R3', 'F1R4', 'F1R5', 'F1R6',
+  'F2R1', 'F2R2', 'F2R3', 'F2R4', 'F2R5',
+  'F3R1', 'F3R2', 'F3R3', 'F3R4', 'F3R5', 'F3R6',
+  'F4R1', 'F4R2', 'F4R3', 'F4R4', 'F4R5',
+];
+/** Treasure Dungeon mix-ups counted from attempt `confusions` ({item|want, picked}): an opposite-direction swap. */
+export const MIXUP_PAIRS = [
+  { key: 'lr', label: '左↔右', a: 'left', b: 'right' },
+  { key: 'fb', label: '前↔後', a: 'front', b: 'back' },
+  { key: 'ud', label: '上↔下', a: 'above', b: 'below' },
+];
+function mixupKey(c) {
+  if (!c) return null;
+  const want = c.item ?? c.want, picked = c.picked;
+  const p = MIXUP_PAIRS.find((m) => (want === m.a && picked === m.b) || (want === m.b && picked === m.a));
+  return p ? p.key : null;
+}
 
 // ---------- Overview tab ----------
 
@@ -153,6 +173,9 @@ export function buildOverviewRows({ attempts = [], scores = [], bondsProgress = 
     const byGame = {};
     for (const g of OVERVIEW_GAMES) byGame[g] = { attempts: 0, minutes: 0, lastPlayed: null, active: false };
     const shapesStars = Object.fromEntries(SHAPES_COURSES.map((k) => [k, null]));
+    const dungeonStars = Object.fromEntries(DUNGEON_ROOMS.map((k) => [k, null]));
+    const dungeonMixups = Object.fromEntries(MIXUP_PAIRS.map((m) => [m.key, 0]));
+    let dungeonRush = bestByMode.dungeonRush ?? null;
     for (const a of aList) {
       const g = byGame[a.game || gameOf(a.mode)];
       if (!g) continue;
@@ -164,6 +187,12 @@ export function buildOverviewRows({ attempts = [], scores = [], bondsProgress = 
       if ((a.game || gameOf(a.mode)) === 'shapes' && a.kind === 'level' && a.stars != null) {
         const key = String(a.mode).replace(/^shapes/, '');
         if (key in shapesStars && a.stars > (shapesStars[key] || 0)) shapesStars[key] = a.stars;
+      }
+      if ((a.game || gameOf(a.mode)) === 'dungeon') {
+        const key = String(a.mode).replace(/^dungeon/, '');
+        if (a.kind === 'level' && a.stars != null && key in dungeonStars && a.stars > (dungeonStars[key] || 0)) dungeonStars[key] = a.stars;
+        if (key === 'Rush' && Number.isFinite(a.score) && a.score > (dungeonRush ?? -Infinity)) dungeonRush = a.score;
+        for (const c of Array.isArray(a.confusions) ? a.confusions : []) { const k = mixupKey(c); if (k) dungeonMixups[k]++; }
       }
     }
     for (const g of OVERVIEW_GAMES) byGame[g].minutes = byGame[g].minutes ? Math.round(byGame[g].minutes * 10) / 10 : 0;
@@ -188,6 +217,9 @@ export function buildOverviewRows({ attempts = [], scores = [], bondsProgress = 
       byGame,
       shapesStars,
       shapesRush: { a: bestByMode.shapes3d ?? null, b: bestByMode.shapes2d ?? null },
+      dungeonStars,
+      dungeonRush,
+      dungeonMixups,
     });
   }
   rows.sort((a, b) => a.name.localeCompare(b.name));

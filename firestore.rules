@@ -8,7 +8,7 @@ rules_version = '2';
 // Rules tab -> paste this whole file -> Publish. See docs/teacher-data-setup.md
 // for a teacher-friendly walkthrough.
 //
-// Collections used by the app today: settings, scores, bondsProgress, shapesProgress, robotGallery, attempts.
+// Collections used by the app today: settings, scores, bondsProgress, shapesProgress, robotGallery, dungeonProgress, attempts.
 // Everything else is denied by default.
 
 service cloud.firestore {
@@ -117,6 +117,17 @@ service cloud.firestore {
       allow write: if isSignedIn() && request.auth.uid == uid;
     }
 
+    // ---- dungeonProgress/{uid} -------------------------------------------------
+    // Treasure Dungeon's twin of shapesProgress: one doc per player (stars per
+    // room, coins, hero, looks). A player reads/writes only their own doc; the
+    // teacher may also read any doc for the dashboard, never write one. The
+    // shape comes from dungeon-progress.js and may keep changing, so it is not
+    // field-validated here beyond the ownership check.
+    match /dungeonProgress/{uid} {
+      allow read: if isSignedIn() && (request.auth.uid == uid || isTeacher());
+      allow write: if isSignedIn() && request.auth.uid == uid;
+    }
+
     // ---- robotGallery/{uid} ----------------------------------------------------
     // The class gallery: one doc per player holding their robot and up to six
     // creations. Any signed-in player may read the ones that are not hidden
@@ -172,7 +183,7 @@ service cloud.firestore {
     function validAttempt(d) {
       return d.keys().hasAll(['uid', 'game', 'mode', 'kind'])
         && d.uid is string
-        && d.game is string && d.game in ['market', 'numbers', 'bonds', 'shapes']
+        && d.game is string && d.game in ['market', 'numbers', 'bonds', 'shapes', 'dungeon']
         && d.mode is string && d.mode.size() <= 50
         && d.kind is string && d.kind in ['timed', 'level']
         && optionalString(d, 'name', 200)

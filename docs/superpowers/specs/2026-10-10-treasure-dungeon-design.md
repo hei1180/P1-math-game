@@ -76,7 +76,7 @@ A room has 4–5 clues, about 2 minutes. A floor has 5 rooms, about 10 minutes. 
 
 | Room | Name | Clues |
 |---|---|---|
-| R1 | 火把走廊 Torch hall | 4 × choose: two objects on the wall, 「🔥在左面還是右面？」. Starts with a demo on the child's own hands: 「舉起你的左手」, a hand icon lights up on the screen's left edge, 「這是左面」. (The hero faces the viewer, so the hero's own hands are never used for left/right.) |
+| R1 | 火把走廊 Torch hall | 4 × choose: two objects on the wall, 「🔥在左面還是右面？」. Starts with a short demo: the big 左 tag on the screen's left edge lights up, 「這邊是左面」, then 右. No hand or body steps in the game (see Teacher notes). |
 | R2 | 寶箱排排 Chest row | 4 × go: a row of 4–5 chests with picture marks; 「鑰匙在🍄寶箱的右面」 |
 | R3 | 兵器架 Weapon rack | 4 × place: 「把盾放在劍和弓之間」, 「把頭盔放在斧的左面」 |
 | R4 | 貓頭鷹問你 Owl's check | 3 × judge + 2 × select-all (「哪些寶箱在火把的左面？」) |
@@ -182,7 +182,7 @@ The base body is a neutral knight so every child can see themself in it. The chi
 
 ### Rules so looks never get in the way
 
-- Hero layers come from Kenney Roguelike Characters, which face the viewer. Left/right teaching never uses the hero's own hands (see Floor 1 R1).
+- Hero layers come from Kenney Roguelike Characters, which face the viewer. Left/right is never taught with the hero's own hands; it is always the screen's left and right.
 - Shields and helmets carry no letters or arrows.
 - The pet trails behind the hero, never stands in a slot and is never part of a clue.
 - The hero appears on the end-of-floor card and in the map; no class gallery, so nothing needs moderating.
@@ -236,6 +236,10 @@ Rules:
 - `logAttempt` at every room end and Rush end: game `dungeon`, mode `dungeonF1R1`…`dungeonF4R5`, `dungeonRush`; stars, mistakes, hints used, duration, and up to 5 `confusions` such as `{want:'left', picked:'right'}` or `{want:'front', picked:'back'}`, so the teacher sees left/right swaps and front/back flips.
 - `labels.js` gets the new labels. `teacher.html` gets a **Treasure Dungeon** sub-tab under Overview (like Robot Workshop): stars per room per child and the top confusions.
 - `firestore.rules`: `dungeonProgress/{uid}` read/write own, teacher read. The teacher email stays the placeholder.
+
+### Teacher notes (README and teacher panel help)
+
+Left and right start from the child's own body, which the game cannot check. Before Floor 1, run the textbook's 「老師話」 activity (p72): children sit side by side, point to the eraser on their left or right, raise the left or right hand. Before Floor 2, the 數學探索 line-up (p73): three children in a row say who is in front and behind, then turn round. The game takes over from there with pictures and words.
 
 ## §7 Architecture
 

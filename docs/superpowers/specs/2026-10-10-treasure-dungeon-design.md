@@ -1,6 +1,6 @@
 # Treasure Dungeon 尋寶地下城 — Design Spec
 
-Date: 2026-10-10 · Status: design approved, not built (branch `treasure-dungeon`)
+Date: 2026-10-10 · Status: design approved (incl. §4b customization, §4c art), not built (branch `treasure-dungeon`)
 
 ## Goal
 
@@ -14,7 +14,7 @@ Each floor (chapter) takes **about 10 minutes**. Design follows Bloom's taxonomy
 - Phaser 3.90 from jsDelivr, same as Rod Town. Code in `dungeon/`, pure logic in `dungeon-logic.js`, progress in `dungeon-progress.js`.
 - Reuses `shared.js`: Google login, `settings`, teacher modal (PIN), test mode, `saveScore`, leaderboard pop-up over the blurred game, rank popup, trophies, combo/fever, `logAttempt`, `sharedSound`, account box.
 - Bilingual, Chinese first. Prompts **read aloud** (speechSynthesis `zh-HK`, 🔈 replay, silent fallback), as in Robot Workshop.
-- Friendly dungeon look: warm torchlight, rounded stone, cute slimes and bats. Nothing scary, no fighting, no dying.
+- Friendly 16 px pixel-art dungeon (see §4c): warm torchlight, cute slimes and bats. Nothing scary, no fighting, no dying.
 - Another game (Picnic Park 野餐樂園) is being built in parallel in the main checkout. Shared files (`index.html`, `shared.js`, `labels.js`, `teacher*.{html,js}`, `firestore.rules`, `bump.sh`) will need a careful merge; keep edits there small and additive.
 
 ## Curriculum scope and position rules
@@ -44,7 +44,7 @@ The dungeon is drawn as a side-view cut-through: 4 floors stacked downward, link
 
 ### Characters
 
-- **Hero**: a small knight. Looks (helmet, cape, pet) bought with coins.
+- **Hero**: a small knight the child makes and dresses (see §4b).
 - **蝠蝠 Fu-fu** the bat: guide. Speaks every clue and gives hints. Hangs from the ceiling (handy for 上下).
 - **Slimes 史萊姆** in four colours, with clear eyes and a pointed hop, so their facing is easy to see. Used for queues (前後).
 - **Owl 貓頭鷹**: says sentences in ✓/✗ rooms. Sometimes wrong on purpose.
@@ -76,7 +76,7 @@ A room has 4–5 clues, about 2 minutes. A floor has 5 rooms, about 10 minutes. 
 
 | Room | Name | Clues |
 |---|---|---|
-| R1 | 火把走廊 Torch hall | 4 × choose: two objects on the wall, 「🔥在左面還是右面？」. Starts with a demo: the hero raises the left hand, 「這是左面」. |
+| R1 | 火把走廊 Torch hall | 4 × choose: two objects on the wall, 「🔥在左面還是右面？」. Starts with a demo on the child's own hands: 「舉起你的左手」, a hand icon lights up on the screen's left edge, 「這是左面」. (The hero faces the viewer, so the hero's own hands are never used for left/right.) |
 | R2 | 寶箱排排 Chest row | 4 × go: a row of 4–5 chests with picture marks; 「鑰匙在🍄寶箱的右面」 |
 | R3 | 兵器架 Weapon rack | 4 × place: 「把盾放在劍和弓之間」, 「把頭盔放在斧的左面」 |
 | R4 | 貓頭鷹問你 Owl's check | 3 × judge + 2 × select-all (「哪些寶箱在火把的左面？」) |
@@ -144,8 +144,74 @@ Per room: 3★ no mistakes, 2★ 1–2 mistakes, 1★ finished. A room can be re
 - **Coins:** R1 and R2: +1 coin for every right answer (continuous). R3–R5: coins come in one chest at the end of the room, 5 + 2 × stars (thinner schedule once the skill is forming). Floor clear: +10 coins and one free look (fixed, shown before as a silhouette).
 - **Never taken away:** no lives, no coin loss, no timer in rooms.
 - **Fixed rewards only:** no random loot. Shop prices are fixed.
-- **Shop:** 4 helmets, 4 capes, 3 pets (slime, ghost-cute, baby dragon after the boss). Prices 10–30 coins. The whole game gives enough coins for most of the shop.
+- **Shop:** see §4b. The whole game gives enough coins for most of the shop.
 - **Healthy play:** no streaks, nothing lost by not playing. After a floor, a 「今日做得好！」 card with **Continue** still there.
+
+## §4b Character customization
+
+Ownership and a token economy: coins earned by right answers turn into looks the child chooses. Built **core first**; later slots exist in the data and code but are empty in the first build.
+
+### Make your hero (first visit, free, all open)
+
+| Layer | Choices |
+|---|---|
+| Skin tone | 6 |
+| Hair style | 5 |
+| Hair colour | 6 |
+| Tunic colour | 8 |
+| Name | preset bilingual list (勇勇 Brave, 叮叮 Ding-ding, 星星 Star…) + a number. **No free text**, same rule as the robot names |
+
+The base body is a neutral knight so every child can see themself in it. The child can change any of these later for free.
+
+### Earned with coins (first build)
+
+| Slot | Items | Price |
+|---|---|---|
+| Helmet | 5 (plain helm, horned helm, crown, wizard hat, hood) | 10–25 coins |
+| Pet that follows | slime, ghost, cat, owlet | 15–30 coins |
+| Pet: baby dragon | only from beating the floor-4 boss | not for sale |
+
+**Later (slots reserved, not in the first build):** cape, shield badge, walk trail. Coins saved meanwhile stay; nothing is lost.
+
+### Shop 裝備室
+
+- A room off the map with a big mirror view of the hero.
+- Every item shows its picture and price. Trying on is free; the child pays only to keep it.
+- Locked items show a silhouette and how to get them (coins, or "beat the dragon").
+- Fixed prices, nothing random, no discounts or timers.
+
+### Rules so looks never get in the way
+
+- Hero layers come from Kenney Roguelike Characters, which face the viewer. Left/right teaching never uses the hero's own hands (see Floor 1 R1).
+- Shields and helmets carry no letters or arrows.
+- The pet trails behind the hero, never stands in a slot and is never part of a clue.
+- The hero appears on the end-of-floor card and in the map; no class gallery, so nothing needs moderating.
+
+### Data
+
+`dungeonProgress/{uid}` holds `hero: {skin, hairStyle, hairColour, tunic, name}`, `looks: [...]` (owned item ids) and `equipped: {helmet, pet, cape:null, badge:null, trail:null}`.
+
+## §4c Art style
+
+**16 px pixel art, Kenney CC0 packs plus matching code-drawn sprites.**
+
+| Source | Used for |
+|---|---|
+| [Kenney Tiny Dungeon](https://kenney.nl/assets/tiny-dungeon) (CC0, 16×16) | room scenery: brick wall faces, stone floor and platforms, doors, barrels, chests, tables, torches, potions, weapons, shields; also clue objects |
+| [Kenney Roguelike Characters](https://kenney.nl/assets/roguelike-characters) (CC0, 16×16 layers) | the hero, built from body, tunic, hair and helmet layers |
+| Drawn in code, same 16 px flat style | slimes, bat 蝠蝠, owl, dragon, pets, ladders and shelves if the pack lacks a side-view one, 左/右 tags frame |
+
+Tiny Dungeon is a top-down set, so rooms use only its **front-facing pieces** (wall faces, doors, furniture, items) laid out as a side view: a wall backdrop, a floor line, shelves and ladders. Its top-down floor tiles are not used.
+
+Rules:
+- Whole-number scaling with no smoothing (Phaser `pixelArt: true`): ×5 on iPad (hero about 80 px tall), ×3–4 on phones. Room logic is 192×108 px (12×6.75 tiles).
+- Every creature in a queue faces left or right in side view, with eyes on the side it faces and a forward-leaning hop. Facing arrows (footprints) only at support level S3.
+- Objects that can be the answer to a clue look the same apart from their mark; colour never gives an answer away.
+- Nothing tappable is smaller than 48 px on screen.
+- The background is lifted (lighter stone) and sprites get a soft shadow so the no-outline character layers stay clear.
+- Clue text, 左/右 tags, buttons and numbers are smooth vector text, not pixel fonts, so the Chinese stays sharp and looks like the textbook.
+- Footer credit: "Art: Kenney.nl (CC0)".
+- Only the sheets actually used are committed, with Kenney's `License.txt`. Downloading the packs needs the owner's OK at build time.
 
 ## §5 Rush 寶藏快手
 
@@ -165,7 +231,7 @@ Per room: 3★ no mistakes, 2★ 1–2 mistakes, 1★ finished. A room can be re
 
 ### Data
 
-- `dungeonProgress/{uid}`: `{ name, email, stars: {F1R1..F4R5}, coins, looks: [...], equipped: {helmet, cape, pet}, updatedAt }` + a localStorage copy (same pattern as `bonds-progress.js`).
+- `dungeonProgress/{uid}`: `{ name, email, stars: {F1R1..F4R5}, coins, hero, looks: [...], equipped, updatedAt }` (fields in §4b) + a localStorage copy (same pattern as `bonds-progress.js`).
 - `scores/{uid}_dungeon` via `saveScore`.
 - `logAttempt` at every room end and Rush end: game `dungeon`, mode `dungeonF1R1`…`dungeonF4R5`, `dungeonRush`; stars, mistakes, hints used, duration, and up to 5 `confusions` such as `{want:'left', picked:'right'}` or `{want:'front', picked:'back'}`, so the teacher sees left/right swaps and front/back flips.
 - `labels.js` gets the new labels. `teacher.html` gets a **Treasure Dungeon** sub-tab under Overview (like Robot Workshop): stars per room per child and the top confusions.
@@ -189,7 +255,8 @@ Per room: 3★ no mistakes, 2★ 1–2 mistakes, 1★ finished. A room can be re
 | `dungeon/main.js` | boot, `?dev`, `window.__dungeon.go(scene, data)` |
 | `dungeon/scenes/map.js`, `room.js`, `rush.js`, `shop.js` | Phaser scenes |
 | `dungeon/hero.js` | tap-to-walk, ladder paths, looks |
-| `dungeon/art.js` | all art drawn with Phaser Graphics (no image files to license) |
+| `dungeon/art.js` | loads the Kenney sheets, builds the hero from layers, draws the code-made sprites (§4c) |
+| `dungeon/assets/` | the Kenney sheets actually used + their `License.txt` |
 | `dungeon/fx.js`, `sfx.js`, `theme.js`, `hidpi.js` | effects, sounds, colours, sharp rendering (from Rod Town) |
 | `dungeon/voice.js` | speechSynthesis wrapper |
 

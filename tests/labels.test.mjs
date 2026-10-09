@@ -36,3 +36,12 @@ test('Robot Workshop labels', () => {
   assert.equal(modeLabel('shapes3d'), 'Robot Workshop Rush 立體');
   assert.equal(modeLabel('shapes2d'), 'Robot Workshop Rush 平面');
 });
+
+test('Treasure Dungeon labels', () => {
+  assert.equal(GAME_LABEL.dungeon, '🗝️ Treasure Dungeon');
+  for (const m of ['dungeonF1R1', 'dungeonF3R6', 'dungeonF4R5', 'dungeonRush']) assert.equal(gameOf(m), 'dungeon', m);
+  assert.equal(gameOf('dungeonF5R1'), 'unknown');
+  assert.equal(modeLabel('dungeonF1R1'), 'Treasure Dungeon F1R1 火把走廊');
+  assert.equal(modeLabel('dungeonF4R5'), 'Treasure Dungeon F4R5 龍的寶庫');
+  assert.equal(modeLabel('dungeonRush'), 'Treasure Dungeon Rush 寶藏快手');
+});

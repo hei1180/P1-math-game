@@ -14,7 +14,7 @@ Each floor (chapter) takes **about 10 minutes**. Design follows Bloom's taxonomy
 - Phaser 3.90 from jsDelivr, same as Rod Town. Code in `dungeon/`, pure logic in `dungeon-logic.js`, progress in `dungeon-progress.js`.
 - Reuses `shared.js`: Google login, `settings`, teacher modal (PIN), test mode, `saveScore`, leaderboard pop-up over the blurred game, rank popup, trophies, combo/fever, `logAttempt`, `sharedSound`, account box.
 - Bilingual, Chinese first. Prompts **read aloud** (speechSynthesis `zh-HK`, 🔈 replay, silent fallback), as in Robot Workshop.
-- Friendly 16 px pixel-art dungeon (see §4c): warm torchlight, cute slimes and bats. Nothing scary, no fighting, no dying.
+- Friendly 16 px pixel-art dungeon (see §4c): warm torchlight, cute slimes and bats. Nothing scary and no dying; monsters are only bopped with a foam sword and pop into sparkles.
 - Another game (Picnic Park 野餐樂園) is being built in parallel in the main checkout. Shared files (`index.html`, `shared.js`, `labels.js`, `teacher*.{html,js}`, `firestore.rules`, `bump.sh`) will need a careful merge; keep edits there small and additive.
 
 ## Curriculum scope and position rules
@@ -70,7 +70,7 @@ For **go**, any slot in the answer set is right. For **select-all**, the chosen 
 
 ## §2 Floors and rooms
 
-A room has 4–5 clues, about 2 minutes. A floor has 5 rooms, about 10 minutes. Room 1 of floors 2–4 starts with 2 review clues from earlier floors (spaced, interleaved practice).
+A room has 4–5 clues, about 2 minutes. A floor has 5 rooms, about 10 minutes; floors 1 and 3 add a 6th **wave room** (§5), about 12 minutes. Room 1 of floors 2–4 starts with 2 review clues from earlier floors (spaced, interleaved practice).
 
 ### Floor 1 — 左和右 (with 之間 in a row)
 
@@ -81,6 +81,7 @@ A room has 4–5 clues, about 2 minutes. A floor has 5 rooms, about 10 minutes. 
 | R3 | 兵器架 Weapon rack | 4 × place: 「把盾放在劍和弓之間」, 「把頭盔放在斧的左面」 |
 | R4 | 貓頭鷹問你 Owl's check | 3 × judge + 2 × select-all (「哪些寶箱在火把的左面？」) |
 | R5 | 我的寶庫 My vault | 2 × make (put 3 treasures on 5 hooks, pick the true sentence) + 2 × go with 之間 |
+| R6 | 怪物來了！ Monster waves | wave room, 左右 only (§5) |
 
 ### Floor 2 — 前和後 (with 之間 in a queue)
 
@@ -101,6 +102,7 @@ A room has 4–5 clues, about 2 minutes. A floor has 5 rooms, about 10 minutes. 
 | R3 | 藥水架 Potion shelf | 4 × place on a 3-level shelf: 「把藥水放在書和頭盔之間」 |
 | R4 | 貓頭鷹問你 | 3 × judge + 2 × select-all |
 | R5 | 我的高塔 My tower | 2 × make (stack 3 crates, pick the true sentence) + 2 × go with 之間 |
+| R6 | 蝙蝠和地鼠 Bats and moles | wave room, 上下 only (§5) |
 
 ### Floor 4 — Mixed
 
@@ -122,7 +124,7 @@ A room has 4–5 clues, about 2 minutes. A floor has 5 rooms, about 10 minutes. 
 | **S2** | small tags, no glow, arrows only as footprints, 3–4 slots |
 | **S1** | no tags, no arrows (eyes show facing), 5+ slots |
 
-Default level by room: R1 S3, R2 S3, R3 S2, R4 S2, R5 S1. Floor 4: R1 S2, others S1.
+Default level by room: R1 S3, R2 S3, R3 S2, R4 S2, R5 S1, R6 S1. Floor 4: R1 S2, others S1.
 
 **Adaptive rule:** if a child made 3 or more mistakes in the previous room, the next room uses the previous room's level when that is more support than its default. Support never drops below S1 and is never added in the middle of a clue (hints do that).
 
@@ -182,7 +184,7 @@ The base body is a neutral knight so every child can see themself in it. The chi
 
 ### Rules so looks never get in the way
 
-- Hero layers come from Kenney Roguelike Characters, which face the viewer. Left/right is never taught with the hero's own hands; it is always the screen's left and right.
+- Hero layers come from Kenney Roguelike Characters, which face the viewer. Left/right is never taught with a viewer-facing hero's hands; it is always the screen's left and right. The only time hands are used is the **back-view** hero in wave rooms (§5), where the hero's left hand is on the screen's left.
 - Shields and helmets carry no letters or arrows.
 - The pet trails behind the hero, never stands in a slot and is never part of a clue.
 - The hero appears on the end-of-floor card and in the map; no class gallery, so nothing needs moderating.
@@ -213,10 +215,38 @@ Rules:
 - Footer credit: "Art: Kenney.nl (CC0)".
 - Only the sheets actually used are committed, with Kenney's `License.txt`. Downloading the packs needs the owner's OK at build time.
 
-## §5 Rush 寶藏快手
+## §5 Monster waves 怪物來了！
+
+Fluency practice after accuracy: the same side words, now quick. Friendly monsters (slimes, bats, moles) come at the hero; the child picks the side and the hero bops them with a foam sword. A bopped monster pops into sparkles and a coin. Nothing is hurt or killed.
+
+### Back-view hero
+
+In wave rooms the hero is shown **from behind**, standing in the middle of a corridor. Its left hand is on the screen's left, so "the left hand" and "the left side" are the same. The back view is drawn in code as matching layers (body, hair, tunic colour, helmet, pet behind), so the child's customization still shows.
+
+### Controls
+
+| Waves | Child taps | Hero does |
+|---|---|---|
+| 左右 (floor 1 R6, Rush) | the hero's **left hand** or **right hand** (big glowing hand buttons at the hero's sides) | swings with that hand to that side |
+| 上下 (floor 3 R6, Rush) | 上 (sword raised above the head) or 下 (sword down at the feet) | bops a bat dropping from the ceiling or a mole popping up from the floor |
+| Mixed (Rush only) | any of the four | |
+
+Each monster is announced by sound and voice for the first wave (「左面！」) and then by sight only. 前後 is not used in waves: the back-view hero has no clear front and back on screen.
+
+### Mistakes
+
+- A wrong side: the monster bonks the hero's shield (funny wobble, 「哎呀！」), the combo resets, and the monster **stays** until the right side is picked. **No HP, nothing lost.**
+- In wave rooms there is no time pressure: monsters walk in slowly and wait at the hero. In the Rush they keep coming; a monster that reaches the hero bonks the shield and resets the combo, then leaves.
+
+### Wave rooms (floor 1 R6, floor 3 R6)
+
+- 3 waves, 4 → 6 → 8 monsters, about 2 minutes. Support S1, but in wave 1 the side a monster comes from glows briefly.
+- Stars as for any room (wrong taps are mistakes). Coins: 1 per bop.
+
+## §5b Rush 寶藏快手 (monster waves)
 
 - Timed, default 60 s (teacher setting). Opens when floor 4 is cleared.
-- One fixed room: a shelf with 2 rows × 5 slots, a slime queue and a column of crates. Clues fire one after another, each with a single answer: 「哪個在🔥和🛡️之間？」 (tap the object) or 「⭐在🍄的左面還是右面？」 (tap a sign).
+- Monster waves as in §5, getting faster: 左右 waves, then 上下, then mixed. Between waves, one quick 之間 clue: 「哪隻怪物在🔥和🛡️之間？」 (tap it), so the Rush still covers between.
 - Shared combo/fever and trophy cutoffs. Leaderboard tab `dungeon`.
 
 ## §6 Progression, teacher, data
@@ -231,9 +261,9 @@ Rules:
 
 ### Data
 
-- `dungeonProgress/{uid}`: `{ name, email, stars: {F1R1..F4R5}, coins, hero, looks: [...], equipped, updatedAt }` (fields in §4b) + a localStorage copy (same pattern as `bonds-progress.js`).
+- `dungeonProgress/{uid}`: `{ name, email, stars: {F1R1..F4R5, F1R6, F3R6}, coins, hero, looks: [...], equipped, updatedAt }` (fields in §4b) + a localStorage copy (same pattern as `bonds-progress.js`).
 - `scores/{uid}_dungeon` via `saveScore`.
-- `logAttempt` at every room end and Rush end: game `dungeon`, mode `dungeonF1R1`…`dungeonF4R5`, `dungeonRush`; stars, mistakes, hints used, duration, and up to 5 `confusions` such as `{want:'left', picked:'right'}` or `{want:'front', picked:'back'}`, so the teacher sees left/right swaps and front/back flips.
+- `logAttempt` at every room end and Rush end: game `dungeon`, mode `dungeonF1R1`…`dungeonF4R5` plus `dungeonF1R6` and `dungeonF3R6`, `dungeonRush`; stars, mistakes, hints used, duration, and up to 5 `confusions` such as `{want:'left', picked:'right'}` or `{want:'front', picked:'back'}`, so the teacher sees left/right swaps and front/back flips.
 - `labels.js` gets the new labels. `teacher.html` gets a **Treasure Dungeon** sub-tab under Overview (like Robot Workshop): stars per room per child and the top confusions.
 - `firestore.rules`: `dungeonProgress/{uid}` read/write own, teacher read. The teacher email stays the placeholder.
 

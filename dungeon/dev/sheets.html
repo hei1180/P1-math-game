@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dungeon sheets</title>
+<style>
+  body { margin: 0; padding: 16px; background: #2b2b33; color: #eee; font: 13px system-ui, sans-serif; }
+  h2 { margin: 18px 0 6px; font-size: 15px; }
+  .wrap { overflow: auto; max-width: 100%; }
+  canvas { image-rendering: pixelated; display: block; background: #55556a; }
+  label { margin-right: 12px; }
+</style>
+</head>
+<body>
+<p>Dev only: every frame of the two Kenney CC0 sheets, nearest-scaled, with its frame index (row × cols + col).
+  <label>Scale <select id="scale"><option>3</option><option selected>4</option><option>5</option></select></label></p>
+<h2>td — Tiny Dungeon (12 × 11, no spacing)</h2>
+<div class="wrap"><canvas id="td"></canvas></div>
+<h2>rc — Roguelike Characters (54 × 12, 1 px spacing)</h2>
+<div class="wrap"><canvas id="rc"></canvas></div>
+<script>
+const SHEETS = [
+  { id: 'td', src: '../assets/tiny-dungeon.png?v=0', cols: 12, rows: 11, sp: 0 },
+  { id: 'rc', src: '../assets/roguelike-characters.png?v=0', cols: 54, rows: 12, sp: 1 },
+];
+const imgs = {};
+function draw() {
+  const S = +document.getElementById('scale').value;
+  for (const s of SHEETS) {
+    const img = imgs[s.id]; if (!img) continue;
+    const cell = 16 * S + 2;
+    const c = document.getElementById(s.id);
+    c.width = s.cols * cell; c.height = s.rows * cell;
+    const g = c.getContext('2d');
+    g.imageSmoothingEnabled = false;
+    g.font = `${Math.max(9, S * 3)}px system-ui`;
+    for (let r = 0; r < s.rows; r++) for (let q = 0; q < s.cols; q++) {
+      const x = q * cell, y = r * cell;
+      g.drawImage(img, q * (16 + s.sp), r * (16 + s.sp), 16, 16, x + 1, y + 1, 16 * S, 16 * S);
+      g.fillStyle = 'rgba(0,0,0,.55)'; g.fillRect(x + 1, y + 1, S * 7, S * 4);
+      g.fillStyle = '#ff0'; g.fillText(String(r * s.cols + q), x + 3, y + S * 3.3);
+    }
+  }
+}
+for (const s of SHEETS) { const i = new Image(); i.onload = () => { imgs[s.id] = i; draw(); }; i.src = s.src; }
+document.getElementById('scale').onchange = draw;
+// Console helper: comp([[0, 3, 11, 19], …], scale, perRow) stacks rc frames into one preview cell each.
+window.comp = function (list, S = 6, perRow = 10) {
+  let c = document.getElementById('cmp');
+  if (!c) { c = document.createElement('canvas'); c.id = 'cmp'; document.body.prepend(c); }
+  const cell = 16 * S + 4;
+  c.width = perRow * cell; c.height = Math.ceil(list.length / perRow) * cell;
+  const g = c.getContext('2d'); g.imageSmoothingEnabled = false;
+  g.fillStyle = '#8a8aa0'; g.fillRect(0, 0, c.width, c.height); g.font = '11px system-ui';
+  list.forEach((layers, i) => {
+    const x = (i % perRow) * cell, y = Math.floor(i / perRow) * cell;
+    for (const f of layers) g.drawImage(imgs.rc, (f % 54) * 17, Math.floor(f / 54) * 17, 16, 16, x + 2, y + 2, 16 * S, 16 * S);
+    g.fillStyle = '#000'; g.fillText(String(layers[layers.length - 1]), x + 3, y + 12);
+  });
+  window.scrollTo(0, 0);
+};
+</script>
+</body>
+</html>

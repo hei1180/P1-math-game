@@ -3,8 +3,8 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
 import { getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
 import { getFirestore, collection, doc, getDoc, setDoc, getDocs, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
-import { DEFAULT_TROPHY, TROPHY_ICON, TROPHY_LABEL, trophyFor, validateCutoffs } from './trophy.js?v=202610081258';
-import { gameOf, modeLabel } from './labels.js?v=202610081258';
+import { DEFAULT_TROPHY, TROPHY_ICON, TROPHY_LABEL, trophyFor, validateCutoffs } from './trophy.js?v=202610100109';
+import { gameOf, modeLabel } from './labels.js?v=202610100109';
 
 export { TROPHY_ICON, TROPHY_LABEL };
 
@@ -39,10 +39,12 @@ export const BONDS_KEYS = ['w1', 'w2', 'w3', 'w4'];
 const defaultBondsUnlock = () => Object.fromEntries(BONDS_KEYS.map(k => [k, false]));
 export const SHAPES_KEYS = ['a', 'b'];
 const defaultShapesUnlock = () => Object.fromEntries(SHAPES_KEYS.map(k => [k, false]));
-export const DEFAULT_SETTINGS = { timeLimit: 30, unlockMedium: false, unlockHard: false, numTimeLimit: 30, numUnlock: defaultNumUnlock(), bondsUnlock: defaultBondsUnlock(), bondsTimeLimit: 60, shapesUnlock: defaultShapesUnlock(), shapesTimeLimit: 60, shapesGallery: true, lessMotion: false, trophy: { ...DEFAULT_TROPHY }, sheetUrl: '' };
+export const PICNIC_KEYS = ['add', 'sub', 'zero'];
+const defaultPicnicUnlock = () => Object.fromEntries(PICNIC_KEYS.map(k => [k, false]));
+export const DEFAULT_SETTINGS = { timeLimit: 30, unlockMedium: false, unlockHard: false, numTimeLimit: 30, numUnlock: defaultNumUnlock(), bondsUnlock: defaultBondsUnlock(), bondsTimeLimit: 60, shapesUnlock: defaultShapesUnlock(), shapesTimeLimit: 60, shapesGallery: true, picnicUnlock: defaultPicnicUnlock(), lessMotion: false, trophy: { ...DEFAULT_TROPHY }, sheetUrl: '' };
 
 export const player = { name: 'Guest', uid: null, email: '', highScores: {} };
-export const settings = { ...DEFAULT_SETTINGS, numUnlock: defaultNumUnlock(), bondsUnlock: defaultBondsUnlock(), shapesUnlock: defaultShapesUnlock(), trophy: { ...DEFAULT_TROPHY } };
+export const settings = { ...DEFAULT_SETTINGS, numUnlock: defaultNumUnlock(), bondsUnlock: defaultBondsUnlock(), shapesUnlock: defaultShapesUnlock(), picnicUnlock: defaultPicnicUnlock(), trophy: { ...DEFAULT_TROPHY } };
 
 /** Teacher test mode: this browser tab only, all levels open, nothing saved. Cleared when the tab closes. */
 const TEST_KEY = 'p1maths.testMode';
@@ -216,6 +218,7 @@ export async function loadSettings() {
       settings.numUnlock = { ...defaultNumUnlock(), ...(d.numUnlock || {}) };
       settings.bondsUnlock = { ...defaultBondsUnlock(), ...(d.bondsUnlock || {}) };
       settings.shapesUnlock = { ...defaultShapesUnlock(), ...(d.shapesUnlock || {}) };
+      settings.picnicUnlock = { ...defaultPicnicUnlock(), ...(d.picnicUnlock || {}) };
       settings.sheetUrl = typeof d.sheetUrl === 'string' ? d.sheetUrl.trim() : '';
     }
   } catch (e) { console.warn('settings offline', e); }
@@ -446,6 +449,14 @@ const TEACHER_MODAL_HTML = `
         <label class="flex items-center gap-2 font-bold text-gray-700 mt-3">Rush time (s)<input type="number" id="settingShapesTime" min="10" max="300" class="border-2 border-gray-300 p-1 rounded-lg w-20 text-center font-bold outline-none"></label>
         <label class="flex items-center gap-2 font-bold text-gray-700 mt-2 cursor-pointer"><input type="checkbox" id="settingShapesGallery" class="w-6 h-6 accent-emerald-500 rounded"> Class gallery 班級展覽廳</label>
       </div>
+      <div class="bg-lime-50 p-4 rounded-xl mb-4 border-2 border-lime-200">
+        <div class="font-bold text-gray-700 mb-2">Picnic Park 野餐樂園</div>
+        <div class="grid grid-cols-2 gap-2">
+          <label class="flex items-center gap-2 font-bold text-gray-700 cursor-pointer"><input type="checkbox" id="settingPicnicAdd" class="w-6 h-6 accent-lime-600 rounded"> 加法 Add</label>
+          <label class="flex items-center gap-2 font-bold text-gray-700 cursor-pointer"><input type="checkbox" id="settingPicnicSub" class="w-6 h-6 accent-lime-600 rounded"> 減法 Subtract</label>
+          <label class="flex items-center gap-2 font-bold text-gray-700 cursor-pointer"><input type="checkbox" id="settingPicnicZero" class="w-6 h-6 accent-lime-600 rounded"> 0 的認識 Zero</label>
+        </div>
+      </div>
       <div class="grid grid-cols-2 gap-3 mb-4">
         <label class="text-sm font-bold text-gray-700 text-center">Market time (s)<input type="number" id="settingTime" min="10" max="300" class="border-4 border-gray-300 p-2 rounded-xl w-full text-center text-xl font-bold outline-none"></label>
         <label class="text-sm font-bold text-gray-700 text-center">Number Shop time (s)<input type="number" id="settingNumTime" min="10" max="300" class="border-4 border-gray-300 p-2 rounded-xl w-full text-center text-xl font-bold outline-none"></label>
@@ -498,6 +509,7 @@ export function mountTeacherModal(onSaved) {
     NUM_KEYS.forEach((k, i) => { $('settingNum' + (i + 1)).checked = !!settings.numUnlock[k]; });
     BONDS_KEYS.forEach((k, i) => { $('settingBonds' + (i + 1)).checked = !!settings.bondsUnlock[k]; });
     $('settingBondsTime').value = settings.bondsTimeLimit; $('settingLessMotion').checked = !!settings.lessMotion;
+    PICNIC_KEYS.forEach(k => { $('settingPicnic' + k[0].toUpperCase() + k.slice(1)).checked = !!settings.picnicUnlock[k]; });
     $('settingShapesA').checked = !!settings.shapesUnlock.a; $('settingShapesB').checked = !!settings.shapesUnlock.b; $('settingShapesTime').value = settings.shapesTimeLimit; $('settingShapesGallery').checked = settings.shapesGallery !== false;
     $('settingTime').value = settings.timeLimit; $('settingNumTime').value = settings.numTimeLimit;
     $('settingSheetUrl').value = settings.sheetUrl || '';
@@ -515,6 +527,7 @@ export function mountTeacherModal(onSaved) {
       bondsUnlock: Object.fromEntries(BONDS_KEYS.map((k, i) => [k, $('settingBonds' + (i + 1)).checked])),
       bondsTimeLimit: parseInt($('settingBondsTime').value) || 60,
       shapesUnlock: { a: $('settingShapesA').checked, b: $('settingShapesB').checked }, shapesTimeLimit: parseInt($('settingShapesTime').value) || 60, shapesGallery: $('settingShapesGallery').checked,
+      picnicUnlock: Object.fromEntries(PICNIC_KEYS.map(k => [k, $('settingPicnic' + k[0].toUpperCase() + k.slice(1)).checked])),
       lessMotion: $('settingLessMotion').checked,
       trophy, sheetUrl
     };

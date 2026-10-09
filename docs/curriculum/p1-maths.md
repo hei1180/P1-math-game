@@ -178,10 +178,10 @@ From 「小一」 mentions in the KS1 notes. Useful for "bridge" levels at the t
 | 1N1.2 counting on/back | 🔢 Number Shop Lv3 | number line (incl. descending) |
 | 1N1.5 分解和合成 2–18 | 🚂 Rod Town (`bonds.html`) | single-digit parts only, matches the boundary |
 | 1N2.2 + and − within 18 (equations) | 🚂 Rod Town (partly) | bond equations and Rush; no take-away/compare stories, 0 rules or related-fact families yet |
+| 1N2.1–1N2.5 + and − meaning, 18 以內口算, 0, related facts, commutativity | 🧺 Picnic Park (`picnic.html`) | picture stories (共有/多放/還有/相差), 橫式 building, fact families, 0 rules, judge/create; single-digit parts |
 
 **Not yet covered (candidates for new games):**
 - 1N1.3 ordinal numbers (第幾)
-- 1N2.1/1N2.3/1N2.4/1N2.5 picture word problems (combine, add on, take away, compare), zero, fact families, commutativity
 - 1N3 numbers to 100: tens and ones, ordering a group, skip-counting by 2/5/10, estimating
 - 1N4 2-digit + (carrying) and − (no borrowing), three addends, vertical form, simple word problems
 - 1M1/1M3 length: compare, self-chosen units, cm ruler, body benchmarks

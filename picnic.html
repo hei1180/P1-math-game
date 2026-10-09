@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Picnic Park 野餐樂園</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="shared.css?v=202610100109">
+    <link rel="stylesheet" href="picnic/picnic.css?v=202610100109">
+</head>
+<body class="h-[100dvh] w-full flex flex-col relative">
+    <div id="loginScreen" class="absolute inset-0 flex flex-col items-center justify-center bg-lime-500 z-50 p-4">
+        <h1 class="text-4xl md:text-6xl font-bold text-white mb-2 text-center drop-shadow-lg leading-tight">🧺 Picnic Park<br>野餐樂園</h1>
+        <p class="text-white text-xl font-bold mb-8 drop-shadow">加法・減法・0</p>
+        <div id="loginSpinner" class="spinner"></div>
+        <button id="loginBtn" class="hidden bubbly-btn bg-white text-lime-700 font-bold text-xl md:text-2xl py-4 px-8 rounded-full border-4 border-lime-200 w-[90%] max-w-sm">Login with Google</button>
+        <a href="index.html" class="text-white mt-6 underline font-bold">⬅ Back to games</a>
+    </div>
+
+    <div id="gameScreen" class="hidden absolute inset-0 flex flex-col overflow-hidden">
+        <div id="app" class="flex-1 min-h-0 relative"></div>
+        <div id="cornerBtns" class="absolute bottom-2 right-2 flex gap-2 z-20">
+            <div class="test-badge hidden bg-purple-600 text-white font-bold px-2 py-1 rounded-full text-sm self-center">🧪 Test</div>
+            <button id="muteBtn" class="bg-white/80 rounded-lg px-2 py-1 text-xl bubbly-btn" aria-label="聲音 Sound">🔊</button>
+            <button id="adminBtn" class="bg-gray-800 text-white rounded-lg px-2 py-1 font-bold bubbly-btn" aria-label="Teacher">⚙️</button>
+        </div>
+    </div>
+
+    <script type="module" src="picnic/main.js?v=202610100109"></script>
+</body>
+</html>

@@ -2,8 +2,8 @@
 // already-fetched Firestore docs (or plain test fixtures) and returns plain objects/strings.
 // Firestore Timestamp objects (with a .toDate() method) are supported via toDate() below,
 // so callers can pass raw snapshot data straight through.
-import { GAME_LABEL, modeLabel, gameOf } from './labels.js?v=202610081258';
-import { WORLDS, LEVEL_COUNT, levelKey } from './bonds-logic.js?v=202610081258';
+import { GAME_LABEL, modeLabel, gameOf } from './labels.js?v=202610100109';
+import { WORLDS, LEVEL_COUNT, levelKey } from './bonds-logic.js?v=202610100109';
 
 export { GAME_LABEL, modeLabel, gameOf };
 
@@ -107,7 +107,9 @@ export const WORLD_TOTAL_LEVELS = LEVEL_COUNT + 1; // + boss
 
 /** Robot Workshop courses shown in the overview, in order. attempt mode = 'shapes' + key. */
 export const SHAPES_COURSES = ['A1', 'A2', 'A3', 'A4', 'B1', 'B2', 'B3', 'B4', 'Boss'];
-export const OVERVIEW_GAMES = ['market', 'numbers', 'bonds', 'shapes'];
+/** Picnic Park levels shown in the overview, in order. attempt mode = 'picnic' + key. */
+export const PICNIC_LEVELS = ['Add1', 'Add2', 'Add3', 'Add4', 'Add5', 'Sub1', 'Sub2', 'Sub3', 'Sub4', 'Sub5', 'Zero1', 'Zero2', 'Zero3', 'Zero4', 'Zero5'];
+export const OVERVIEW_GAMES = ['market', 'numbers', 'bonds', 'shapes', 'picnic'];
 
 // ---------- Overview tab ----------
 
@@ -153,6 +155,7 @@ export function buildOverviewRows({ attempts = [], scores = [], bondsProgress = 
     const byGame = {};
     for (const g of OVERVIEW_GAMES) byGame[g] = { attempts: 0, minutes: 0, lastPlayed: null, active: false };
     const shapesStars = Object.fromEntries(SHAPES_COURSES.map((k) => [k, null]));
+    const picnicStars = Object.fromEntries(PICNIC_LEVELS.map((k) => [k, null]));
     for (const a of aList) {
       const g = byGame[a.game || gameOf(a.mode)];
       if (!g) continue;
@@ -164,6 +167,10 @@ export function buildOverviewRows({ attempts = [], scores = [], bondsProgress = 
       if ((a.game || gameOf(a.mode)) === 'shapes' && a.kind === 'level' && a.stars != null) {
         const key = String(a.mode).replace(/^shapes/, '');
         if (key in shapesStars && a.stars > (shapesStars[key] || 0)) shapesStars[key] = a.stars;
+      }
+      if ((a.game || gameOf(a.mode)) === 'picnic' && a.kind === 'level' && a.stars != null) {
+        const key = String(a.mode).replace(/^picnic/, '');
+        if (key in picnicStars && a.stars > (picnicStars[key] || 0)) picnicStars[key] = a.stars;
       }
     }
     for (const g of OVERVIEW_GAMES) byGame[g].minutes = byGame[g].minutes ? Math.round(byGame[g].minutes * 10) / 10 : 0;
@@ -188,6 +195,7 @@ export function buildOverviewRows({ attempts = [], scores = [], bondsProgress = 
       byGame,
       shapesStars,
       shapesRush: { a: bestByMode.shapes3d ?? null, b: bestByMode.shapes2d ?? null },
+      picnicStars,
     });
   }
   rows.sort((a, b) => a.name.localeCompare(b.name));

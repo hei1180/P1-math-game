@@ -36,3 +36,11 @@ test('Robot Workshop labels', () => {
   assert.equal(modeLabel('shapes3d'), 'Robot Workshop Rush 立體');
   assert.equal(modeLabel('shapes2d'), 'Robot Workshop Rush 平面');
 });
+
+test('Picnic Park labels match the level titles in picnic-logic', async () => {
+  const { CHAPTERS, LEVELS, modeKey } = await import('../picnic-logic.js');
+  assert.equal(GAME_LABEL.picnic, '🧺 Picnic Park');
+  assert.equal(gameOf('picnicAdd1'), 'picnic'); assert.equal(gameOf('picnicZero5'), 'picnic'); assert.equal(gameOf('picnicAdd6'), 'unknown');
+  assert.equal(modeLabel('picnicSub4'), 'Picnic Park 減法 第4關 加和減的關係');
+  for (const c of CHAPTERS) LEVELS[c.key].forEach((lv, i) => assert.ok(modeLabel(modeKey(c.key, i + 1)).endsWith(lv.title), c.key + (i + 1)));
+});

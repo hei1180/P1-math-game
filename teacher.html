@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Teacher Dashboard 老師資料板</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="shared.css?v=202610081258">
+    <link rel="stylesheet" href="shared.css?v=202610100109">
     <style>
         /* This page scrolls (unlike the games) — undo shared.css's fixed-body lock. */
         body { position: static; overflow: auto; user-select: text; -webkit-user-select: text; background-color: #f8fafc; }
@@ -146,17 +146,17 @@
     </div>
 
     <script type="module">
-        import { signIn, onUser, db, auth, isTeacherEmail } from './shared.js?v=202610081258';
+        import { signIn, onUser, db, auth, isTeacherEmail } from './shared.js?v=202610100109';
         import {
             collection, getDocs, query, where, orderBy, Timestamp,
         } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js';
         import {
             buildOverviewRows, buildAttemptRows, filterAttemptRows, sortRows,
-            MEDAL_ICON, WORLD_TOTAL_LEVELS, SHAPES_COURSES,
+            MEDAL_ICON, WORLD_TOTAL_LEVELS, SHAPES_COURSES, PICNIC_LEVELS,
             toCSV, overviewToCSVRows, OVERVIEW_HEADERS, attemptsToCSVRows, ATTEMPTS_HEADERS, csvFilename,
             GAME_LABEL,
-        } from './teacher-data.js?v=202610081258';
-        import { WORLDS, LEVEL_COUNT, levelKey } from './bonds-logic.js?v=202610081258';
+        } from './teacher-data.js?v=202610100109';
+        import { WORLDS, LEVEL_COUNT, levelKey } from './bonds-logic.js?v=202610100109';
 
 
         const $ = id => document.getElementById(id);
@@ -292,6 +292,8 @@
                 ...SHAPES_COURSES.map(k => col(`shapesStars.${k}`, `${k}<br>⭐`, r => starStr(r.shapesStars[k]))),
                 col('shapesRush.a', 'Rush<br>立體', r => dash(r.shapesRush.a)),
                 col('shapesRush.b', 'Rush<br>平面', r => dash(r.shapesRush.b))] },
+            { key: 'picnic', label: GAME_LABEL.picnic, cols: [nameCol, lastCol('picnic'), minCol('picnic'),
+                ...PICNIC_LEVELS.map(k => col(`picnicStars.${k}`, `${k.replace(/\d/, '<br>L$&')}<br>⭐`, r => starStr(r.picnicStars[k])))] },
         ];
         const gameTab = () => GAME_TABS.find(t => t.key === state.gameTab) || GAME_TABS[0];
 
@@ -488,7 +490,7 @@
                 for (let i = 0; i < nAttempts; i++) {
                     const daysAgo = rand(0, 40);
                     const ts = fakeTimestamp(new Date(Date.now() - daysAgo * 86400000 - rand(0, 80000) * 1000));
-                    const pool = pick(['market', 'numbers', 'bonds-level', 'bonds-rush', 'shapes-level', 'shapes-rush']);
+                    const pool = pick(['market', 'numbers', 'bonds-level', 'bonds-rush', 'shapes-level', 'shapes-rush', 'picnic-level']);
                     let attempt;
                     if (pool === 'market') {
                         const mode = pick(marketModes);
@@ -512,6 +514,10 @@
                         const mode = 'shapes' + pick(['A1', 'A2', 'A3', 'A4', 'B1', 'B2', 'B3', 'B4', 'Boss']);
                         const mistakes = rand(0, 4);
                         attempt = { uid: s.uid, name: s.name, email: s.email, game: 'shapes', mode, kind: 'level', score: null, accuracy: null, maxCombo: null, stars: mistakes === 0 ? 3 : mistakes <= 2 ? 2 : 1, mistakes, durationSec: rand(30, 120), ts, day: '' };
+                    } else if (pool === 'picnic-level') {
+                        const mode = 'picnic' + pick(PICNIC_LEVELS);
+                        const mistakes = rand(0, 6);
+                        attempt = { uid: s.uid, name: s.name, email: s.email, game: 'picnic', mode, kind: 'level', score: null, accuracy: null, maxCombo: null, stars: mistakes <= 1 ? 3 : mistakes <= 4 ? 2 : 1, mistakes, durationSec: rand(90, 160), ts, day: '' };
                     } else if (pool === 'shapes-rush') {
                         const mode = pick(['shapes3d', 'shapes2d']);
                         const score = rand(8, 90);

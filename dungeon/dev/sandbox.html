@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-HK">
+<head>
+<meta charset="utf-8">
+<base href="../../"><!-- repo root, so art.js asset URLs (dungeon/assets/…) resolve -->
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dungeon sandbox</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #2b2533; overflow: hidden; }
+  #game { position: fixed; inset: 0; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.min.js"></script>
+</head>
+<body>
+<!-- Temporary dev page (T3): boots only SandboxScene, before the real page (position.html?dev&scene=Sandbox) exists. -->
+<div id="game"></div>
+<script type="module">
+import SandboxScene from './dungeon/scenes/SandboxScene.js?v=0';
+import { scaleConfig, installHiDPI } from './bonds/hidpi.js';
+const game = new Phaser.Game({
+  type: Phaser.AUTO,
+  backgroundColor: '#2b2533',
+  scale: scaleConfig('game'),
+  render: { antialias: true, roundPixels: true },
+  scene: [SandboxScene],
+});
+installHiDPI(game, 'game');
+// hidpi zooms cameras on scene 'start', which the first scene passed before 'ready': restart it once.
+game.events.once('ready', () => game.scene.getScene('Sandbox').scene.restart());
+window.__sandbox = game;
+</script>
+</body>
+</html>

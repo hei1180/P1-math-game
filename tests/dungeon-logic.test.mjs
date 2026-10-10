@@ -449,3 +449,21 @@ test('21 chest costume pieces: fixed rooms, first clear only, not for sale', () 
   const worn = equip(r.progress, 'helmet', 'helmetCap');
   assert.equal(worn.equipped.helmet, 'helmetCap');
 });
+
+test('make prompt names what the child arranges (slimes / boxes / treasures)', () => {
+  const BOXES = new Set(['crate', 'chestStar', 'chestMoon', 'chestHeart', 'chestSun']);
+  for (const seed of [1, 2, 3, 7, 11]) {
+    for (const [key, word] of [['F1R5', '寶物'], ['F2R5', '史萊姆'], ['F3R5', '箱']]) {
+      for (const level of [1, 2, 3]) {
+        const makes = genRoom(key, lcg(seed), level).clues.filter(c => c.kind === 'make');
+        assert.ok(makes.length > 0, key);
+        for (const c of makes) {
+          assert.ok(c.ask.zh.includes(word), `${key}: ${c.ask.zh}`);
+          if (key !== 'F1R5') assert.ok(!c.ask.zh.includes('寶物'), `${key}: ${c.ask.zh}`);
+          if (key === 'F3R5') assert.ok(c.items.every(k => BOXES.has(k)), `${key} items ${c.items}`);
+          if (key === 'F2R5') assert.ok(/slime/i.test(c.ask.en), c.ask.en);
+        }
+      }
+    }
+  }
+});

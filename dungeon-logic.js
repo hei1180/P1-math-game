@@ -73,6 +73,7 @@ const JUDGE_ROW = [...CHESTS, 'torch', 'crate', 'barrel'];
 const TREASURES = ['gem', 'book', 'key', 'potionRed', 'potionBlue', 'potionGreen', 'helmet'];
 const SHELF_STUFF = ['potionRed', 'potionBlue', 'potionGreen', 'book', 'helmet', 'gem', 'key'];
 const TOWER = ['crate', 'barrel', ...CHESTS, 'book'];
+const BOXES = ['crate', ...CHESTS]; // 'make' towers stack boxes only, so the prompt can say 箱子
 const COLUMN_STUFF = ['bat', 'owl', 'crate', 'barrel', 'book', 'helmet', ...CHESTS];
 const BOSS_REFS = ['shield', 'sword', 'bow', 'axe', 'torch', 'book', 'helmet'];
 const POOLS = { lr: ROW_STUFF, fb: SLIMES, ud: SHELF_STUFF };
@@ -331,7 +332,11 @@ const T = {
     const B = nm(scene, b), C = nm(scene, c);
     return { zh: `哪隻怪物在${B.zh}和${C.zh}之間？`, en: `Which monster is between the ${B.en} and the ${C.en}?` };
   },
-  make: () => ({ zh: '把寶物放好，然後選出正確的句子', en: 'Put your treasures anywhere, then pick the true sentence.' }),
+  make: fam => (fam === 'fb'
+    ? { zh: '把史萊姆排好隊，然後選出正確的句子', en: 'Line up the slimes, then pick the true sentence.' }
+    : fam === 'ud'
+      ? { zh: '把箱子疊高，然後選出正確的句子', en: 'Stack the boxes up, then pick the true sentence.' }
+      : { zh: '把寶物放好，然後選出正確的句子', en: 'Put your treasures anywhere, then pick the true sentence.' }),
   // Deviation: the plan's template says 玩具 (toys); the shelf holds treasures from KINDS, so 寶物.
   solve: () => ({ zh: '依提示把寶物放上架', en: 'Put the treasures on the shelf to match the clues.' }),
   wave: () => ({ zh: '怪物來了！', en: 'Monsters are coming!' }),
@@ -453,11 +458,11 @@ function genSelect(fam, level, rng, { pool = POOLS[fam], between = false } = {})
  */
 function genMake(fam, level, rng) {
   const nItems = level === 3 ? 2 : 3;
-  const items = shuffle(fam === 'lr' ? TREASURES : fam === 'fb' ? SLIMES : TOWER, rng).slice(0, nItems);
+  const items = shuffle(fam === 'lr' ? TREASURES : fam === 'fb' ? SLIMES : BOXES, rng).slice(0, nItems);
   const len = fam === 'ud' ? nItems : nItems + 2; // a tower stacks with no gaps; hooks / a parade have spare places
   const scene = buildScene({ layout: lineLayout(fam), cols: fam === 'ud' ? 1 : len, rows: fam === 'ud' ? len : 1, n: 0, pool: [], rng, withSlots: true, facing: 'right' });
   const rels = [...FAM[fam], 'between'];
-  return { kind: 'make', scene, ask: T.make(), level, rel: rels[0], items, rels };
+  return { kind: 'make', scene, ask: T.make(fam), level, rel: rels[0], items, rels };
 }
 
 /** Every placement of `items` into distinct slot indices. */

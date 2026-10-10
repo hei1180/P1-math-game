@@ -115,6 +115,8 @@ function setHud(on) {
 
 // Less motion follows the teacher setting live (also when settings change after the game started).
 Object.defineProperty(fx, 'lessMotion', { get: () => !!settings.lessMotion, set: v => { settings.lessMotion = !!v; }, configurable: true });
+// art.js (hop, idle motion) reads this global so it needs no import of fx / settings.
+Object.defineProperty(window, '__dungeonLessMotion', { get: () => !!settings.lessMotion, configurable: true });
 
 /** Stop every running scene except `key`, then start `key`. */
 function go(key, data) {

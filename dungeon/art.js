@@ -348,7 +348,9 @@ export function hop(sprite, { height = 3, repeat = 0, delay = 0, repeatDelay = 6
 // ---------------------------------------------------------------- backdrop
 /**
  * 192 × 108 art-px room: Tiny Dungeon brick faces tinted per floor (1 purple, 2 blue, 3 green, 4 gold),
- * a stone floor strip from y = 92, two flickering torches and one door in the middle.
+ * a stone floor strip from y = 92, two wall banners and a dimmed door at the far left (where the hero comes in).
+ * No torches on the wall: 火把 is a clue object, so the backdrop never shows anything a clue can name, and the
+ * door stays clear of every object / place position (scenes keep ≥ 18 art px free floor at their left).
  */
 export function makeBackdrop(scene, floor = 1) {
   const P = FLOOR_STONE[floor] || FLOOR_STONE[1];
@@ -373,16 +375,19 @@ export function makeBackdrop(scene, floor = 1) {
   edge.fillStyle(Phaser.Display.Color.HexStringToColor(P.deep).color, 1).fillRect(0, FLOOR_Y, 192, 1);
   c.add(edge);
 
-  c.door = scene.add.image(96, FLOOR_Y, 'td', KENNEY.door[1]).setOrigin(0.5, 1);
-  c.torches = [36, 156].map(x => scene.add.image(x, 52, T('torch')).setOrigin(0.5, 1));
-  c.add([c.door, ...c.torches]);
-  if (!reduced()) {
-    let n = 0;
-    const ev = scene.time.addEvent({ delay: 260, loop: true, callback: () => {
-      n++;
-      c.torches.forEach((t, i) => t.active && t.setTexture(T((n + i) % 2 ? 'torch.2' : 'torch')));
-    } });
-    c.once('destroy', () => ev.remove(false));
-  }
+  c.door = scene.add.image(0, FLOOR_Y, 'td', KENNEY.door[1]).setOrigin(0, 1).setTint(0x9a92a8);
+  // plain cloth pennants (no emblem, no shield shape): clearly wall decoration, never a clue object
+  const cloth = { 1: ['#2f8f83', '#226b62'], 2: ['#c0582f', '#93411f'], 3: ['#7a5bb0', '#5b4388'], 4: ['#3f6fb0', '#2e5288'] }[floor] || ['#2f8f83', '#226b62'];
+  const pennant = canvasTex(scene, `bd.${floor}.pennant`, 12, 20, ctx => {
+    ctx.fillStyle = '#5b3a1e'; ctx.fillRect(0, 0, 12, 2);                 // rod
+    ctx.fillStyle = '#e8c56a'; ctx.fillRect(0, 0, 1, 2); ctx.fillRect(11, 0, 1, 2);
+    ctx.fillStyle = cloth[0]; ctx.fillRect(2, 2, 8, 15);                  // cloth
+    ctx.fillStyle = cloth[1]; ctx.fillRect(8, 2, 2, 15); ctx.fillRect(2, 2, 8, 1);
+    ctx.fillStyle = '#e8c56a'; ctx.fillRect(2, 13, 8, 1);                 // trim
+    ctx.fillStyle = cloth[0]; ctx.fillRect(2, 17, 3, 2); ctx.fillRect(7, 17, 3, 2); // swallowtail
+    ctx.fillStyle = cloth[1]; ctx.fillRect(4, 17, 1, 1); ctx.fillRect(7, 17, 1, 1);
+  });
+  c.banners = [10, 182].map(x => scene.add.image(x, 30, pennant).setOrigin(0.5, 0));
+  c.add([c.door, ...c.banners]);
   return c;
 }

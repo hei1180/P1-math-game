@@ -14,7 +14,7 @@ export default class SolveTask {
 
   async run() {
     const { room, clue } = this, sc = clue.scene;
-    room.stage.drawScene(sc);
+    room.stage.drawScene(sc, { markers: true });
     const board = this.board = new DragBoard(room, { kinds: clue.items, trayAx: 150 });
     const done = this.done = new TaskButton(room, { zh: '完成', en: 'Done', icon: '✔', enabled: false });
     const panel = this.panel = new SentencePanel(room, clue.sentences, { pickable: false, reserveBottom: 92, avoid: () => board.contentRect() });

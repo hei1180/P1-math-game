@@ -7,9 +7,12 @@
 //             await room.wrong(picked) -> step 1|2|3   (1 the clue is replayed here; 2 the task glows; 3 the task shows the answer, then resolves)
 //             await room.right()                   (ding, sparkle, 做得好！, per-answer coin, dot turns good)
 //             room.heroScreen() -> {x, y}          hero's head in CSS px
+//             room.fufu / room.flapFufu()          蝠蝠 Fu-fu, the guide bat hanging in the room's top-left corner;
+//                                                  flaps when a clue is read (ui.prompt / 🔈), on hints and on 做得好！
+// Start data: { key } (consumed in init, so a later start without data never replays an old room).
 import { genRoom, roomByKey, nextRoom, hintStep, mistakesFor, starsFor, coinsPerAnswer, chestCoins, confusionOf,
          KINDS, CHEST_LOOKS, SHOP, equip } from '../dungeon-logic.js?v=0';
-import { makeHero, makeBackdrop, artFrame } from './art.js?v=0';
+import { makeHero, makeBackdrop, artFrame, makeCreature } from './art.js?v=0';
 import { PixelStage, FLOOR_Y } from './stage.js?v=0';
 import { UI } from './ui.js?v=0';
 import { TASKS } from './tasks/index.js?v=0';
@@ -34,10 +37,16 @@ function tintAll(o, color) {
 export class RoomScene extends Phaser.Scene {
   constructor() { super('Room'); this.runId = 0; }
 
-  create(data = {}) {
+  init(data) {
+    this.startData = data || {};
+    this.sys.settings.data = {}; // Phaser would hand this data to a later start that passes none
+  }
+
+  create() {
     const bridge = this.bridge = this.registry.get('bridge');
-    this.key = data.key || 'F1R1';
+    this.key = this.startData.key;
     this.info = roomByKey(this.key);
+    this.task = null;
     if (!this.info) { this.scene.start('Map'); return; }
     if (this.info.wave) { this.scene.start('Waves', { key: this.key }); return; }
     fx.irisIn(this);
@@ -54,6 +63,9 @@ export class RoomScene extends Phaser.Scene {
     this.hero = this.makeHeroSprite();
     this.hero.setPosition(12, FLOOR_Y);
     this.stage.front.add(this.hero);
+    this.stage.hero = this.hero;
+    if (this.info.boss) this.stage.extraFocus = [150, 190]; // the dragon (tasks/pick.js) sits at ax 170
+    this.makeFufu();
 
     this.ui.back(() => { voice.stop(); fx.iris(this, 'Map', {}); });
     this.ui.coins(bridge.coins, false);
@@ -79,6 +91,41 @@ export class RoomScene extends Phaser.Scene {
   }
 
   wait(ms) { return new Promise(res => this.time.delayedCall(ms, res)); }
+
+  /** 蝠蝠 Fu-fu (spec §1): hangs upside down from the ceiling at the visible top-left; flaps when it talks. */
+  makeFufu() {
+    let bat;
+    try { bat = makeCreature(this, 'bat', 'right'); } catch (e) { return; }
+    bat.setOrigin(0.5, 0).setFlipY(true);
+    this.stage.front.add(bat);
+    this.fufu = bat;
+    const place = () => {
+      if (!bat.active) return;
+      const vis = Math.max(0, this.stage.fromScreen(0, 0).ax);
+      bat.setPosition(Math.round(vis + 12), 3);
+      // a clue that has its own bat (F3 columns) hides Fu-fu, so there is never a second bat to mix up
+      const cur = this.stage.current;
+      bat.setVisible(!(cur && (cur.scene.objects || []).some(o => o.kind === 'bat')));
+    };
+    place();
+    this.events.on('stage:resize', place);
+    this.events.once('shutdown', () => this.events.off('stage:resize', place));
+    // flap whenever a clue is read (prompt) or replayed (🔈)
+    const ui = this.ui, prompt = ui.prompt.bind(ui), say = ui.say.bind(ui);
+    ui.prompt = (zh, en, opts = {}) => { if (opts.speak !== false) this.flapFufu(); return prompt(zh, en, opts); };
+    ui.say = zh => { this.flapFufu(); return say(zh); };
+  }
+
+  flapFufu(times = 3) {
+    const bat = this.fufu;
+    if (!bat || !bat.active) return;
+    this.tweens.killTweensOf(bat);
+    bat.setScale(1).setAngle(0);
+    if (reduced()) { bat.setTint(0xfde68a); this.time.delayedCall(150, () => bat.active && bat.clearTint()); return; }
+    this.tweens.add({ targets: bat, scaleX: 0.55, duration: 90, yoyo: true, repeat: times * 2 - 1, ease: 'Sine.easeInOut',
+      onComplete: () => bat.setScale(1) });
+    this.tweens.add({ targets: bat, angle: { from: -8, to: 8 }, duration: 180, yoyo: true, repeat: times - 1, onComplete: () => bat.setAngle(0) });
+  }
   heroScreen() { return this.stage.toScreen(this.hero.x, this.hero.y - 16); }
 
   async run(id) {
@@ -93,7 +140,10 @@ export class RoomScene extends Phaser.Scene {
       if (!Task) { console.warn('[room] no task for', clue.kind); continue; }
       const task = this.task = new Task(this, clue);
       try { await task.run(); } catch (e) { console.error('[room] task', clue.kind, e); }
-      finally { try { task.destroy(); } catch (e) { /* ignore */ } this.task = null; }
+      finally {
+        try { task.destroy(); } catch (e) { /* ignore */ }
+        if (id === this.runId && this.task === task) this.task = null; // a stale run never touches a newer run's task
+      }
       if (id !== this.runId) return;
       this.mistakes += this.clueMistakes;
       this.states[i] = this.clueRight ? 'good' : 'bad';
@@ -125,8 +175,9 @@ export class RoomScene extends Phaser.Scene {
     }
     const hs = this.heroScreen();
     fx.floatText(this, hs.x, hs.y - 10, '哎呀！', '#f97316');
-    if (step === 1) this.ui.prompt(clue.ask.zh, clue.ask.en);           // replay the clue
-    if (step >= 3) this.ui.toast('蝠蝠幫你！', 'Fu-fu shows you', 1400);
+    if (step === 1) this.ui.prompt(clue.ask.zh, clue.ask.en);           // replay the clue (Fu-fu flaps)
+    if (step === 2) this.flapFufu(2);
+    if (step >= 3) { this.flapFufu(4); this.ui.toast('蝠蝠幫你！', 'Fu-fu shows you', 1400); }
     await this.wait(reduced() ? 150 : 350);
     return step;
   }
@@ -139,6 +190,7 @@ export class RoomScene extends Phaser.Scene {
     fx.sparkle(this, hs.x, hs.y);
     fx.floatText(this, hs.x, hs.y - 20, '做得好！', '#22c55e');
     voice.say('做得好！');
+    this.flapFufu(2);
     const n = coinsPerAnswer(this.key);
     if (n > 0) {
       this.coinsEarned += n;
@@ -166,6 +218,9 @@ export class RoomScene extends Phaser.Scene {
   async chest(coins, lookItem) {
     const st = this.stage;
     st.clearScene(); st.tags(false);
+    st.setFocus(60, 132);
+    this.tweens.killTweensOf(this.hero);
+    this.hero.setPosition(72, FLOOR_Y).setAngle(0);
     this.ui.prompt('寶箱！', 'Treasure chest!', { speak: false });
     let chest;
     try { const f = artFrame(KINDS.chestStar.art); chest = this.add.image(0, 0, f.texture, f.frame).setOrigin(0.5, 1); }

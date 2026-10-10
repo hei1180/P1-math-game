@@ -77,6 +77,7 @@ export default class PlaceTask {
       ay = 84; // below the wall torch, beside the shelf
     }
     this.home = { ax, ay };
+    st.addFocus(ax - 15, ax + 15); // the tray stays on screen when the stage zooms to the scene
     const g = this.tray = room.add.graphics();
     g.fillStyle(0x000000, 0.3).fillRect(ax - 12, ay - 20, 25, 24);
     g.fillStyle(0x1c1917, 0.75).fillRect(ax - 13, ay - 21, 26, 24);

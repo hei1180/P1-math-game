@@ -2,17 +2,23 @@
 //
 //   stage = new PixelStage(scene, { w = 192, h = 108, top = 0, bottom = 0, cropX = 8 })
 //     top / bottom: CSS px kept free for the UI (number, or a function read on every fit);
-//     cropX: art px of plain wall that may be cut off at each side on narrow screens (clue content stays within
-//     ax 16..176), so PX = max(1, floor(min(W / (w - 2 * cropX), (H - top - bottom) / h))); the room is centred.
+//     cropX: art px of plain wall that may be cut off at each side when nothing is in focus.
+//   Fit: PX fits the *focus* (the art-px x range the current clue uses: objects, places, ladders, the hero's home,
+//     plus anything a task adds) to the width and the whole room height to the height: PX = floor(DPR * min(W / focusW,
+//     (H - top - bottom) / h)) / DPR, at least 1 (whole device pixels, so art stays crisp). The focus is at least
+//     FOCUS_MIN art px wide so clues do not zoom wildly. A room wider than the screen is cropped around the focus.
+//   setFocus(x0, x1)  addFocus(x0, x1)   (drawScene sets it; clearScene drops it; both refit)
+//   stage.hero: when set (RoomScene), drawScene stands it on stage.home = {ax, ay}, just left of the scene
 //   stage.root (Container, scale PX)  with layers stage.back (backdrop) · stage.objs (drawScene) · stage.front (hero) · stage.hints
 //   stage.PX, stage.w, stage.h, stage.ox, stage.oy (CSS px of the room's top-left), stage.level (3|2|1, slot markers)
 //   toScreen(ax, ay) -> {x, y}   fromScreen(x, y) -> {ax, ay}
 //   layout(sceneData) -> { pos(x, y) -> {ax, ay}, standPoints: [{ax, ay, x, y}], ladders: [{ax, y0, y1}], cellW, cellH, floorY }
 //       pos is the bottom-centre of a grid cell (where an object stands). Ladder y0 = bottom ay (floor), y1 = top ay.
-//   drawScene(sceneData, { level }?) -> { sprites: {id: Sprite}, slots: [Zone] }   (also stage.sprites / stage.slots)
+//   drawScene(sceneData, { level, markers }?) -> { sprites: {id: Sprite}, slots: [Zone] }   (also stage.sprites / stage.slots)
+//       markers: true draws (faint) place markers even at support level 1 (make / solve: the child must see the places)
 //       slot zones: interactive, ≥ 48 CSS px, with .slotIndex .ax .ay .gx .gy .marker
 //   slotIndexAt(ax, ay) -> index | -1     nearest slot within half a cell
-//   clearScene()   clearHints()
+//   clearScene()   clearHints()   destroy()
 //   glow(sprite, on = true)   arrow(ax, ay, dir = 'right'|'left'|'up'|'down') -> Graphics
 //   tags(on, size = 'big'|'small') -> { left, right } | null   smooth 左 / 右 wall tags (outside the scaled root)
 //
@@ -22,8 +28,10 @@ import { artFrame, makeCreature } from './art.js?v=0';
 import { KINDS } from '../dungeon-logic.js?v=0';
 import { textStyle } from './theme.js?v=0';
 import { fx } from './fx.js?v=0';
+import { DPR } from '../bonds/hidpi.js?v=0';
 
 export const ROOM_W = 192, ROOM_H = 108, FLOOR_Y = 92, STEP = 20;
+export const FOCUS_MIN = 120, HOME_GAP = 18; // art px: narrowest focus; free floor left of a scene for the hero
 const CREATURE = /^(slime|bat$|owl$)/;
 const reduced = () => fx.lessMotion || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 const val = v => (typeof v === 'function' ? v() : v) || 0;
@@ -39,24 +47,45 @@ export class PixelStage {
     this.root.add([this.back, this.objs, this.front, this.hints]);
     this.tagLayer = scene.add.container(0, 0).setDepth(20);
     this.level = 3; this.sprites = {}; this.slots = []; this.current = null; this.tagOpts = null; this.tagObjs = null;
+    this.focusRange = null; this.extraFocus = null; this.hero = null; this.home = { ax: 12, ay: FLOOR_Y };
     this.fit();
-    const onResize = () => this.fit();
-    scene.scale.on('resize', onResize);
-    scene.events.once('shutdown', () => scene.scale.off('resize', onResize));
+    this.onResize = () => this.fit();
+    scene.scale.on('resize', this.onResize);
+    scene.events.once('shutdown', () => scene.scale.off('resize', this.onResize));
+  }
+
+  /** Remove the stage before its scene ends (e.g. the Sandbox redraws a page). */
+  destroy() {
+    this.scene.scale.off('resize', this.onResize);
+    this.clearScene();
+    if (this.root.active) this.root.destroy();
+    if (this.tagLayer.active) this.tagLayer.destroy();
   }
 
   fit() {
     const W = this.scene.scale.width, H = this.scene.scale.height;
     const top = val(this.pad.top), bottom = val(this.pad.bottom);
     const availH = Math.max(1, H - top - bottom);
-    this.PX = Math.max(1, Math.floor(Math.min(W / (this.w - 2 * this.cropX), availH / this.h)));
-    this.ox = Math.round((W - this.w * this.PX) / 2);
-    this.oy = Math.round(top + Math.max(0, availH - this.h * this.PX) / 2);
+    let [f0, f1] = this.focusRange || [this.cropX, this.w - this.cropX];
+    if (f1 - f0 < FOCUS_MIN) { const m = (f0 + f1) / 2; f0 = m - FOCUS_MIN / 2; f1 = m + FOCUS_MIN / 2; }
+    if (f0 < 0) { f1 -= f0; f0 = 0; }
+    if (f1 > this.w) { f0 = Math.max(0, f0 - (f1 - this.w)); f1 = this.w; }
+    const raw = Math.min(W / (f1 - f0 + 4), availH / this.h);
+    this.PX = Math.max(1, Math.floor(raw * DPR + 1e-6) / DPR);
+    const roomW = this.w * this.PX, snap = v => Math.round(v * DPR) / DPR;
+    this.ox = snap(roomW <= W ? (W - roomW) / 2 : Math.max(W - roomW, Math.min(0, W / 2 - ((f0 + f1) / 2) * this.PX)));
+    this.oy = snap(top + Math.max(0, availH - this.h * this.PX) / 2);
     this.root.setPosition(this.ox, this.oy).setScale(this.PX);
     if (this.tagOpts) this.tags(true, this.tagOpts.size);
     this.scene.events.emit('stage:resize', this);
   }
   setPad(pad) { Object.assign(this.pad, pad); this.fit(); }
+  setFocus(x0, x1) { this.focusRange = [x0, x1]; this.fit(); }
+  addFocus(x0, x1) {
+    const f = this.focusRange || [x0, x1];
+    const n = [Math.min(f[0], x0), Math.max(f[1], x1)];
+    if (!this.focusRange || n[0] !== f[0] || n[1] !== f[1]) this.setFocus(n[0], n[1]);
+  }
 
   toScreen(ax, ay) { return { x: this.ox + ax * this.PX, y: this.oy + ay * this.PX }; }
   fromScreen(x, y) { return { ax: (x - this.ox) / this.PX, ay: (y - this.oy) / this.PX }; }
@@ -65,11 +94,20 @@ export class PixelStage {
     const L = sd.layout, cols = Math.max(1, sd.cols || 1), rows = Math.max(1, sd.rows || 1);
     const cellH = rows > 1 ? Math.min(STEP, Math.floor((FLOOR_Y - 20) / (rows - 1))) : STEP;
     let cellW = L === 'shelf' ? 24 : STEP;
-    if (cols * cellW > this.w - 16) cellW = Math.floor((this.w - 16) / cols);
+    const line = L === 'row' || L === 'queue';
+    // a long row / queue leaves HOME_GAP free floor at its left for the hero (never standing on the first thing)
+    // (164 art px: a 10-long row still fits a 375 px phone at PX 2 with the hero beside it)
+    const maxW = line ? this.w - HOME_GAP - 10 : this.w - 16;
+    if (cols * cellW > maxW) cellW = Math.floor(maxW / cols);
     const ay = y => FLOOR_Y - y * cellH;
+    let shift = 0;
+    if (line) {
+      const left = 96 - (cols * cellW) / 2;
+      if (left < HOME_GAP) shift = Math.min(HOME_GAP - left, this.w - 2 - (96 + (cols * cellW) / 2));
+    }
     let axOf;
     if (L === 'pair') axOf = x => (cols < 2 ? 96 : 56 + x * (80 / (cols - 1)));
-    else axOf = x => Math.round(96 + (x - (cols - 1) / 2) * cellW);
+    else axOf = x => Math.round(96 + shift + (x - (cols - 1) / 2) * cellW);
     const pos = (x, y = 0) => ({ ax: axOf(x), ay: ay(y) });
     const ladders = [];
     if (L === 'column') ladders.push({ ax: Math.min(72, axOf(0) - 24), y0: FLOOR_Y, y1: ay(rows - 1) });
@@ -96,11 +134,22 @@ export class PixelStage {
     return s.add.rectangle(0, 0, 12, 12, 0x9ca3af).setOrigin(0.5, 1);
   }
 
-  drawScene(sd, { level = this.level } = {}) {
+  drawScene(sd, { level = this.level, markers = false } = {}) {
     this.clearScene();
     const s = this.scene, lay = this.layout(sd), L = sd.layout;
     const cols = Math.max(1, sd.cols || 1), rows = Math.max(1, sd.rows || 1);
     this.current = { scene: sd, layout: lay };
+    // the hero's home: floor just left of everything; the focus covers home + scene (+ extraFocus)
+    let edge = lay.pos(0, 0).ax - lay.cellW / 2;
+    for (const l of lay.ladders) edge = Math.min(edge, l.ax - 6);
+    this.home = { ax: Math.max(8, Math.round(edge - 9)), ay: FLOOR_Y };
+    const pet = this.hero && this.hero.pet && this.hero.pet.visible; // the pet trails 14 art px left of the hero
+    let fx0 = Math.max(0, this.home.ax - (pet ? 22 : 9)), fx1 = this.home.ax + 9;
+    for (const o of [...(sd.objects || []), ...(sd.slots || [])]) { const p = lay.pos(o.x, o.y); fx0 = Math.min(fx0, p.ax - 10); fx1 = Math.max(fx1, p.ax + 10); }
+    for (const l of lay.ladders) { fx0 = Math.min(fx0, l.ax - 6); fx1 = Math.max(fx1, l.ax + 6); }
+    if (this.extraFocus) { fx0 = Math.min(fx0, this.extraFocus[0]); fx1 = Math.max(fx1, this.extraFocus[1]); }
+    this.setFocus(fx0, fx1);
+    if (this.hero && this.hero.active) { this.scene.tweens.killTweensOf(this.hero); this.hero.setPosition(this.home.ax, this.home.ay).setAngle(0); }
     const g = s.add.graphics();
     this.objs.add(g);
     // furniture: shelf planks and ladders (pixel style, drawn in art px)
@@ -141,9 +190,9 @@ export class PixelStage {
     (sd.slots || []).forEach((sl, i) => {
       const p = lay.pos(sl.x, sl.y);
       let marker = null;
-      if (level >= 2) {
+      if (level >= 2 || markers) {
         marker = s.add.graphics();
-        marker.fillStyle(0xfef3c7, level >= 3 ? 0.9 : 0.55);
+        marker.fillStyle(0xfef3c7, level >= 3 ? 0.9 : level >= 2 ? 0.55 : 0.4);
         for (let k = 0; k < 14; k += 3) {
           marker.fillRect(p.ax - 7 + k, p.ay - 15, 2, 1).fillRect(p.ax - 7 + k, p.ay - 1, 2, 1);
           marker.fillRect(p.ax - 7, p.ay - 15 + k, 1, 2).fillRect(p.ax + 6, p.ay - 15 + k, 1, 2);
@@ -178,7 +227,7 @@ export class PixelStage {
     this.clearHints();
     this.objs.each(o => this.scene.tweens.killTweensOf(o));
     this.objs.removeAll(true);
-    this.sprites = {}; this.slots = []; this.current = null;
+    this.sprites = {}; this.slots = []; this.current = null; this.focusRange = null;
   }
 
   /** Pulsing gold halo behind a sprite (hint step 2). */

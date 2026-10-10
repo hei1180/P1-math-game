@@ -18,7 +18,7 @@ export default class MakeTask {
 
   async run() {
     const { room, clue } = this, sc = clue.scene, st = room.stage;
-    st.drawScene(sc);
+    st.drawScene(sc, { markers: true });
     room.ui.prompt(clue.ask.zh, clue.ask.en);
     const queue = sc.layout === 'queue';
     this.facing = sc.queueFacing || 'right';

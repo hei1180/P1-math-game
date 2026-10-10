@@ -64,7 +64,7 @@ export class WaveField {
     if (bd) {
       // raise the floor strip and the door to FLOOR (the door ends the corridor, right behind the hero)
       bd.list.forEach(o => { if (o.type === 'Image' && o.texture && /slab$/.test(o.texture.key)) o.y = FLOOR; });
-      if (bd.door) bd.door.y = FLOOR;
+      if (bd.door) bd.door.setOrigin(0.5, 1).setPosition(HERO_X, FLOOR).clearTint(); // no clue places here
       st.back.add(bd);
     }
     const g = s.add.graphics();
@@ -168,6 +168,12 @@ export class WaveField {
       const vis = this.visible && on.includes(side);
       c.setVisible(vis);
       if (c.input) c.input.enabled = vis;
+    }
+    // 上下 waves only use the middle of the corridor: zoom in there (bigger hero on phones); 左右 needs the sides
+    if (mode) {
+      const st = this.stage, f = mode === 'ud' ? [60, 132] : null, cur = st.focusRange;
+      if (f && !(cur && cur[0] === f[0] && cur[1] === f[1])) st.setFocus(f[0], f[1]);
+      else if (!f && cur && !st.current) { st.focusRange = null; st.fit(); }
     }
   }
 

@@ -11,7 +11,8 @@
 //                                         removed when tapped; ui.removeButton(id) removes it and resolves null
 //   ui.dots(states)                       'good' | 'bad' | 'now' | null per clue, bottom centre
 //   ui.coins(n, animate = true)           coin counter top-right (left of the DOM corner buttons)   ui.coinTarget() -> {x, y}
-//   ui.toast(zh, en = '', ms = 1500) -> Promise
+//   ui.toast(zh, en = '', ms = 1500) -> Promise   placed where it covers no panel or button (near the room's top wall)
+//   ui.avoidList.add(fn) / .delete(fn)    fn() -> screen rect {x0, y0, x1, y1} toasts must not cover (e.g. the owl's bubble)
 //   ui.endPanel({ title, stars, newBest, coins, next = true }) -> Promise<'next'|'map'|'retry'>   title: string or {zh, en}
 //   ui.card({ zh, en?, icon?, buttons = [{ id:'ok', zh:'繼續', en:'Continue' }] }) -> Promise<id>
 //   ui.back(onBack)                       ← button top-left
@@ -72,7 +73,7 @@ export function pill(scene, { zh, en = '', icon = '', w = 150, h = 64, fill = 0x
   c.on('pointerout', () => { down = false; scene.tweens.killTweensOf(c); c.setScale(c.baseScale); });
   c.on('pointerup', () => { scene.tweens.killTweensOf(c); c.setScale(c.baseScale); if (!down) return; down = false; if (onTap) onTap(); });
   c.paint = (f, r = rim) => draw(f, r);
-  c.w = w; c.h = h;
+  c.uiW = w; c.uiH = h; // (a Container's own .w / .h are Phaser's, always 0)
   return c;
 }
 
@@ -88,6 +89,7 @@ export class UI {
     this.pending = new Set();
     this.choiceBtns = null; this.choiceIds = ''; this.choiceRes = null;
     this.modalOpen = false;
+    this.avoidList = new Set(); // () => {x0, y0, x1, y1} | null: things outside the UI layer toasts keep clear of
     const onResize = () => this.layout();
     scene.scale.on('resize', onResize);
     scene.events.once('shutdown', () => { scene.scale.off('resize', onResize); voice.stop(); this.pending.clear(); });
@@ -153,7 +155,8 @@ export class UI {
     const te = s.add.text(0, 0, en, textStyle(14, '#57534e', { fontStyle: 'normal' })).setOrigin(0.5);
     c.add([g, spk, tz, te]);
     const relayout = () => {
-      const r = this._barRect(), left = 62, avail = r.w - left - 12;
+      // a 0 × 0 canvas (hidden tab, first frame) would make avail ≤ 0, and Phaser throws on a word wrap that narrow
+      const r = this._barRect(), left = 62, avail = Math.max(120, r.w - left - 12);
       tz.setStyle({ wordWrap: null }).setFontSize(26).setScale(1);
       if (tz.width > avail) tz.setFontSize(Math.max(20, Math.floor(26 * avail / tz.width)));
       if (tz.width > avail) tz.setWordWrapWidth(avail, true);
@@ -262,7 +265,7 @@ export class UI {
     const b = this.choiceBtns && this.choiceBtns[id];
     if (!b) return Promise.resolve();
     b.paint(good ? 0xbbf7d0 : 0xfecaca, good ? C.good : C.bad);
-    const t = this.scene.add.text(b.w / 2 - 16, -b.h / 2 + 12, good ? '✓' : '✗', textStyle(26, good ? '#15803d' : '#b91c1c')).setOrigin(0.5);
+    const t = this.scene.add.text(b.uiW / 2 - 16, -b.uiH / 2 + 12, good ? '✓' : '✗', textStyle(26, good ? '#15803d' : '#b91c1c')).setOrigin(0.5);
     b.add(t);
     if (!good && !reduced()) this.scene.tweens.add({ targets: b, x: b.x + 6, duration: 50, yoyo: true, repeat: 3 });
     return new Promise(res => this.scene.time.delayedCall(dur(550), () => { if (t.active) t.destroy(); if (b.active && !good) b.paint(0xffffff); res(); }));
@@ -304,13 +307,53 @@ export class UI {
     const w = Math.max(a.width, b ? b.width : 0) + 40, h = en ? 70 : 52;
     g.fillStyle(0x1c1917, 0.82).fillRoundedRect(-w / 2, -h / 2, w, h, 22);
     c.add([g, a, ...(b ? [b] : [])]);
-    this._set('toast', c, () => { c.setPosition(this.W / 2, this.H * 0.32); c.setScale(Math.min(1, (this.W - 16) / w)); });
+    this._set('toast', c, () => {
+      const k = Math.min(1, (this.W - 16) / w);
+      c.setScale(k);
+      c.setPosition(this.W / 2, this._freeY(c, w * k, h * k));
+    });
     c.setAlpha(0);
     s.tweens.add({ targets: c, alpha: 1, duration: dur(160) });
     return new Promise(res => s.time.delayedCall(ms, () => {
       if (this.parts.toast !== c) { res(); return; }
       s.tweens.add({ targets: c, alpha: 0, duration: dur(200), onComplete: () => { if (this.parts.toast === c) this._drop('toast'); res(); } });
     }));
+  }
+
+  /**
+   * Screen rects (CSS px) of everything tappable or readable on the UI layer except `skip`: pills / panels carry
+   * uiW × uiH (centred on their position, times their scale); plain containers are searched one level down.
+   */
+  _rects(skip) {
+    const out = [];
+    const add = (o, px, py, k) => {
+      if (!o || o === skip || !o.visible || o.alpha === 0) return;
+      const x = px + o.x * k, y = py + o.y * k, kk = k * (o.scaleX || 1);
+      if (o.uiW && o.uiH) { out.push({ x0: x - (o.uiW * kk) / 2, x1: x + (o.uiW * kk) / 2, y0: y - (o.uiH * kk) / 2, y1: y + (o.uiH * kk) / 2 }); return; }
+      if (o.list && k === 1) o.list.forEach(ch => add(ch, x, y, kk));
+    };
+    this.root.list.forEach(o => add(o, 0, 0, 1));
+    for (const f of this.avoidList) { const r = f(); if (r) out.push(r); }
+    return out;
+  }
+
+  /** Centre y for a w × h toast: the free spot nearest the room's upper wall (below the top bar), else the least covered. */
+  _freeY(skip, w, h) {
+    const st = this.stage, x0 = this.W / 2 - w / 2, x1 = this.W / 2 + w / 2;
+    const lo = this.topH + 6 + h / 2, hi = this.H - 40 - h / 2;
+    const want = st ? st.oy + 24 * st.PX : this.H * 0.32;
+    if (hi <= lo) return Math.max(h / 2, Math.min(this.H - h / 2, want));
+    const rects = this._rects(skip);
+    const cover = y => rects.reduce((a, r) => {
+      const ox = Math.min(x1, r.x1) - Math.max(x0, r.x0), oy = Math.min(y + h / 2, r.y1) - Math.max(y - h / 2, r.y0);
+      return a + (ox > 0 && oy > 0 ? ox * oy : 0);
+    }, 0);
+    let best = null;
+    for (let y = lo; y <= hi; y += 8) {
+      const c = cover(y), d = Math.abs(y - want);
+      if (!best || c < best.c - 1 || (Math.abs(c - best.c) <= 1 && d < best.d)) best = { y, c, d };
+    }
+    return Math.round(best.y);
   }
 
   /** Dim blocker + centred panel container (w × h, scaled down to fit). */

@@ -23,6 +23,7 @@ export default class JudgeTask {
     let ax = 160, ay = 30;
     if (sd.layout === 'column' || sd.layout === 'shelf') { ax = 152; ay = 76; }   // below the backdrop torch
     else if (st.tagObjs && st.tagObjs.right) ax = Math.min(160, Math.floor(st.fromScreen(st.tagObjs.right.x - 40, 0).ax) - 10);
+    st.addFocus(ax - 10, ax + 10); // keep the owl on screen when the stage zooms to the scene
     const g = room.add.graphics();
     g.fillStyle(0x5b3a1e, 1).fillRect(ax - 8, ay, 16, 2);
     g.fillStyle(0x8b5a2b, 1).fillRect(ax - 8, ay, 16, 1).fillRect(ax + 4, ay + 2, 2, 5);
@@ -49,7 +50,9 @@ export default class JudgeTask {
     const relayout = () => { if (c.active && this.owl && this.owl.active) this.layoutBubble(c, g, tz, te); };
     relayout();
     sc.events.on('stage:resize', relayout);
-    c.once('destroy', () => sc.events.off('stage:resize', relayout));
+    const avoid = () => (c.active && c.hit ? { x0: c.x, y0: c.y, x1: c.x + c.hit.width, y1: c.y + c.hit.height } : null);
+    room.ui.avoidList.add(avoid);
+    c.once('destroy', () => { sc.events.off('stage:resize', relayout); room.ui.avoidList.delete(avoid); });
     if (!reduced()) sc.tweens.add({ targets: c, alpha: { from: 0, to: 1 }, duration: 220 });
   }
 

@@ -30,12 +30,8 @@ const reduced = () => fx.lessMotion || (window.matchMedia && window.matchMedia('
 
 /** The hero's resting spot for a drawn scene: on the floor, left of everything. */
 function homeStop(stage) {
-  const cur = stage.current;
-  if (!cur) return { ax: 12, ay: FLOOR_Y, home: true };
-  const L = cur.layout;
-  let edge = L.pos(0, 0).ax - L.cellW / 2;
-  for (const l of L.ladders) edge = Math.min(edge, l.ax - 6);
-  return { ax: Math.max(8, Math.min(12, Math.round(edge - 9))), ay: FLOOR_Y, home: true };
+  if (!stage.current) return { ax: 12, ay: FLOOR_Y, home: true };
+  return { ax: stage.home.ax, ay: stage.home.ay, home: true }; // PixelStage.drawScene picks it (left of the scene)
 }
 
 export function attachWalk(room, { walk = true, names = true, onStart = null, onStop = null } = {}) {

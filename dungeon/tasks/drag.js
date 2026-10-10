@@ -44,6 +44,7 @@ export class DragBoard {
     this.tray.fillStyle(0x8b5a2b, 1).fillRect(b.x0 + 2, TRAY_Y, b.x1 - b.x0 - 4, 1);
     this.hintG = room.add.graphics();
     st.objs.add([this.tray, this.hintG]);
+    st.addFocus(b.x0 - 2, b.x1 + 2); // keep the tray on screen when the stage zooms to the scene
     this.items = kinds.map((kind, i) => {
       const sp = st.makeSprite(kind, facing);
       const home = { ax: Math.round(trayAx + (i - (n - 1) / 2) * GAP), ay: TRAY_Y };
@@ -259,7 +260,7 @@ const PAINT = {
 export class SentencePanel {
   constructor(room, sentences, { pickable = false, reserveBottom = 0, avoid }) {
     const s = this.s = room; this.room = room; this.avoid = avoid; this.reserveBottom = reserveBottom;
-    this.res = null; this.state = sentences.map(() => 'normal');
+    this.res = null; this.state = sentences.map(() => 'normal'); this.sentences = sentences;
     const c = this.c = s.add.container(0, 0);
     const rowH = 60, gap = 8;
     const texts = sentences.map(se => ({
@@ -269,6 +270,7 @@ export class SentencePanel {
     const w = Math.max(240, ...texts.map(t => Math.max(t.zh.width, t.en.width) + 52 + 34));
     const h = sentences.length * rowH + (sentences.length - 1) * gap + 16;
     this.w = w + 16; this.h = h;
+    c.uiW = this.w; c.uiH = h; // ui.toast reads these to keep clear of the panel
     const back = s.add.graphics();
     back.fillStyle(0x1c1917, 0.45).fillRoundedRect(-this.w / 2, -h / 2, this.w, h, 18);
     c.add(back);

@@ -1,8 +1,9 @@
 // Sandbox (dev only, ?dev&scene=Sandbox): every art key, hero looks front/back, a slime queue that turns,
 // and each clue layout drawn from a hard-coded Scene object.
-// Runs on its own too (dungeon/dev/sandbox.html): loads and builds the art itself when Boot has not.
-// Layouts use a tiny local drawer; T10 switches it to PixelStage.
+// Layouts are drawn by the game's own PixelStage (same grid, slot markers, tags and hero home as the rooms).
+// preload / buildArt are idempotent, so it also works when opened straight from ?scene=Sandbox.
 import { ART_KEYS, artFrame, preloadArt, buildArt, makeHero, makeCreature, hop, makeBackdrop, HERO_ART, FLOOR_Y } from '../art.js?v=0';
+import { PixelStage } from '../stage.js?v=0';
 
 const FONT = '"Chalkboard SE","Comic Sans MS","PingFang TC","Microsoft JhengHei",sans-serif';
 const RES = Math.min(3, Math.max(1, window.devicePixelRatio || 1));
@@ -68,6 +69,7 @@ export default class SandboxScene extends Phaser.Scene {
   }
 
   render() {
+    if (this.stage) { this.stage.destroy(); this.stage = null; }
     this.tweens.killAll();
     this.time.removeAllEvents();
     this.children.removeAll(true);
@@ -183,54 +185,19 @@ export default class SandboxScene extends Phaser.Scene {
 
   page_layouts() {
     const sd = LAYOUTS[this.layoutId];
-    this.root.add(makeBackdrop(this, 3));
-    this.drawLocal(sd);
+    this.root.destroy();
+    const st = this.stage = new PixelStage(this, { top: TOP, bottom: BOTTOM });
+    st.back.add(makeBackdrop(this, 3));
+    st.hero = makeHero(this, this.look, { view: 'front' });
+    st.front.add(st.hero);
+    st.level = 3;
+    st.drawScene(sd);
+    st.tags(true, 'big');
     const ids = Object.keys(LAYOUTS), bw = Math.min(96, (this.W - 16) / ids.length - 6);
     ids.forEach((id, i) => this.button(8 + bw / 2 + i * (bw + 6), this.H - BOTTOM / 2 - 6, id, '',
       () => { this.layoutId = id; this.render(); }, { w: bw, on: id === this.layoutId }));
-    // 左 / 右 wall tags: tag.frame sprite + smooth text
-    for (const [ax, zh] of [[14, '左'], [178, '右']]) {
-      const f = artFrame('tag.frame');
-      this.root.add(this.add.image(ax, 10, f.texture, f.frame).setOrigin(0.5, 0));
-      const p = this.toScreen(ax, 17);
-      this.text(p.x, p.y, zh, Math.max(12, 7 * this.PX), '#1f2937').setOrigin(0.5);
-    }
-  }
-
-  /** Mini layout drawer (same grid maths as PixelStage.layout). */
-  drawLocal(sd) {
-    const L = sd.layout, cols = Math.max(1, sd.cols), rows = Math.max(1, sd.rows), STEP = 20;
-    const cellH = rows > 1 ? Math.min(STEP, Math.floor((FLOOR_Y - 20) / (rows - 1))) : STEP;
-    let cellW = L === 'shelf' ? 24 : STEP;
-    if (cols * cellW > 176) cellW = Math.floor(176 / cols);
-    const axOf = x => (L === 'pair' ? (cols < 2 ? 96 : 56 + x * (80 / (cols - 1))) : Math.round(96 + (x - (cols - 1) / 2) * cellW));
-    const ayOf = y => FLOOR_Y - y * cellH;
-    if (L === 'shelf' || L === 'column') {
-      for (let y = 1; y < rows; y++) for (let x = 0; x < cols; x++) {
-        const f = artFrame('shelf');
-        this.root.add(this.add.image(axOf(x) - 8, ayOf(y), f.texture, f.frame).setOrigin(0, 0));
-      }
-      const lx = L === 'column' ? Math.min(72, axOf(0) - 24) : axOf(0) - 20;
-      for (let ay = FLOOR_Y - 16; ay > ayOf(rows - 1) - 16; ay -= 16) {
-        const f = artFrame('ladder');
-        this.root.add(this.add.image(lx, ay, f.texture, f.frame).setOrigin(0.5, 0));
-      }
-    }
-    const g = this.add.graphics();
-    g.lineStyle(1, 0xffffff, 0.9);
-    for (const s of sd.slots) {
-      const ax = axOf(s.x), ay = ayOf(s.y);
-      for (let i = 0; i < 14; i += 3) {
-        g.lineBetween(ax - 7 + i, ay - 15, ax - 6 + i, ay - 15); g.lineBetween(ax - 7 + i, ay - 1, ax - 6 + i, ay - 1);
-        g.lineBetween(ax - 7, ay - 15 + i, ax - 7, ay - 14 + i); g.lineBetween(ax + 7, ay - 15 + i, ax + 7, ay - 14 + i);
-      }
-    }
-    this.root.add(g);
-    for (const o of sd.objects) {
-      const s = makeCreature(this, o.kind, o.facing || 'right').setPosition(axOf(o.x), ayOf(o.y));
-      this.root.add(s);
-    }
-    const p = this.toScreen(96, 4);
-    this.text(p.x, p.y, `layout: ${L} (${cols}×${rows})`, 14, '#ffffff', { stroke: '#1f2937', strokeThickness: 4 }).setOrigin(0.5, 0);
+    const p = st.toScreen(96, 4);
+    this.text(this.W / 2, Math.max(TOP + 30, p.y), `layout: ${sd.layout} (${sd.cols}×${sd.rows}) · PX ×${st.PX}`, 14, '#ffffff',
+      { stroke: '#1f2937', strokeThickness: 4 }).setOrigin(0.5, 0).setDepth(30);
   }
 }

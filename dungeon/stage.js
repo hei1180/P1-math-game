@@ -99,6 +99,7 @@ export class PixelStage {
     // (164 art px: a 10-long row still fits a 375 px phone at PX 2 with the hero beside it)
     const maxW = line ? this.w - HOME_GAP - 10 : this.w - 16;
     if (cols * cellW > maxW) cellW = Math.floor(maxW / cols);
+    if (line && cols >= 6) cellW = Math.min(cellW, 18); // 16 px things, 2 px apart: long rows fit phones one step bigger
     const ay = y => FLOOR_Y - y * cellH;
     let shift = 0;
     if (line) {

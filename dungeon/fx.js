@@ -74,6 +74,8 @@ export const fx = {
   },
   floatText(scene, x, y, text, color = '#f97316') {
     const t = scene.add.text(x, y, text, { fontFamily: FONT, fontSize: '28px', fontStyle: 'bold', color, stroke: '#ffffff', strokeThickness: 5, padding: { x: 2, y: 4 } }).setOrigin(0.5).setDepth(1001);
+    const half = (t.width * (reduced() ? 1 : 1.4)) / 2 + 4, W = scene.scale.width; // stay on screen at the edges
+    t.x = Math.max(half, Math.min(W - half, x));
     scene.tweens.add({ targets: t, y: y - 60, alpha: 0, scale: reduced() ? 1 : 1.4, duration: reduced() ? 150 : 700, ease: 'Cubic.easeOut', onComplete: () => t.destroy() });
   },
   /** Circle-wipe out of the current scene, then start `targetKey` (which should call fx.irisIn in create). */

@@ -11,7 +11,7 @@
 //                                                  flaps when a clue is read (ui.prompt / 🔈), on hints and on 做得好！
 // Start data: { key } (consumed in init, so a later start without data never replays an old room).
 import { genRoom, roomByKey, nextRoom, hintStep, mistakesFor, starsFor, coinsPerAnswer, chestCoins, confusionOf,
-         KINDS, CHEST_LOOKS, SHOP, equip } from '../dungeon-logic.js?v=0';
+         KINDS, CHEST_LOOKS, FLOOR_LOOK, SHOP, equip } from '../dungeon-logic.js?v=0';
 import { makeHero, makeBackdrop, artFrame, makeCreature } from './art.js?v=0';
 import { PixelStage, FLOOR_Y } from './stage.js?v=0';
 import { UI } from './ui.js?v=0';
@@ -281,6 +281,7 @@ export class RoomScene extends Phaser.Scene {
     const lookItem = lookId ? SHOP.find(s => s.id === lookId) || { id: lookId, slot: 'helmet', zh: lookId, en: '' } : null;
     if (chestN > 0 || lookItem) await this.chest(chestN, lookItem);
     if (id !== this.runId) return;
+    const hadLooks = ((bridge.progress && bridge.progress.looks) || []).slice();
     const res = await bridge.complete(key, stars, {
       mistakes: this.mistakes, hints: this.hints, durationSec: Math.round((Date.now() - this.t0) / 1000),
       confusions: this.confusions, coins: this.coinsEarned + chestN, level: this.level,
@@ -300,7 +301,19 @@ export class RoomScene extends Phaser.Scene {
     if (res.floorCleared) {
       sfx.fanfare(); fx.confetti(this);
       await this.ui.toast(`第${res.floorCleared}層完成！ +${res.bonus}`, `Floor ${res.floorCleared} cleared! +${res.bonus} coins`, 2200);
+      if (id !== this.runId) return;
       this.ui.coins(bridge.coins);
+      // the floor's free look (floor 2 slime pet, floor 4 baby dragon), as WavesScene does for floors 1 and 3
+      const fid = FLOOR_LOOK[res.floorCleared], item = fid && SHOP.find(s => s.id === fid);
+      if (item && !hadLooks.includes(fid)) {
+        const pick = await this.ui.card({ icon: '🎁', zh: `新裝備：${item.zh}`, en: `New look: ${item.en}`,
+          buttons: [{ id: 'wear', zh: '穿上', en: 'Wear it' }, { id: 'go', zh: '繼續', en: 'Continue' }] });
+        if (id !== this.runId) return;
+        if (pick === 'wear') {
+          await bridge.saveLook(p => equip(p, item.slot, item.id));
+          if (this.hero.setLook) try { this.hero.setLook({ hero: bridge.progress.hero, equipped: bridge.progress.equipped }); } catch (e) { /* ignore */ }
+        }
+      }
     }
     if (bridge.sitting.rooms >= 3 && !bridge.sitting.wellDoneShown) {
       bridge.sitting.wellDoneShown = true;

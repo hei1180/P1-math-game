@@ -17,9 +17,14 @@ const reduced = () => fx.lessMotion || (window.matchMedia && window.matchMedia('
 export class WavesScene extends Phaser.Scene {
   constructor() { super('Waves'); this.runId = 0; }
 
-  create(data = {}) {
+  init(data) {
+    this.startData = data || {};
+    this.sys.settings.data = {}; // Phaser would hand this data to a later start that passes none
+  }
+
+  create() {
     const bridge = this.bridge = this.registry.get('bridge');
-    this.key = data.key || 'F1R6';
+    this.key = this.startData.key;
     this.info = roomByKey(this.key);
     if (!this.info) { this.scene.start('Map'); return; }
     if (!this.info.wave) { this.scene.start('Room', { key: this.key }); return; }

@@ -22,6 +22,10 @@ const reduced = () => fx.lessMotion || (window.matchMedia && window.matchMedia('
 export class RushScene extends Phaser.Scene {
   constructor() { super('Rush'); this.runId = 0; }
 
+  init() {
+    this.sys.settings.data = {}; // Phaser would hand this data to a later start that passes none
+  }
+
   create() {
     const bridge = this.bridge = this.registry.get('bridge');
     this.state = 'countdown'; // countdown | play | over | left

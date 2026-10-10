@@ -56,7 +56,10 @@ function swatch(scene, x, y, size, drawFace, onTap) {
 
 export class MakeHeroScene extends Phaser.Scene {
   constructor() { super('MakeHero'); }
-  init(data) { this.startData = data || {}; }
+  init(data) {
+    this.startData = data || {};
+    this.sys.settings.data = {}; // Phaser would hand this data to a later start that passes none
+  }
 
   create() {
     const bridge = this.bridge = this.registry.get('bridge');

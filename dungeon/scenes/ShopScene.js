@@ -25,7 +25,10 @@ const HOW = {
 
 export class ShopScene extends Phaser.Scene {
   constructor() { super('Shop'); }
-  init(data) { this.startData = data || {}; }
+  init(data) {
+    this.startData = data || {};
+    this.sys.settings.data = {}; // Phaser would hand this data to a later start that passes none
+  }
 
   create() {
     this.bridge = this.registry.get('bridge');

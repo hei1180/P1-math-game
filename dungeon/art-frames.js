@@ -109,17 +109,17 @@ export const PIX = {
     '................',
   ] },
 
-  // 16 × 12 bat, side view, facing right: ears and eye on the right, wing behind.
-  bat: { pal: { m: '#6b4a8a', w: '#9a7cc0', f: '#ffffff' }, rows: [
+  // 16 × 12 bat, side view, facing right: rounded head, one big friendly eye, a small smile and soft wings.
+  bat: { pal: { m: '#8f7bd6', w: '#c0b0f0' }, rows: [
     '................',
-    '..........m.m...',
-    '.w.......mmmmm..',
-    '.ww.....mmmmmmm.',
-    '.wwww..mmmmWKmm.',
-    '.wwwwwwmmmmWKmm.',
-    '..wwwwwmmmmmmmm.',
-    '..wwwwwmmmmmmf..',
-    '..w.w.wmmmmmm...',
+    '.........m..m...',
+    '.w......mmmmm...',
+    '.ww....mmmmmmm..',
+    '.wwww.mmmWWKmm..',
+    '.wwwwwwmmWWKmm..',
+    '..wwwwwmmmmmm...',
+    '..wwwwwmmmmkm...',
+    '..w.w.wmmmkm....',
     '........m..m....',
     '................',
     '................',

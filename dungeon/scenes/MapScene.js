@@ -239,13 +239,19 @@ export class MapScene extends Phaser.Scene {
     const edge = this.add.graphics();
     edge.fillStyle(hexN(stone.deep), 1).fillRect(L.x0 + sx0 * P, y + LINE * P, (sx1 - sx0) * P, P);
     W.add(edge);
-    // two torches on the wall, in the gaps between doors 2–3 and 4–5
+    // two torches on the wall, in the gaps between doors 2–3 and 4–5; their flames flicker (less motion: still)
     if (!isRush && this.textures.exists('art:torch')) {
       const xs = roomsOf(f).map(k => L.doors[k].ax).sort((m, n) => m - n);
-      for (const i of [1, 3]) {
-        if (xs[i + 1] == null) continue;
-        W.add(this.add.image(L.x0 + Math.round((xs[i] + xs[i + 1]) / 2) * P, y + 34 * P, 'art:torch').setOrigin(0.5, 1).setScale(P).setAlpha(0.9));
-      }
+      [1, 3].forEach((i, j) => {
+        if (xs[i + 1] == null) return;
+        const x = L.x0 + Math.round((xs[i] + xs[i + 1]) / 2) * P, ty = y + 34 * P;
+        const torch = this.add.image(x, ty, 'art:torch').setOrigin(0.5, 1).setScale(P).setAlpha(0.9);
+        W.add(torch);
+        if (!reduced()) this.tweens.add({
+          targets: torch, scaleX: { from: P * 0.9, to: P * 1.06 }, angle: { from: -3, to: 3 },
+          duration: 250, yoyo: true, repeat: -1, ease: 'Sine.easeInOut', delay: j * 140,
+        });
+      });
     }
   }
 

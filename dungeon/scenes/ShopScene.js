@@ -169,9 +169,8 @@ export class ShopScene extends Phaser.Scene {
       if (t.width > w - 8) t.setScale((w - 8) / t.width);
       c.add(t);
     } else {
-      const pg = this.add.graphics();
-      pg.fillStyle(0xb45309, 1).fillCircle(-14, h / 2 - 16, 10).fillStyle(0xfacc15, 1).fillCircle(-14, h / 2 - 17, 8.5);
-      c.add([pg, this.add.text(0, h / 2 - 16, String(it.price), textStyle(18, '#a16207')).setOrigin(0, 0.5)]);
+      const coin = this.add.image(-15, h / 2 - 16, 'art:coin').setScale(1.6);
+      c.add([coin, this.add.text(3, h / 2 - 16, String(it.price), textStyle(18, '#a16207')).setOrigin(0, 0.5)]);
     }
     if (wear && !hid) c.add(this.add.text(w / 2 - 14, -h / 2 + 14, '✓', textStyle(18, '#15803d')).setOrigin(0.5));
     c.setSize(w, h).setInteractive({ useHandCursor: true });
@@ -192,6 +191,7 @@ export class ShopScene extends Phaser.Scene {
   /** The button under the mirror, for the item being tried on. */
   paintAction() {
     if (this.actBtn) { this.actBtn.destroy(); this.actBtn = null; }
+    if (this.actCoin) { this.actCoin.destroy(); this.actCoin = null; }
     const it = this.tryOn && SHOP.find(s => s.id === this.tryOn);
     let spec = null;
     if (it) {
@@ -199,7 +199,7 @@ export class ShopScene extends Phaser.Scene {
       else if (this.owned(it.id)) spec = { zh: '穿上', en: 'Wear', act: 'wear' };
       else if (it.price != null) {
         const ok = this.bridge.coins >= it.price;
-        spec = ok ? { zh: `買 🪙${it.price}`, en: 'Buy', act: 'buy' } : { zh: `買 🪙${it.price}`, en: `Need ${it.price - this.bridge.coins} more coins`, act: 'short', dim: true };
+        spec = ok ? { zh: `買 ${it.price}`, en: 'Buy', act: 'buy' } : { zh: `買 ${it.price}`, en: `Need ${it.price - this.bridge.coins} more coins`, act: 'short', dim: true };
       }
     }
     if (!spec) {
@@ -213,6 +213,11 @@ export class ShopScene extends Phaser.Scene {
     b.setPosition(this.actPos.x, this.actPos.y);
     this.actBtn = b;
     this.layer.add(b);
+    // the same gold coin the game uses (never the 🪙 emoji, which some devices draw silver)
+    if (spec.act === 'buy' || spec.act === 'short') {
+      this.actCoin = this.add.image(this.actPos.x - 100 - 20, this.actPos.y, 'art:coin').setScale(1.9);
+      this.layer.add(this.actCoin);
+    }
   }
 
   tap(it) {

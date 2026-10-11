@@ -14,10 +14,12 @@
 //   equipped.helmet / .pet: logic id ('helmetCrown', 'petCat'), index into HERO_ART.helmetOrder / petOrder, or null.
 // Code-drawn creatures face RIGHT in their texture (eyes on the right); setFacing('left') flips them.
 // Every texture is NEAREST-filtered; never smooth-scale. Phaser is the global from the <script> tag.
-import { KENNEY, TD_STONE, FLOOR_STONE, RC, PAL, SLIME_COLOURS, PIX, HAIR_BACK, CHEST_MARKS } from './art-frames.js?v=202610112341';
+import { KENNEY, FLOOR_STONE, RC, PAL, SLIME_COLOURS, PIX, HAIR_BACK, CHEST_MARKS } from './art-frames.js?v=202610112341';
 
 export const ART_PX = 16;
 export const FLOOR_Y = 92;
+/** Pets are drawn a touch smaller than the hero (12 px art → ~9 px on screen) so they read as a little friend. */
+export const PET_SCALE = 0.72;
 
 const T = key => 'art:' + key;            // texture key of a code-drawn art key
 const nearest = () => Phaser.Textures.FilterMode.NEAREST;
@@ -275,7 +277,7 @@ export function makeHero(scene, look, { view = 'front' } = {}) {
   c.view = view;
   c.setSize(16, 16);
   const img = () => scene.add.image(0, 0, T('missing')).setOrigin(0.5, 1);
-  c.pet = scene.add.image(-14, 0, T('missing')).setOrigin(0.5, 1).setVisible(false);
+  c.pet = scene.add.image(-12, 0, T('missing')).setOrigin(0.5, 1).setScale(PET_SCALE).setVisible(false);
   c.parts = { body: img(), pants: img(), tunic: img(), hair: img(), helmet: img() };
   c.add([c.pet, c.parts.body, c.parts.pants, c.parts.tunic, c.parts.hair, c.parts.helmet]);
   // hand positions (art px, relative to the bottom-centre origin)
@@ -299,7 +301,7 @@ export function makeHero(scene, look, { view = 'front' } = {}) {
   /** Put the pet on one side, facing the hero (it trails behind the walking direction). */
   c.setPetSide = side => {
     c.petSide = side;
-    c.pet.x = side === 'right' ? 14 : -14;
+    c.pet.x = side === 'right' ? 12 : -12;
     c.pet.setFlipX(side === 'right');
     return c;
   };
@@ -347,25 +349,34 @@ export function hop(sprite, { height = 3, repeat = 0, delay = 0, repeatDelay = 6
 
 // ---------------------------------------------------------------- backdrop
 /**
- * 192 × 108 art-px room: Tiny Dungeon brick faces tinted per floor (1 purple, 2 blue, 3 green, 4 gold),
- * a stone floor strip from y = 92, two wall banners and a dimmed door at the far left (where the hero comes in).
- * No torches on the wall: 火把 is a clue object, so the backdrop never shows anything a clue can name, and the
- * door stays clear of every object / place position (scenes keep ≥ 18 art px free floor at their left).
+ * 192 × 108 art-px room: a calm, low-contrast stone wall tinted per floor (1 purple, 2 blue, 3 green, 4 gold),
+ * a darker ceiling band, a stone floor strip from y = 92 and a dimmed door at the far left (where the hero comes
+ * in). Deliberately plain — the clue objects must read clearly, so the wall has no busy texture, no grates and
+ * no hanging decorations. No torches on the wall either: 火把 is a clue object, so the backdrop never shows
+ * anything a clue can name, and the door stays clear of every object / place position (scenes keep ≥ 18 art px
+ * free floor at their left).
  */
 export function makeBackdrop(scene, floor = 1) {
   const P = FLOOR_STONE[floor] || FLOOR_STONE[1];
-  const map = { [TD_STONE.mortar]: P.mortar, [TD_STONE.stone]: P.stone, [TD_STONE.hi]: P.hi,
-    [TD_STONE.deep]: P.deep, [TD_STONE.mid]: P.mortar };
-  const wall = recolour(scene, `bd.${floor}.wall`, 'td', KENNEY.wall[1], map);
-  const grate = recolour(scene, `bd.${floor}.grate`, 'td', KENNEY['wall.grate'][1], map);
-  const slab = recolour(scene, `bd.${floor}.slab`, 'td', KENNEY['floor.slab'][1], map);
+  // calm wall tile: flat stone with a soft 1 px seam grid (low contrast so the objects pop)
+  const wall = canvasTex(scene, `bd.${floor}.wall`, 16, 16, ctx => {
+    ctx.fillStyle = P.stone; ctx.fillRect(0, 0, 16, 16);
+    ctx.fillStyle = P.mortar; ctx.fillRect(0, 0, 16, 1); ctx.fillRect(0, 0, 1, 16);
+    ctx.globalAlpha = 0.35; ctx.fillStyle = P.hi; ctx.fillRect(1, 1, 14, 1); ctx.globalAlpha = 1;
+  });
+  // calm floor slab: mortar base with a clear top edge and one soft seam
+  const slab = canvasTex(scene, `bd.${floor}.slab`, 16, 16, ctx => {
+    ctx.fillStyle = P.mortar; ctx.fillRect(0, 0, 16, 16);
+    ctx.fillStyle = P.deep; ctx.fillRect(0, 0, 16, 1);
+    ctx.globalAlpha = 0.5; ctx.fillStyle = P.stone; ctx.fillRect(0, 2, 15, 1); ctx.fillRect(0, 10, 15, 1); ctx.globalAlpha = 1;
+    ctx.fillStyle = P.deep; ctx.fillRect(15, 0, 1, 16);
+  });
 
   const c = scene.add.container(0, 0);
   c.setSize(192, 108);
   c.floorY = FLOOR_Y;
   for (let ty = 0; ty < 6; ty++) for (let tx = 0; tx < 12; tx++) {
-    const isGrate = ty === 1 && (tx === 3 || tx === 8);
-    c.add(scene.add.image(tx * 16, ty * 16, isGrate ? grate : wall).setOrigin(0, 0));
+    c.add(scene.add.image(tx * 16, ty * 16, wall).setOrigin(0, 0));
   }
   const g = scene.add.graphics();
   g.fillStyle(Phaser.Display.Color.HexStringToColor(P.ceiling).color, 1).fillRect(0, 0, 192, 3);
@@ -376,18 +387,6 @@ export function makeBackdrop(scene, floor = 1) {
   c.add(edge);
 
   c.door = scene.add.image(0, FLOOR_Y, 'td', KENNEY.door[1]).setOrigin(0, 1).setTint(0x9a92a8);
-  // plain cloth pennants (no emblem, no shield shape): clearly wall decoration, never a clue object
-  const cloth = { 1: ['#2f8f83', '#226b62'], 2: ['#c0582f', '#93411f'], 3: ['#7a5bb0', '#5b4388'], 4: ['#3f6fb0', '#2e5288'] }[floor] || ['#2f8f83', '#226b62'];
-  const pennant = canvasTex(scene, `bd.${floor}.pennant`, 12, 20, ctx => {
-    ctx.fillStyle = '#5b3a1e'; ctx.fillRect(0, 0, 12, 2);                 // rod
-    ctx.fillStyle = '#e8c56a'; ctx.fillRect(0, 0, 1, 2); ctx.fillRect(11, 0, 1, 2);
-    ctx.fillStyle = cloth[0]; ctx.fillRect(2, 2, 8, 15);                  // cloth
-    ctx.fillStyle = cloth[1]; ctx.fillRect(8, 2, 2, 15); ctx.fillRect(2, 2, 8, 1);
-    ctx.fillStyle = '#e8c56a'; ctx.fillRect(2, 13, 8, 1);                 // trim
-    ctx.fillStyle = cloth[0]; ctx.fillRect(2, 17, 3, 2); ctx.fillRect(7, 17, 3, 2); // swallowtail
-    ctx.fillStyle = cloth[1]; ctx.fillRect(4, 17, 1, 1); ctx.fillRect(7, 17, 1, 1);
-  });
-  c.banners = [10, 182].map(x => scene.add.image(x, 30, pennant).setOrigin(0.5, 0));
-  c.add([c.door, ...c.banners]);
+  c.add(c.door);
   return c;
 }

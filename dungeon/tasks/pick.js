@@ -4,14 +4,14 @@
 // 3 the answer chest glows and opens, and the riddle is read with the answer shown.
 // Boss room (room.info.boss): a grumpy, sleepy baby dragon sits at the right. It yawns after each riddle and falls
 // asleep (Zzz) after the last one; then RoomScene's end chest opens. Mistakes never end the boss.
-import { checkAnswer, sentenceText } from '../../dungeon-logic.js?v=0';
-import { artFrame, makeCreature } from '../art.js?v=0';
-import { FLOOR_Y } from '../stage.js?v=0';
-import { textStyle } from '../theme.js?v=0';
-import { voice } from '../voice.js?v=0';
-import { sfx } from '../sfx.js?v=0';
-import { fx } from '../fx.js?v=0';
-import { reduced, wait, tapZone, sayName, wiggle, relDir, dirTo, arrowFrom, hopQueue } from './choose.js?v=0';
+import { checkAnswer, sentenceText } from '../../dungeon-logic.js?v=202610112341';
+import { artFrame, makeCreature } from '../art.js?v=202610112341';
+import { FLOOR_Y } from '../stage.js?v=202610112341';
+import { textStyle } from '../theme.js?v=202610112341';
+import { voice } from '../voice.js?v=202610112341';
+import { sfx } from '../sfx.js?v=202610112341';
+import { fx } from '../fx.js?v=202610112341';
+import { reduced, wait, tapZone, sayName, wiggle, relDir, dirTo, arrowFrom, hopQueue } from './choose.js?v=202610112341';
 
 const DRAGON_AX = 170;
 

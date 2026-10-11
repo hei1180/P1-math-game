@@ -2,8 +2,8 @@
 // and each clue layout drawn from a hard-coded Scene object.
 // Layouts are drawn by the game's own PixelStage (same grid, slot markers, tags and hero home as the rooms).
 // preload / buildArt are idempotent, so it also works when opened straight from ?scene=Sandbox.
-import { ART_KEYS, artFrame, preloadArt, buildArt, makeHero, makeCreature, hop, makeBackdrop, HERO_ART, FLOOR_Y } from '../art.js?v=0';
-import { PixelStage } from '../stage.js?v=0';
+import { ART_KEYS, artFrame, preloadArt, buildArt, makeHero, makeCreature, hop, makeBackdrop, HERO_ART, FLOOR_Y } from '../art.js?v=202610112341';
+import { PixelStage } from '../stage.js?v=202610112341';
 
 const FONT = '"Chalkboard SE","Comic Sans MS","PingFang TC","Microsoft JhengHei",sans-serif';
 const RES = Math.min(3, Math.max(1, window.devicePixelRatio || 1));

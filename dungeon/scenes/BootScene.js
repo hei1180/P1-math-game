@@ -1,7 +1,7 @@
 // Boot: loads the Kenney sheets, builds code-drawn art + fx textures, then opens ?scene= (dev), MakeHero (no hero yet) or the Map.
-import { preloadArt, buildArt } from '../art.js?v=0';
-import { fx } from '../fx.js?v=0';
-import { textStyle } from '../theme.js?v=0';
+import { preloadArt, buildArt } from '../art.js?v=202610112341';
+import { fx } from '../fx.js?v=202610112341';
+import { textStyle } from '../theme.js?v=202610112341';
 
 export class BootScene extends Phaser.Scene {
   constructor() { super('Boot'); }

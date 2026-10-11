@@ -1,6 +1,6 @@
 // Visual effects shared by all Treasure Dungeon scenes. Textures ('fx.*') are made once by fx.makeTextures in BootScene.
 // Effects are drawn in screen (CSS) px, outside the pixel stage, so they stay smooth.
-import { FONT } from './theme.js?v=0';
+import { FONT } from './theme.js?v=202610112341';
 const MAX_LIVE = 60;
 // Live-particle budget per scene. Scene objects are reused on restart and a shutdown drops the pending
 // "particles died" timers, so the budget is reset on every shutdown (else it leaks until no fx show).

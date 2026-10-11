@@ -3,15 +3,15 @@
 // 之間 'pick' clue (tap the slime between two things) after every wave. Monsters keep coming; a wrong side or a
 // monster reaching the hero resets the combo (rushHit(false)), never ends the run. Time up → bridge.rushEnd().
 // Test hook: scene.__test = { tap(side), current(), clue(), pick(id), state() }.
-import { genRush, checkAnswer } from '../../dungeon-logic.js?v=0';
-import { artFrame } from '../art.js?v=0';
-import { PixelStage, FLOOR_Y } from '../stage.js?v=0';
-import { UI } from '../ui.js?v=0';
-import { WaveField, MODE_PROMPT, FLOOR } from '../waves.js?v=0';
-import { textStyle } from '../theme.js?v=0';
-import { sfx } from '../sfx.js?v=0';
-import { voice } from '../voice.js?v=0';
-import { fx } from '../fx.js?v=0';
+import { genRush, checkAnswer } from '../../dungeon-logic.js?v=202610112341';
+import { artFrame } from '../art.js?v=202610112341';
+import { PixelStage, FLOOR_Y } from '../stage.js?v=202610112341';
+import { UI } from '../ui.js?v=202610112341';
+import { WaveField, MODE_PROMPT, FLOOR } from '../waves.js?v=202610112341';
+import { textStyle } from '../theme.js?v=202610112341';
+import { sfx } from '../sfx.js?v=202610112341';
+import { voice } from '../voice.js?v=202610112341';
+import { fx } from '../fx.js?v=202610112341';
 
 const BOP_PTS = 10, PICK_PTS = 20;
 const MODE_TOAST = { lr: ['左面和右面', 'Left and right'], ud: ['上面和下面', 'Up and down'], mix: ['左右上下', 'All four'] };

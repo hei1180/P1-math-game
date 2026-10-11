@@ -14,7 +14,7 @@
 //   equipped.helmet / .pet: logic id ('helmetCrown', 'petCat'), index into HERO_ART.helmetOrder / petOrder, or null.
 // Code-drawn creatures face RIGHT in their texture (eyes on the right); setFacing('left') flips them.
 // Every texture is NEAREST-filtered; never smooth-scale. Phaser is the global from the <script> tag.
-import { KENNEY, TD_STONE, FLOOR_STONE, RC, PAL, SLIME_COLOURS, PIX, HAIR_BACK, CHEST_MARKS } from './art-frames.js?v=0';
+import { KENNEY, TD_STONE, FLOOR_STONE, RC, PAL, SLIME_COLOURS, PIX, HAIR_BACK, CHEST_MARKS } from './art-frames.js?v=202610112341';
 
 export const ART_PX = 16;
 export const FLOOR_Y = 92;

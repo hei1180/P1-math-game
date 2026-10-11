@@ -2,14 +2,14 @@
 // Tapping an item tries it on for free. The button under the mirror: 「買」 (price) → buy and wear;
 // owned → 「穿上」 / 「除下」. Items not for sale (chest pieces, the boss's baby dragon) show a silhouette and how
 // to get them until owned. Fixed prices, nothing random, no timers. Later slots (cape, badge, trail) are not shown.
-import { SHOP, buy, equip } from '../../dungeon-logic.js?v=0';
-import { UI, pill } from '../ui.js?v=0';
-import { fx } from '../fx.js?v=0';
-import { sfx } from '../sfx.js?v=0';
-import { voice } from '../voice.js?v=0';
-import { textStyle } from '../theme.js?v=0';
-import { makeHero, artFrame } from '../art.js?v=0';
-import { drawMirror } from './MakeHeroScene.js?v=0';
+import { SHOP, buy, equip } from '../../dungeon-logic.js?v=202610112341';
+import { UI, pill } from '../ui.js?v=202610112341';
+import { fx } from '../fx.js?v=202610112341';
+import { sfx } from '../sfx.js?v=202610112341';
+import { voice } from '../voice.js?v=202610112341';
+import { textStyle } from '../theme.js?v=202610112341';
+import { makeHero, artFrame } from '../art.js?v=202610112341';
+import { drawMirror } from './MakeHeroScene.js?v=202610112341';
 
 const reduced = () => fx.lessMotion || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));

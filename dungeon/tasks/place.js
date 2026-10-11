@@ -2,12 +2,12 @@
 // (or taps it, then taps a place). A drop away from every place just slides it back (no mistake).
 // Right: it stays. Wrong: bonk, it slides back to the tray. Hints: 1 replay, 2 glow + arrow, 3 the item
 // flies to an answer place and the sentence is read. clue.turned (F2R3): the queue turns round first.
-import { checkAnswer, KINDS } from '../../dungeon-logic.js?v=0';
-import { attachWalk, glowRefs, hintArrows, answerSentence, nearestAnswer } from '../hero-walk.js?v=0';
-import { hop } from '../art.js?v=0';
-import { sfx } from '../sfx.js?v=0';
-import { voice } from '../voice.js?v=0';
-import { fx } from '../fx.js?v=0';
+import { checkAnswer, KINDS } from '../../dungeon-logic.js?v=202610112341';
+import { attachWalk, glowRefs, hintArrows, answerSentence, nearestAnswer } from '../hero-walk.js?v=202610112341';
+import { hop } from '../art.js?v=202610112341';
+import { sfx } from '../sfx.js?v=202610112341';
+import { voice } from '../voice.js?v=202610112341';
+import { fx } from '../fx.js?v=202610112341';
 
 const reduced = () => fx.lessMotion || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 const DROP_R = 16; // art px from a place's centre that still counts as a drop there

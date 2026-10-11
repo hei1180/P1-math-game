@@ -14,12 +14,12 @@
 //   field.tap(side)  same as pressing a button      field.current() -> { i, side, state } | null
 //   field.stop()     end the running wave now        field.destroy()
 // Slimes come along the floor from the sides, bats drop from the ceiling, moles pop up in the dirt below the hero.
-import { checkAnswer } from '../dungeon-logic.js?v=0';
-import { makeHero, makeBackdrop, makeCreature, artFrame } from './art.js?v=0';
-import { UI as C, textStyle } from './theme.js?v=0';
-import { sfx } from './sfx.js?v=0';
-import { voice } from './voice.js?v=0';
-import { fx } from './fx.js?v=0';
+import { checkAnswer } from '../dungeon-logic.js?v=202610112341';
+import { makeHero, makeBackdrop, makeCreature, artFrame } from './art.js?v=202610112341';
+import { UI as C, textStyle } from './theme.js?v=202610112341';
+import { sfx } from './sfx.js?v=202610112341';
+import { voice } from './voice.js?v=202610112341';
+import { fx } from './fx.js?v=202610112341';
 
 export const FLOOR = 68, HERO_X = 96;
 const HEAD = FLOOR - 16, DIRT = FLOOR + 10;

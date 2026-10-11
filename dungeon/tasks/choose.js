@@ -3,12 +3,12 @@
 // (the stage draws footprint arrows under them at support level 3). Grading only through checkAnswer.
 //
 // Also exports small helpers shared by the judge / select / pick tasks (same folder, no new files).
-import { checkAnswer, sentenceText, KINDS } from '../../dungeon-logic.js?v=0';
-import { artFrame, hop } from '../art.js?v=0';
-import { FLOOR_Y } from '../stage.js?v=0';
-import { voice } from '../voice.js?v=0';
-import { sfx } from '../sfx.js?v=0';
-import { fx } from '../fx.js?v=0';
+import { checkAnswer, sentenceText, KINDS } from '../../dungeon-logic.js?v=202610112341';
+import { artFrame, hop } from '../art.js?v=202610112341';
+import { FLOOR_Y } from '../stage.js?v=202610112341';
+import { voice } from '../voice.js?v=202610112341';
+import { sfx } from '../sfx.js?v=202610112341';
+import { fx } from '../fx.js?v=202610112341';
 
 // ---------------------------------------------------------------- shared helpers
 export const reduced = () => fx.lessMotion || !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);

@@ -2,10 +2,10 @@
 // then 「完成」. Graded with checkAnswer(clue, [ids]) (set-equal). A wrong set is one mistake: the bat shows the
 // right set (they glow, wrong rings drop off) and the child confirms by ringing the glowing ones and tapping 完成.
 // Further wrong tries follow the hint ladder; step 3 rings the answers and reads the sentence.
-import { checkAnswer, sentenceText, KINDS } from '../../dungeon-logic.js?v=0';
-import { voice } from '../voice.js?v=0';
-import { sfx } from '../sfx.js?v=0';
-import { reduced, wait, afterSpeech, tapZone, wiggle, relDir, dirTo, arrowFrom, hopQueue, flashFeet } from './choose.js?v=0';
+import { checkAnswer, sentenceText, KINDS } from '../../dungeon-logic.js?v=202610112341';
+import { voice } from '../voice.js?v=202610112341';
+import { sfx } from '../sfx.js?v=202610112341';
+import { reduced, wait, afterSpeech, tapZone, wiggle, relDir, dirTo, arrowFrom, hopQueue, flashFeet } from './choose.js?v=202610112341';
 
 export default class SelectTask {
   constructor(room, clue) { this.room = room; this.clue = clue; this.dead = false; this.sel = new Set(); this.rings = {}; this.locked = false; }

@@ -17,12 +17,12 @@
 //   answerSentence(clue, slotIndex, kind) -> {zh, en}   e.g. 「小騎士在星星寶箱的右面」 (logic sentenceText)
 //   nearestAnswer(room, clue, ax, ay) -> slot index    the answer slot closest to a point
 //   popItem(room, kind, ax, ay)   a found item (the key) pops up out of a place with a sparkle
-import { KINDS, sentenceText } from '../dungeon-logic.js?v=0';
-import { FLOOR_Y } from './stage.js?v=0';
-import { hop } from './art.js?v=0';
-import { voice } from './voice.js?v=0';
-import { fx } from './fx.js?v=0';
-import { textStyle } from './theme.js?v=0';
+import { KINDS, sentenceText } from '../dungeon-logic.js?v=202610112341';
+import { FLOOR_Y } from './stage.js?v=202610112341';
+import { hop } from './art.js?v=202610112341';
+import { voice } from './voice.js?v=202610112341';
+import { fx } from './fx.js?v=202610112341';
+import { textStyle } from './theme.js?v=202610112341';
 
 export const WALK_SPEED = 40;      // art px per second
 export const WALK_MAX_MS = 1800;   // a 6-year-old never waits longer than this for one walk

@@ -2,8 +2,8 @@
 // (shown in a list, each with 🔈, read one by one at the start). The child drags every item onto the shelf and taps
 // 完成 → checkAnswer (checkSolve). Wrong: each sentence that is not true turns red and the items it names wobble
 // (one mistake). Hints: 2 the things the first broken sentence names glow, 3 the items fly to the answer.
-import { checkAnswer, truthOf } from '../../dungeon-logic.js?v=0';
-import { DragBoard, SentencePanel, TaskButton, wait, reduced } from './drag.js?v=0';
+import { checkAnswer, truthOf } from '../../dungeon-logic.js?v=202610112341';
+import { DragBoard, SentencePanel, TaskButton, wait, reduced } from './drag.js?v=202610112341';
 
 export default class SolveTask {
   constructor(room, clue) {

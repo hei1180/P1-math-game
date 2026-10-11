@@ -2,13 +2,13 @@
 // hair colour 6, tunic 8) and a preset name + number (two arrows, no free text). 「出發！」 saves with
 // bridge.saveLook and opens data.then (default 'Map'). First visit (no hero yet) comes here from Boot;
 // later the Shop's 外觀 tab opens it (free changes, ← goes back without saving).
-import { SKINS, HAIR_STYLES, HAIR_COLOURS, TUNICS, HERO_NAMES } from '../../dungeon-logic.js?v=0';
-import { UI, pill } from '../ui.js?v=0';
-import { fx } from '../fx.js?v=0';
-import { sfx } from '../sfx.js?v=0';
-import { voice } from '../voice.js?v=0';
-import { textStyle } from '../theme.js?v=0';
-import { makeHero } from '../art.js?v=0';
+import { SKINS, HAIR_STYLES, HAIR_COLOURS, TUNICS, HERO_NAMES } from '../../dungeon-logic.js?v=202610112341';
+import { UI, pill } from '../ui.js?v=202610112341';
+import { fx } from '../fx.js?v=202610112341';
+import { sfx } from '../sfx.js?v=202610112341';
+import { voice } from '../voice.js?v=202610112341';
+import { textStyle } from '../theme.js?v=202610112341';
+import { makeHero } from '../art.js?v=202610112341';
 
 const reduced = () => fx.lessMotion || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));

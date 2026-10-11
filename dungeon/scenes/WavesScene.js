@@ -2,14 +2,14 @@
 // genRoom gives 3 wave clues (4, 6, 8 monsters). No time pressure: monsters walk in slowly and wait at the hero.
 // Wrong side = a mistake (shield bonk, 「哎呀！」, combo reset, the monster stays). 1 coin per bop.
 // Stars, bridge.complete and the end panel as in RoomScene. Test hook: scene.__test = { tap(side), current() }.
-import { genRoom, roomByKey, nextRoom, starsFor, coinsPerAnswer, confusionOf, FLOOR_LOOK, SHOP, equip } from '../../dungeon-logic.js?v=0';
-import { artFrame } from '../art.js?v=0';
-import { PixelStage } from '../stage.js?v=0';
-import { UI } from '../ui.js?v=0';
-import { WaveField, MODE_PROMPT } from '../waves.js?v=0';
-import { sfx } from '../sfx.js?v=0';
-import { voice } from '../voice.js?v=0';
-import { fx } from '../fx.js?v=0';
+import { genRoom, roomByKey, nextRoom, starsFor, coinsPerAnswer, confusionOf, FLOOR_LOOK, SHOP, equip } from '../../dungeon-logic.js?v=202610112341';
+import { artFrame } from '../art.js?v=202610112341';
+import { PixelStage } from '../stage.js?v=202610112341';
+import { UI } from '../ui.js?v=202610112341';
+import { WaveField, MODE_PROMPT } from '../waves.js?v=202610112341';
+import { sfx } from '../sfx.js?v=202610112341';
+import { voice } from '../voice.js?v=202610112341';
+import { fx } from '../fx.js?v=202610112341';
 
 const WAVE_ZH = ['一', '二', '三', '四', '五'];
 const reduced = () => fx.lessMotion || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);

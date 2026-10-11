@@ -2,10 +2,10 @@
 // Any slot in clue.answers is right. The button appears when a tap-walk ends on an empty place and is one-shot
 // (after a wrong try the hero has to move again). Hints: 1 replay (room), 2 glow + arrow, 3 the hero walks
 // to an answer and the sentence is read with the answer filled in. keyTwist: the key pops out of the place.
-import { checkAnswer } from '../../dungeon-logic.js?v=0';
-import { attachWalk, glowRefs, hintArrows, answerSentence, nearestAnswer, popItem } from '../hero-walk.js?v=0';
-import { sfx } from '../sfx.js?v=0';
-import { fx } from '../fx.js?v=0';
+import { checkAnswer } from '../../dungeon-logic.js?v=202610112341';
+import { attachWalk, glowRefs, hintArrows, answerSentence, nearestAnswer, popItem } from '../hero-walk.js?v=202610112341';
+import { sfx } from '../sfx.js?v=202610112341';
+import { fx } from '../fx.js?v=202610112341';
 
 export default class GoTask {
   constructor(room, clue) {

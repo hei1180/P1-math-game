@@ -6,14 +6,14 @@
 //   justDone: the room just finished — its stars fly to its door and the hero stands there.
 //   goTo:     the end panel's Next — after the stars the hero walks on to that door and opens it.
 // The map scrolls vertically (drag / wheel) when the screen is short. Fixed bottom bar: 裝備室 Shop and 🏆.
-import { ROOMS, roomsOf, roomByKey, isRoomOpen, isFloorOpen, isRushOpen, floorMedal, heroName } from '../../dungeon-logic.js?v=0';
-import { UI, pill, starPts } from '../ui.js?v=0';
-import { fx } from '../fx.js?v=0';
-import { sfx } from '../sfx.js?v=0';
-import { voice } from '../voice.js?v=0';
-import { textStyle } from '../theme.js?v=0';
-import { makeHero, makeBackdrop } from '../art.js?v=0';
-import { FLOOR_STONE } from '../art-frames.js?v=0';
+import { ROOMS, roomsOf, roomByKey, isRoomOpen, isFloorOpen, isRushOpen, floorMedal, heroName } from '../../dungeon-logic.js?v=202610112341';
+import { UI, pill, starPts } from '../ui.js?v=202610112341';
+import { fx } from '../fx.js?v=202610112341';
+import { sfx } from '../sfx.js?v=202610112341';
+import { voice } from '../voice.js?v=202610112341';
+import { textStyle } from '../theme.js?v=202610112341';
+import { makeHero, makeBackdrop } from '../art.js?v=202610112341';
+import { FLOOR_STONE } from '../art-frames.js?v=202610112341';
 
 /** Scene key for a room: wave rooms (F1R6, F3R6) run in Waves, the rest in Room. */
 export const sceneOfRoom = key => (ROOMS.find(r => r.key === key) || {}).wave ? 'Waves' : 'Room';

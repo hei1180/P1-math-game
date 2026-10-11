@@ -9,12 +9,12 @@
 //     panel.pick() -> Promise<index|null>   panel.paint(i, 'normal'|'bad'|'good'|'speak')   panel.flash(i)   panel.destroy()
 //   btn = new TaskButton(room, { zh, en, icon, side: 'right'|'left' })   btn.wait() -> Promise<true|null>   btn.enable(on)  btn.hide()
 // Hit areas: items ≥ 48 CSS px (nearest item centre within max(10, 26 / PX) art px); slots snap within max(14, 28 / PX).
-import { KINDS } from '../../dungeon-logic.js?v=0';
-import { fx } from '../fx.js?v=0';
-import { sfx } from '../sfx.js?v=0';
-import { voice } from '../voice.js?v=0';
-import { pill } from '../ui.js?v=0';
-import { textStyle, UI as C } from '../theme.js?v=0';
+import { KINDS } from '../../dungeon-logic.js?v=202610112341';
+import { fx } from '../fx.js?v=202610112341';
+import { sfx } from '../sfx.js?v=202610112341';
+import { voice } from '../voice.js?v=202610112341';
+import { pill } from '../ui.js?v=202610112341';
+import { textStyle, UI as C } from '../theme.js?v=202610112341';
 
 export const reduced = () => fx.lessMotion || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 export const dur = ms => (reduced() ? Math.min(ms, 150) : ms);

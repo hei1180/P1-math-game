@@ -2,12 +2,12 @@
 // smooth-text speech bubble (also spoken). The child taps ✓ 對 or ✗ 不對. Grading only through checkAnswer.
 // Hints: 1 the bat asks again, then the owl repeats; 2 the named reference glows + an arrow to the side the owl
 // named; 3 shows why (both things glow, arrow to where the thing really is, the true sentence is read).
-import { checkAnswer, sentenceText, truthOf } from '../../dungeon-logic.js?v=0';
-import { makeCreature, hop } from '../art.js?v=0';
-import { textStyle, UI as C } from '../theme.js?v=0';
-import { voice } from '../voice.js?v=0';
-import { sfx } from '../sfx.js?v=0';
-import { reduced, wait, afterSpeech, tapZone, sayName, relDir, dirTo, arrowFrom, hopQueue, flashFeet, OPPOSITE } from './choose.js?v=0';
+import { checkAnswer, sentenceText, truthOf } from '../../dungeon-logic.js?v=202610112341';
+import { makeCreature, hop } from '../art.js?v=202610112341';
+import { textStyle, UI as C } from '../theme.js?v=202610112341';
+import { voice } from '../voice.js?v=202610112341';
+import { sfx } from '../sfx.js?v=202610112341';
+import { reduced, wait, afterSpeech, tapZone, sayName, relDir, dirTo, arrowFrom, hopQueue, flashFeet, OPPOSITE } from './choose.js?v=202610112341';
 
 const BTN = [{ id: 'yes', zh: '對', en: 'Right', icon: '✓' }, { id: 'no', zh: '不對', en: 'Not right', icon: '✗' }];
 

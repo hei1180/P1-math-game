@@ -1,21 +1,21 @@
 // Treasure Dungeon entry: DOM shell wiring, the bridge to shared.js / Firestore, Phaser boot.
 // The bridge is the only link between scenes and shared.js; scenes read it with this.registry.get('bridge').
 import { signIn, onUser, player, settings, session, enterTestMode, initAudio, engine, resetEngine, registerHit, endFever,
-         startTimer, stopTimer, saveScore, renderLeaderboard, showRankPopup, mountTeacherModal, sharedSound, logAttempt } from '../shared.js?v=0';
-import { lcg, recordResult, levelFor, roomByKey, roomsOf } from '../dungeon-logic.js?v=0';
-import { loadProgress, saveProgress } from '../dungeon-progress.js?v=0';
-import { sfx } from './sfx.js?v=0';
-import { voice } from './voice.js?v=0';
-import { fx } from './fx.js?v=0';
-import { scaleConfig, installHiDPI } from '../bonds/hidpi.js?v=0';
-import { BootScene } from './scenes/BootScene.js?v=0';
-import { MapScene } from './scenes/MapScene.js?v=0';
-import { MakeHeroScene } from './scenes/MakeHeroScene.js?v=0';
-import { ShopScene } from './scenes/ShopScene.js?v=0';
-import { RoomScene } from './RoomScene.js?v=0';
-import { WavesScene } from './scenes/WavesScene.js?v=0';
-import { RushScene } from './scenes/RushScene.js?v=0';
-import * as SandboxMod from './scenes/SandboxScene.js?v=0';
+         startTimer, stopTimer, saveScore, renderLeaderboard, showRankPopup, mountTeacherModal, sharedSound, logAttempt } from '../shared.js?v=202610112341';
+import { lcg, recordResult, levelFor, roomByKey, roomsOf } from '../dungeon-logic.js?v=202610112341';
+import { loadProgress, saveProgress } from '../dungeon-progress.js?v=202610112341';
+import { sfx } from './sfx.js?v=202610112341';
+import { voice } from './voice.js?v=202610112341';
+import { fx } from './fx.js?v=202610112341';
+import { scaleConfig, installHiDPI } from '../bonds/hidpi.js?v=202610112341';
+import { BootScene } from './scenes/BootScene.js?v=202610112341';
+import { MapScene } from './scenes/MapScene.js?v=202610112341';
+import { MakeHeroScene } from './scenes/MakeHeroScene.js?v=202610112341';
+import { ShopScene } from './scenes/ShopScene.js?v=202610112341';
+import { RoomScene } from './RoomScene.js?v=202610112341';
+import { WavesScene } from './scenes/WavesScene.js?v=202610112341';
+import { RushScene } from './scenes/RushScene.js?v=202610112341';
+import * as SandboxMod from './scenes/SandboxScene.js?v=202610112341';
 
 const $ = id => document.getElementById(id);
 const params = new URLSearchParams(location.search);

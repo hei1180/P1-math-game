@@ -3,11 +3,11 @@
 // (sentencesFor on the child's own arrangement). Grading: checkAnswer(clue, { scene, sentence }).
 // Hints: 1 the clue replays (room.wrong), 2 the things the true sentence names glow, 3 the true sentence turns green
 // and is read aloud, then the room moves on.
-import { checkAnswer, sentencesFor, truthOf } from '../../dungeon-logic.js?v=0';
-import { DragBoard, SentencePanel, TaskButton, wait, reduced } from './drag.js?v=0';
-import { hop } from '../art.js?v=0';
-import { voice } from '../voice.js?v=0';
-import { sfx } from '../sfx.js?v=0';
+import { checkAnswer, sentencesFor, truthOf } from '../../dungeon-logic.js?v=202610112341';
+import { DragBoard, SentencePanel, TaskButton, wait, reduced } from './drag.js?v=202610112341';
+import { hop } from '../art.js?v=202610112341';
+import { voice } from '../voice.js?v=202610112341';
+import { sfx } from '../sfx.js?v=202610112341';
 
 export default class MakeTask {
   constructor(room, clue) {

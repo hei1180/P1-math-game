@@ -11,15 +11,15 @@
 //                                                  flaps when a clue is read (ui.prompt / 🔈), on hints and on 做得好！
 // Start data: { key } (consumed in init, so a later start without data never replays an old room).
 import { genRoom, roomByKey, nextRoom, hintStep, mistakesFor, starsFor, coinsPerAnswer, chestCoins, confusionOf,
-         KINDS, CHEST_LOOKS, FLOOR_LOOK, SHOP, equip } from '../dungeon-logic.js?v=0';
-import { makeHero, makeBackdrop, artFrame, makeCreature } from './art.js?v=0';
-import { PixelStage, FLOOR_Y } from './stage.js?v=0';
-import { UI } from './ui.js?v=0';
-import { TASKS } from './tasks/index.js?v=0';
-import { sfx } from './sfx.js?v=0';
-import { voice } from './voice.js?v=0';
-import { fx } from './fx.js?v=0';
-import { textStyle } from './theme.js?v=0';
+         KINDS, CHEST_LOOKS, FLOOR_LOOK, SHOP, equip } from '../dungeon-logic.js?v=202610112341';
+import { makeHero, makeBackdrop, artFrame, makeCreature } from './art.js?v=202610112341';
+import { PixelStage, FLOOR_Y } from './stage.js?v=202610112341';
+import { UI } from './ui.js?v=202610112341';
+import { TASKS } from './tasks/index.js?v=202610112341';
+import { sfx } from './sfx.js?v=202610112341';
+import { voice } from './voice.js?v=202610112341';
+import { fx } from './fx.js?v=202610112341';
+import { textStyle } from './theme.js?v=202610112341';
 
 const LR = new Set(['left', 'right', 'side']);
 const reduced = () => fx.lessMotion || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);

@@ -19,10 +19,10 @@
 //   ui.clear()                            remove everything (pending promises resolve null)
 //   ui.modalOpen                          true while an end panel / card blocks the room
 // Buttons give a tick + press squash on pointerdown and act on pointerup. Every tappable thing is ≥ 48 px.
-import { UI as C, textStyle } from './theme.js?v=0';
-import { sfx } from './sfx.js?v=0';
-import { voice } from './voice.js?v=0';
-import { fx } from './fx.js?v=0';
+import { UI as C, textStyle } from './theme.js?v=202610112341';
+import { sfx } from './sfx.js?v=202610112341';
+import { voice } from './voice.js?v=202610112341';
+import { fx } from './fx.js?v=202610112341';
 
 const reduced = () => fx.lessMotion || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 const dur = ms => (reduced() ? Math.min(ms, 150) : ms);

@@ -24,11 +24,11 @@
 //
 // Sprites use their textures' NEAREST filter (set by art.js); this file never smooth-scales art.
 // Emits scene event 'stage:resize' (stage) after every fit.
-import { artFrame, makeCreature } from './art.js?v=0';
-import { KINDS } from '../dungeon-logic.js?v=0';
-import { textStyle } from './theme.js?v=0';
-import { fx } from './fx.js?v=0';
-import { DPR } from '../bonds/hidpi.js?v=0';
+import { artFrame, makeCreature } from './art.js?v=202610112341';
+import { KINDS } from '../dungeon-logic.js?v=202610112341';
+import { textStyle } from './theme.js?v=202610112341';
+import { fx } from './fx.js?v=202610112341';
+import { DPR } from '../bonds/hidpi.js?v=202610112341';
 
 export const ROOM_W = 192, ROOM_H = 108, FLOOR_Y = 92, STEP = 20;
 export const FOCUS_MIN = 120, HOME_GAP = 18; // art px: narrowest focus; free floor left of a scene for the hero

@@ -70,3 +70,13 @@ All inside the 10–12 min target (floor 3 a little over); clue counts unchanged
 ## Shared files (merge note)
 
 Picnic Park (main checkout, uncommitted) edits the same shared files as this branch: `index.html`, `shared.js`, `labels.js`, `teacher.html`, `teacher-data.js`, `firestore.rules`, `bump.sh`, `README.md` and their tests. The dungeon edits there are additive (new keys / rows / cards); merge by keeping both sides.
+
+## Post-review changes (owner feedback)
+
+- **Backdrop (`dungeon/art.js` `makeBackdrop`)**: the busy tiled brick wall, grate tiles and wall pennants were removed. It is now a calm, low-contrast stone wall (flat tile with a soft 1 px seam grid) tinted per floor, a darker ceiling band, a floor slab strip and the dimmed door. `bd.<floor>.wall` / `.slab` textures are still produced for the map. `TD_STONE` is no longer imported there.
+- **Pets smaller (`art.js`)**: `PET_SCALE = 0.72`; the pet trails at ±12 art px instead of ±14.
+- **Shop coin**: the item cards and the buy button now draw the game's gold `art:coin` sprite, never the 🪙 emoji (some devices draw it silver).
+- **Map torches (`MapScene.drawBand`)**: the two torches per floor flicker (angle + scaleX wobble; still under Less motion).
+- **Bat (`art-frames.js` `PIX.bat`)**: redrawn as a friendlier, lighter bat (rounded head, one big eye, a smile, no fang). Used by both the wave enemies and 蝠蝠 Fu-fu.
+- **Boy / girl + cosmetics**: `hero.sex` (`SEXES = ['boy','girl']`) adds the 性別 row to 製作英雄 (a girl sets a long-hair default and wears a code-drawn bow). `COSMETICS` (14 skins / hair colours / outfits) are bought in the shop's new 裝扮 tab; owning one adds its colour as a 製作英雄 swatch. `buy`/`equip` handle the cosmetic slots (`skin`, `hairColour`, `tunic`); tested in `tests/dungeon-logic.test.mjs`.
+- **Class gallery**: new page-scene `dungeon/scenes/GalleryScene.js` and Firestore `dungeonGallery/{uid}` (rules mirror `robotGallery`; see `validDungeonGallery`). `dungeon-progress.js` gains `loadGallery` / `saveGalleryEntry` / `setGalleryHidden`; `validateGalleryEntry` lives in `dungeon-logic.js`. The bridge publishes the hero on every `saveLook` and exposes `bridge.gallery`. Reached from the map's new 展覽廳 button; teacher-only hide/show. Teacher toggle `settings.dungeonGallery` (shared.js; on by default). **The teacher must re-publish `firestore.rules`** to allow `dungeonGallery`.

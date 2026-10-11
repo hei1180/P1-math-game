@@ -1,8 +1,9 @@
-// 製作英雄 Make your hero: a big front-view hero in a mirror, rows of swatches (skin 6, hair style 5,
-// hair colour 6, tunic 8) and a preset name + number (two arrows, no free text). 「出發！」 saves with
-// bridge.saveLook and opens data.then (default 'Map'). First visit (no hero yet) comes here from Boot;
-// later the Shop's 外觀 tab opens it (free changes, ← goes back without saving).
-import { SKINS, HAIR_STYLES, HAIR_COLOURS, TUNICS, SEXES, HERO_NAMES, ownedCosmetics } from '../../dungeon-logic.js?v=202610112341';
+// 製作英雄 Make your hero: a big front-view hero in a mirror, rows of swatches (sex 2, skin 6, hair style 5,
+// hair colour 6, outfit 4, clothes colour 8, weapon 5) and a preset name + number (two arrows, no free text).
+// 「出發！」 saves with bridge.saveLook and opens data.then (default 'Map'). First visit (no hero yet) comes
+// here from Boot; later the Shop's 改造型 tab opens it (free changes, ← goes back without saving). Swatches for
+// paid outfits, weapons and cosmetics only appear once bought in the shop.
+import { SKINS, HAIR_STYLES, HAIR_COLOURS, TUNICS, SEXES, HERO_NAMES, OUTFITS, WEAPONS, ownedCosmetics } from '../../dungeon-logic.js?v=202610112341';
 import { UI, pill } from '../ui.js?v=202610112341';
 import { fx } from '../fx.js?v=202610112341';
 import { sfx } from '../sfx.js?v=202610112341';
@@ -87,6 +88,13 @@ export class MakeHeroScene extends Phaser.Scene {
     };
     this.name = h.name && HERO_NAMES[h.name.i] ? { ...h.name } : { i: Math.floor(rng() * HERO_NAMES.length), n: 1 + Math.floor(rng() * 99) };
     this.leaving = false;
+    // outfit and weapon live in `equipped` (like helmet / pet). Paid ones appear only once bought.
+    const owns = id => (p.looks || []).includes(id);
+    this.outfitList = OUTFITS.filter(o => o.price == null || owns(o.id));
+    this.weaponList = [null, ...WEAPONS.filter(w => w.price == null || owns(w.id))];
+    const eq = p.equipped || {};
+    this.sel.outfit = Math.max(0, this.outfitList.findIndex(o => o.id === (eq.outfit || 'tunic')));
+    this.sel.weapon = Math.max(0, this.weaponList.findIndex(w => (w ? w.id : null) === (eq.weapon || null)));
 
     this.ui = new UI(this);
     this.ui.prompt(this.first ? '製作你的英雄！' : '換個樣子', this.first ? 'Make your hero' : 'Change your look', { speak: true });
@@ -115,7 +123,10 @@ export class MakeHeroScene extends Phaser.Scene {
       hairColour: this.lists.hairColour[this.sel.hairColour], tunic: this.lists.tunic[this.sel.tunic], name: { ...this.name },
     };
   }
-  look() { return { hero: this.hero(), equipped: {} }; } // no helmet / pet here: the hair stays visible
+  look() {
+    const outfit = this.outfitList[this.sel.outfit], weapon = this.weaponList[this.sel.weapon];
+    return { hero: this.hero(), equipped: { outfit: outfit ? outfit.id : 'tunic', weapon: weapon ? weapon.id : null } };
+  }
 
   rows() {
     return [
@@ -123,7 +134,9 @@ export class MakeHeroScene extends Phaser.Scene {
       { key: 'skin', zh: '皮膚', en: 'Skin', n: this.lists.skin.length },
       { key: 'hairStyle', zh: '髮型', en: 'Hair', n: this.lists.hairStyle.length },
       { key: 'hairColour', zh: '髮色', en: 'Hair colour', n: this.lists.hairColour.length },
-      { key: 'tunic', zh: '衣服', en: 'Tunic', n: this.lists.tunic.length },
+      { key: 'outfit', zh: '服裝', en: 'Outfit', n: this.outfitList.length },
+      { key: 'tunic', zh: '衣服顏色', en: 'Clothes colour', n: this.lists.tunic.length },
+      { key: 'weapon', zh: '武器', en: 'Weapon', n: this.weaponList.length },
     ];
   }
 
@@ -228,15 +241,18 @@ export class MakeHeroScene extends Phaser.Scene {
     if (!reduced()) this.tweens.add({ targets: go, scale: { from: 1, to: 1.05 }, duration: 700, yoyo: true, repeat: 2, delay: 600 });
   }
 
-  /** Swatch face: colour dot, or a little hero head (hair style / sex). */
+  /** Swatch face: colour dot, or a little hero showing a hair style / sex / outfit / weapon. */
   face(c, key, i, r) {
     const g = this.add.graphics();
     c.add(g);
-    if (key === 'hairStyle' || key === 'sex') {
-      g.fillStyle(key === 'sex' ? (SEXES[i] === 'girl' ? 0xfbcfe8 : 0xcfe4ff) : 0xdbeafe, 1).fillCircle(0, 0, r);
+    if (key === 'hairStyle' || key === 'sex' || key === 'outfit' || key === 'weapon') {
+      const bg = key === 'sex' ? (SEXES[i] === 'girl' ? 0xfbcfe8 : 0xcfe4ff) : key === 'weapon' ? 0xfff1cf : 0xdbeafe;
+      g.fillStyle(bg, 1).fillCircle(0, 0, r);
       const look = this.look();
       if (key === 'sex') { look.hero.sex = SEXES[i]; look.hero.hairStyle = SEXES[i] === 'girl' ? 'long' : 'short'; }
-      else look.hero.hairStyle = HAIR_STYLES[i];
+      else if (key === 'hairStyle') look.hero.hairStyle = HAIR_STYLES[i];
+      else if (key === 'outfit') look.equipped.outfit = this.outfitList[i].id;
+      else look.equipped.weapon = this.weaponList[i] ? this.weaponList[i].id : null;
       const m = makeHero(this, look, { view: 'front' }).setScale(Math.max(2, Math.floor((r * 2) / 12)));
       m.setPosition(0, r * 1.25 + m.scale * 4);
       // only the head shows: clip with a circular mask
@@ -261,6 +277,8 @@ export class MakeHeroScene extends Phaser.Scene {
     };
     (this.sw.hairStyle || []).forEach((s, i) => { const look = this.look(); look.hero.hairStyle = HAIR_STYLES[i]; refresh(s, look); });
     (this.sw.sex || []).forEach((s, i) => { const look = this.look(); look.hero.sex = SEXES[i]; look.hero.hairStyle = SEXES[i] === 'girl' ? 'long' : 'short'; refresh(s, look); });
+    (this.sw.outfit || []).forEach((s, i) => { const look = this.look(); look.equipped.outfit = this.outfitList[i].id; refresh(s, look); });
+    (this.sw.weapon || []).forEach((s, i) => { const look = this.look(); look.equipped.weapon = this.weaponList[i] ? this.weaponList[i].id : null; refresh(s, look); });
   }
 
   paintName() {
@@ -315,7 +333,8 @@ export class MakeHeroScene extends Phaser.Scene {
     if (save) {
       sfx.fanfare();
       const hero = this.hero();
-      try { await this.bridge.saveLook(p => ({ ...p, hero })); } catch (e) { console.warn('[makeHero] save', e); }
+      const eq = this.look().equipped;
+      try { await this.bridge.saveLook(p => ({ ...p, hero, equipped: { ...(p.equipped || {}), ...eq } })); } catch (e) { console.warn('[makeHero] save', e); }
     }
     fx.iris(this, this.then, {});
   }

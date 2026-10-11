@@ -51,9 +51,22 @@ export const FLOOR_STONE = {
 
 /** Roguelike Characters layers for the front-view hero, and the colours that get swapped. */
 export const RC = {
-  body: 0,            // light body (head, torso, arms, legs)
+  body: 0,            // base body (no mouth)
+  bodyFemale: 1,      // base body with painted lips (the pack's female base)
   pants: 3,           // dark trousers
-  tunic: 11,          // teal tunic with a belt
+  tunic: 11,          // teal tunic with a belt (the plain outfit)
+  // Outfit shapes (all share the teal base colour so art.js can recolour them to hero.tunic).
+  // index = row * 54 + col in the sheet: row 0, cols 10 (cropped) / 11 (tunic) / 12 (dress) / 13 (belted armour).
+  outfits: { cropped: 10, tunic: 11, dress: 12, armour: 13 },
+  // Weapons, held in the hero's right hand. Each: sheet, frame and the grip (origin + position in hero art px)
+  // tuned so the handle sits in the hand. The Roguelike weapons are drawn at the frame's lower-left; the Tiny
+  // Dungeon sword is centred.
+  weapons: {
+    staff:  { tex: 'rc', frame: 46,  ox: 0.12, oy: 0.95, x: 6, y: -1 },
+    sword:  { tex: 'rc', frame: 366, ox: 0.20, oy: 0.95, x: 6, y: -1 },
+    axe:    { tex: 'rc', frame: 51,  ox: 0.15, oy: 0.95, x: 6, y: -1 },
+    hammer: { tex: 'rc', frame: 50,  ox: 0.15, oy: 0.95, x: 6, y: -1 },
+  },
   hair: { short: 19, spiky: 130, bob: 129, long: 20, buns: 128 },        // brown hair styles
   helmets: { helmetPlain: 28, helmetHorned: 352, helmetCrown: 139, helmetWizard: 462, helmetGold: 30 },
   // helmetHood, helmetCap, helmetFlower, helmetPirate are drawn in code (PIX['<id>.front'] / ['<id>.back'])
@@ -657,17 +670,6 @@ export const PIX = {
     '................',
     '................',
     '................',
-  ] },
-
-  // A girl's hair bow (10 × 7), drawn over the hair, under a helmet.
-  'hero.bow': { outline: false, size: [10, 7], pal: { P: '#ff77c8', w: '#ffd0ec' }, rows: [
-    '..........',
-    '..PP..PP..',
-    '.PwwPPwwP.',
-    '.PPwwwwPP.',
-    '..PPwwPP..',
-    '...PPPP...',
-    '..........',
   ] },
 };
 

@@ -2,7 +2,7 @@
 // / 改造型 My hero (opens MakeHero). Tapping an item tries it on for free. The button under the mirror:
 // 「買」 (price) → buy and wear; owned → 「穿上」 / 「除下」. Items not for sale (chest pieces, the boss's baby
 // dragon) show a silhouette and how to get them until owned. Fixed prices, nothing random, no timers.
-import { SHOP, COSMETICS, buy, equip } from '../../dungeon-logic.js?v=202610112341';
+import { SHOP, COSMETICS, SHOP_LOOKS, OUTFITS, WEAPONS, buy, equip } from '../../dungeon-logic.js?v=202610112341';
 import { UI, pill } from '../ui.js?v=202610112341';
 import { fx } from '../fx.js?v=202610112341';
 import { sfx } from '../sfx.js?v=202610112341';
@@ -14,7 +14,8 @@ import { drawMirror } from './MakeHeroScene.js?v=202610112341';
 const reduced = () => fx.lessMotion || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 const hexN = s => parseInt(String(s).slice(1), 16);
-const itemById = id => SHOP.find(s => s.id === id) || COSMETICS.find(c => c.id === id);
+const itemById = id => SHOP.find(s => s.id === id) || COSMETICS.find(c => c.id === id)
+  || OUTFITS.find(o => o.id === id) || WEAPONS.find(w => w.id === id);
 const TABS = [
   { id: 'helmet', zh: '頭盔', en: 'Helmets' },
   { id: 'pet', zh: '寵物', en: 'Pets' },
@@ -114,7 +115,7 @@ export class ShopScene extends Phaser.Scene {
     });
 
     // item grid (scrolls when it does not fit)
-    const items = this.tab === 'dress' ? COSMETICS : SHOP.filter(s => s.slot === this.tab);
+    const items = this.tab === 'dress' ? SHOP_LOOKS : SHOP.filter(s => s.slot === this.tab);
     const area = { x: gx, y: gy + tabH + 10, w: gw, h: Math.max(100, gh - tabH - 10) };
     const cols = Math.max(2, Math.min(6, Math.floor(area.w / 104)));
     const cw = Math.min(140, Math.floor(area.w / cols)), ch = Math.round(cw * 1.12);
@@ -158,7 +159,7 @@ export class ShopScene extends Phaser.Scene {
     g.fillStyle(fill, 1).fillRoundedRect(-w / 2, -h / 2, w, h, 14);
     g.lineStyle(trying ? 6 : 3, rim, 1).strokeRoundedRect(-w / 2, -h / 2, w, h, 14);
     c.add(g);
-    // picture: a sprite, or a colour dot for a cosmetic (skin / hair colour / outfit)
+    // picture: a sprite, a colour dot for a cosmetic, or a little hero wearing an outfit / holding a weapon
     if (it.colour) {
       const cd = this.add.graphics(), rad = Math.min(w, h * 0.55) * 0.3;
       cd.fillStyle(0x000000, 0.25).fillCircle(2, 3, rad);
@@ -166,6 +167,11 @@ export class ShopScene extends Phaser.Scene {
       cd.fillStyle(0xffffff, 0.35).fillCircle(-rad * 0.35, -rad * 0.35, rad * 0.3);
       cd.setPosition(0, -h / 2 + 6 + h * 0.22);
       c.add(cd);
+    } else if (it.slot === 'outfit' || it.slot === 'weapon') {
+      const mini = makeHero(this, { hero: { ...(this.p.hero || {}) }, equipped: { ...(this.p.equipped || {}), [it.slot]: it.id } }, { view: 'front' });
+      mini.setScale(Math.max(2, Math.floor(Math.min(w, h * 0.55) / 22)));
+      mini.setPosition(0, -h / 2 + h * 0.62);
+      c.add(mini);
     } else {
       const f = artFrame(it.id);
       const k = Math.max(2, Math.floor(Math.min(w, h * 0.55) / 16));

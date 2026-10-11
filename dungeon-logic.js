@@ -66,7 +66,7 @@ const FAMILY_OF_FLOOR = { 1: 'lr', 2: 'fb', 3: 'ud' };
 // Object pools (kinds) per use. Answer candidates differ by kind/mark only, never by a clue colour.
 const SLIMES = ['slimeGreen', 'slimePink', 'slimeBlue', 'slimeYellow'];
 const CHESTS = ['chestStar', 'chestMoon', 'chestHeart', 'chestSun'];
-const WEAPONS = ['shield', 'sword', 'bow', 'axe', 'helmet'];
+const CLUE_WEAPONS = ['shield', 'sword', 'bow', 'axe', 'helmet'];
 const WALL = ['torch', 'shield', 'sword', 'bow', 'axe', 'helmet'];
 const ROW_STUFF = [...CHESTS, 'crate', 'barrel'];
 const JUDGE_ROW = [...CHESTS, 'torch', 'crate', 'barrel'];
@@ -888,7 +888,7 @@ const RECIPES = {
     make(() => genChoose('lr', L, r, WALL)), make(() => genChoose('lr', L, r, WALL)),
   ],
   F1R2: (L, r) => times(4, () => make(() => genGo('lr', L, r, { pool: ROW_STUFF }))),
-  F1R3: (L, r) => times(4, () => make(() => genPlace('lr', L, r, { pool: WEAPONS.concat('torch'), items: WEAPONS }))),
+  F1R3: (L, r) => times(4, () => make(() => genPlace('lr', L, r, { pool: CLUE_WEAPONS.concat('torch'), items: CLUE_WEAPONS }))),
   F1R4: (L, r) => [...times(3, () => make(() => genJudge('lr', L, r, { pool: JUDGE_ROW }))), ...times(2, () => make(() => genSelect('lr', L, r, { pool: JUDGE_ROW })))],
   F1R5: (L, r) => [make(() => genMake('lr', L, r)), make(() => genMake('lr', L, r)),
     ...times(2, () => make(() => genGo('lr', L, r, { pool: ROW_STUFF, onlyBetween: true })))],
@@ -1056,12 +1056,40 @@ export const COSMETICS = [
   { id: 'tunicLime',  slot: 'tunic',      zh: '青檸衫', en: 'Lime tunic',  colour: '#b6e05a', price: 12 },
 ];
 export const COSMETIC_SLOTS = ['skin', 'hairColour', 'tunic'];
-const itemById = id => SHOP.find(s => s.id === id) || COSMETICS.find(c => c.id === id);
+const itemById = id => SHOP.find(s => s.id === id) || COSMETICS.find(c => c.id === id)
+  || OUTFITS.find(o => o.id === id) || WEAPONS.find(w => w.id === id);
 /** Owned cosmetic colours for a slot, in COSMETICS order (used by 製作英雄 to add swatches). */
 export const ownedCosmetics = (progress, slot) =>
   COSMETICS.filter(c => c.slot === slot && ((progress && progress.looks) || []).includes(c.id));
 
-const emptyEquipped = () => ({ helmet: null, pet: null, cape: null, badge: null, trail: null });
+/**
+ * Outfits (equipped.outfit) — the hero's garment shape, recoloured by hero.tunic. Free ones can be picked at
+ * creation; the rest are bought in the shop. Maps to a Roguelike Characters sheet frame in art.js (RC.outfits).
+ */
+export const OUTFITS = [
+  { id: 'tunic',   slot: 'outfit', zh: '外衣',   en: 'Tunic',   price: null },
+  { id: 'cropped', slot: 'outfit', zh: '短衣',   en: 'Cropped', price: null },
+  { id: 'dress',   slot: 'outfit', zh: '連身裙', en: 'Dress',   price: 10 },
+  { id: 'armour',  slot: 'outfit', zh: '盔甲',   en: 'Armour',  price: 15 },
+];
+/** Held weapons (equipped.weapon; null = empty hands). Maps to RC.weapons in art.js. */
+export const WEAPONS = [
+  { id: 'staff',  slot: 'weapon', zh: '魔杖', en: 'Staff',  price: null },
+  { id: 'sword',  slot: 'weapon', zh: '寶劍', en: 'Sword',  price: null },
+  { id: 'axe',    slot: 'weapon', zh: '斧頭', en: 'Axe',    price: 12 },
+  { id: 'hammer', slot: 'weapon', zh: '鐵鎚', en: 'Hammer', price: 14 },
+];
+/** Items the shop's 裝扮 tab can sell (cosmetics + the paid outfits and weapons). */
+export const SHOP_LOOKS = [
+  ...COSMETICS,
+  ...OUTFITS.filter(o => o.price != null),
+  ...WEAPONS.filter(w => w.price != null),
+];
+/** outfit / weapon by id (falls back to the first — the default outfit, or the first weapon). */
+export const outfitById = id => OUTFITS.find(o => o.id === id) || OUTFITS[0];
+export const weaponById = id => WEAPONS.find(w => w.id === id) || WEAPONS[0];
+
+const emptyEquipped = () => ({ helmet: null, pet: null, outfit: 'tunic', weapon: null, cape: null, badge: null, trail: null });
 const norm = p => ({
   ...emptyProgress(), ...p,
   stars: { ...((p && p.stars) || {}) }, looks: ((p && p.looks) || []).slice(),
@@ -1080,8 +1108,9 @@ export function buy(progress, id) {
   return { ok: true, progress: p };
 }
 /**
- * Wear an owned item in its slot (or null to take a helmet / pet off). A cosmetic slot ('skin' / 'hairColour' /
- * 'tunic') is never removed — it just sets the hero's colour. Not owned / wrong slot / no hero → unchanged.
+ * Wear an owned item in its slot (or null to take a helmet / pet / weapon off). A cosmetic slot ('skin' /
+ * 'hairColour' / 'tunic') just sets the hero's colour. outfit / weapon are equipped like helmet / pet, but a
+ * free one (price null) may be worn without buying it. Not owned / wrong slot / no hero → unchanged.
  */
 export function equip(progress, slot, id) {
   if (COSMETIC_SLOTS.includes(slot)) {
@@ -1089,6 +1118,15 @@ export function equip(progress, slot, id) {
     if (!item || item.slot !== slot || !(progress.looks || []).includes(id) || !progress.hero) return progress;
     const p = norm(progress);
     p.hero = { ...p.hero, [slot]: item.colour };
+    return p;
+  }
+  if (slot === 'outfit' || slot === 'weapon') {
+    if (id !== null) {
+      const item = (slot === 'outfit' ? OUTFITS : WEAPONS).find(x => x.id === id);
+      if (!item || item.slot !== slot || (item.price != null && !(progress.looks || []).includes(id))) return progress;
+    }
+    const p = norm(progress);
+    p.equipped[slot] = id;
     return p;
   }
   if (!(slot in emptyEquipped())) return progress;
@@ -1133,6 +1171,8 @@ export function validateGalleryEntry(e) {
       const id = eq[slot];
       if (id != null && !SHOP.some(s => s.id === id && s.slot === slot)) return false;
     }
+    if (eq.outfit != null && !OUTFITS.some(o => o.id === eq.outfit)) return false;
+    if (eq.weapon != null && !WEAPONS.some(w => w.id === eq.weapon)) return false;
   }
   if (e.hidden != null && typeof e.hidden !== 'boolean') return false;
   return true;

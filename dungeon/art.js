@@ -59,7 +59,7 @@ function dotted(id) { return id.replace(/^([a-z]+)([A-Z])(.*)$/, (_, a, b, c) =>
 // ---------------------------------------------------------------- registry
 const ART = {};   // art key -> { texture, frame }
 for (const [k, [sheet, idx]] of Object.entries(KENNEY)) ART[k] = { texture: sheet, frame: idx };
-const CODE_KEYS = ['bat', 'mole', 'owl', 'dragon', 'dragon.sleep', 'hero.bow',
+const CODE_KEYS = ['bat', 'mole', 'owl', 'dragon', 'dragon.sleep',
   'pet.slime', 'pet.ghost', 'pet.cat', 'pet.owlet', 'pet.dragon', 'pet.chick', 'pet.bunny', 'pet.frog',
   'bow', 'book', 'key', 'gem', 'crate', 'helmet', 'torch', 'torch.2',
   'ladder', 'shelf', 'tag.frame', 'hand.left', 'hand.right', 'foot', 'sparkle', 'coin', 'sword.foam', 'hero'];
@@ -239,13 +239,17 @@ function heroKeys(scene, look, view) {
   const hairC = pickColour(h.hairColour ?? 1, HERO_ART.hairColours);
   const tunic = pickColour(h.tunic ?? 0, HERO_ART.tunics);
   const style = pickStyle(h.hairStyle ?? 0);
+  const female = h.sex === 'girl';
+  const outfit = eq.outfit && RC.outfits[eq.outfit] != null ? eq.outfit : 'tunic';
   const S = RC.bodySrc, H = RC.hairSrc, U = RC.tunicSrc;
   const back = view === 'back';
   const tex = key => ({ texture: key, frame: undefined });
 
-  const body = tex(recolour(scene, `hero.body${back ? 'B' : ''}.${skin}`, 'rc', RC.body,
+  const body = tex(recolour(scene, `hero.body${back ? 'B' : ''}${female ? 'F' : ''}.${skin}`, 'rc',
+    female ? RC.bodyFemale : RC.body,
     { [S.main]: skin, [S.shade]: shade(skin, 0.75), [S.eye]: back ? skin : shade(skin, 0.42) }));
-  const tun = tex(recolour(scene, `hero.tunic.${tunic}`, 'rc', RC.tunic, { [U.main]: tunic, [U.shade]: shade(tunic, 0.72) }));
+  const tun = tex(recolour(scene, `hero.tunic.${outfit}.${tunic}`, 'rc', RC.outfits[outfit] ?? RC.tunic,
+    { [U.main]: tunic, [U.shade]: shade(tunic, 0.72), '#2e8d89': shade(tunic, 0.84), '#329a95': shade(tunic, 0.9), '#1f6360': shade(tunic, 0.6) }));
   const hair = back
     ? tex(paint(scene, `hero.hairB.${style.id}.${hairC}`,
       { rows: HAIR_BACK[style.id], pal: { h: hairC, s: shade(hairC, 0.7) }, outline: false, size: [16, 16] }))
@@ -264,7 +268,9 @@ function heroKeys(scene, look, view) {
   }
   const pid = pickId(eq.pet, HERO_ART.petOrder);
   const pet = pid ? artFrame(HERO_ART.pets[pid].art) : null;
-  return { body, pants: { texture: 'rc', frame: RC.pants }, tunic: tun, hair, helmet, pet };
+  const wdef = eq.weapon && RC.weapons[eq.weapon] ? RC.weapons[eq.weapon] : null;
+  const weapon = wdef ? { texture: wdef.tex, frame: wdef.frame, ox: wdef.ox, oy: wdef.oy, x: wdef.x, y: wdef.y } : null;
+  return { body, pants: { texture: 'rc', frame: RC.pants }, tunic: tun, hair, helmet, pet, weapon };
 }
 
 /**
@@ -278,9 +284,11 @@ export function makeHero(scene, look, { view = 'front' } = {}) {
   c.setSize(16, 16);
   const img = () => scene.add.image(0, 0, T('missing')).setOrigin(0.5, 1);
   c.pet = scene.add.image(-12, 0, T('missing')).setOrigin(0.5, 1).setScale(PET_SCALE).setVisible(false);
-  c.parts = { body: img(), pants: img(), tunic: img(), hair: img(),
-    bow: scene.add.image(0, -12, T('hero.bow')).setOrigin(0.5, 1).setVisible(false), helmet: img() };
-  c.add([c.pet, c.parts.body, c.parts.pants, c.parts.tunic, c.parts.hair, c.parts.bow, c.parts.helmet]);
+  c.parts = { body: img(), pants: img(), tunic: img(), hair: img(), helmet: img() };
+  // the held weapon sits in the right hand, on top of every other layer (front view only)
+  c.weapon = scene.add.image(7, -2, 'rc', RC.pants).setOrigin(0.5, 0.82).setVisible(false);
+  c.add([c.pet, c.parts.body, c.parts.pants, c.parts.tunic, c.parts.hair, c.parts.helmet]);
+  if (view === 'front') c.add(c.weapon);
   // hand positions (art px, relative to the bottom-centre origin)
   c.hands = { left: { x: -6, y: -3 }, right: { x: 6, y: -3 } };
   if (view === 'back') {
@@ -297,8 +305,10 @@ export function makeHero(scene, look, { view = 'front' } = {}) {
     else c.parts.helmet.setVisible(false);
     if (k.pet) c.pet.setTexture(k.pet.texture, k.pet.frame).setVisible(true);
     else c.pet.setVisible(false);
-    const girl = !!(newLook && newLook.hero && newLook.hero.sex === 'girl');
-    c.parts.bow.setVisible(girl && !k.helmet);
+    if (view === 'front') {
+      if (k.weapon) c.weapon.setTexture(k.weapon.texture, k.weapon.frame).setOrigin(k.weapon.ox, k.weapon.oy).setPosition(k.weapon.x, k.weapon.y).setVisible(true);
+      else c.weapon.setVisible(false);
+    }
     return c;
   };
   /** Put the pet on one side, facing the hero (it trails behind the walking direction). */

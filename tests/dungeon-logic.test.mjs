@@ -8,6 +8,7 @@ import {
   hintStep, mistakesFor, starsFor, coinsPerAnswer, chestCoins, FLOOR_BONUS, FLOOR_LOOK, CHEST_LOOKS, floorMedal,
   SKINS, HAIR_STYLES, HAIR_COLOURS, TUNICS, SEXES, HERO_NAMES, heroName, SHOP, LATER_SLOTS, buy, equip,
   COSMETICS, COSMETIC_SLOTS, ownedCosmetics, validateGalleryEntry,
+  OUTFITS, WEAPONS, SHOP_LOOKS,
   emptyProgress, recordResult, mergeProgress,
   isFloorCleared, isFloorOpen, isRoomOpen, isRushOpen,
 } from '../dungeon-logic.js';
@@ -506,4 +507,20 @@ test('gallery entry validation accepts the real look and rejects junk', () => {
   assert.equal(validateGalleryEntry({ playerName: 'x', hero: { hairStyle: 3 } }), false, 'style is a string id');
   assert.equal(validateGalleryEntry({ playerName: 'x', hero: {}, equipped: { helmet: 'petCat' } }), false, 'id must match the slot');
   assert.equal(validateGalleryEntry({ playerName: 'x', hero: {}, hidden: 'no' }), false);
+});
+
+test('outfits and weapons: free ones wearable, paid ones need buying, null weapon = empty hands', () => {
+  const p = { ...emptyProgress(), hero: { sex: 'boy', skin: SKINS[1], hairStyle: 'short', hairColour: HAIR_COLOURS[1], tunic: TUNICS[4] } };
+  assert.ok(OUTFITS.length >= 3 && WEAPONS.length >= 3);
+  const freeO = OUTFITS.find(o => o.price == null), paidO = OUTFITS.find(o => o.price != null);
+  assert.equal(equip(p, 'outfit', freeO.id).equipped.outfit, freeO.id, 'a free outfit needs no purchase');
+  assert.equal(equip(p, 'outfit', paidO.id), p, 'a paid outfit is rejected until bought');
+  const bought = buy({ ...p, coins: 100 }, paidO.id);
+  assert.equal(bought.ok, true);
+  assert.equal(equip(bought.progress, 'outfit', paidO.id).equipped.outfit, paidO.id);
+  const freeW = WEAPONS.find(w => w.price == null), paidW = WEAPONS.find(w => w.price != null);
+  assert.equal(equip(p, 'weapon', freeW.id).equipped.weapon, freeW.id);
+  assert.equal(equip(p, 'weapon', null).equipped.weapon, null, 'empty hands');
+  assert.equal(equip(p, 'weapon', paidW.id), p, 'a paid weapon is rejected until bought');
+  assert.ok(SHOP_LOOKS.some(i => i.slot === 'outfit') && SHOP_LOOKS.some(i => i.slot === 'weapon') && SHOP_LOOKS.some(i => i.slot === 'tunic'));
 });

@@ -6,7 +6,8 @@ import {
   validateClue, checkAnswer, checkSolve, confusionOf,
   FLOORS, ROOMS, roomByKey, roomsOf, nextRoom, DEFAULT_LEVEL, levelFor, genRoom, genRush,
   hintStep, mistakesFor, starsFor, coinsPerAnswer, chestCoins, FLOOR_BONUS, FLOOR_LOOK, CHEST_LOOKS, floorMedal,
-  SKINS, HAIR_STYLES, HAIR_COLOURS, TUNICS, HERO_NAMES, heroName, SHOP, LATER_SLOTS, buy, equip,
+  SKINS, HAIR_STYLES, HAIR_COLOURS, TUNICS, SEXES, HERO_NAMES, heroName, SHOP, LATER_SLOTS, buy, equip,
+  COSMETICS, COSMETIC_SLOTS, ownedCosmetics,
   emptyProgress, recordResult, mergeProgress,
   isFloorCleared, isFloorOpen, isRoomOpen, isRushOpen,
 } from '../dungeon-logic.js';
@@ -466,4 +467,28 @@ test('make prompt names what the child arranges (slimes / boxes / treasures)', (
       }
     }
   }
+});
+
+test('cosmetics: buy then wear adds a swatch; only owned items of the right slot work', () => {
+  assert.deepEqual(SEXES, ['boy', 'girl']);
+  assert.deepEqual(COSMETIC_SLOTS, ['skin', 'hairColour', 'tunic']);
+  assert.ok(COSMETICS.length >= 9 && COSMETICS.every(c => c.price > 0 && /^#[0-9a-f]{6}$/i.test(c.colour)));
+  const hero = { sex: 'boy', skin: SKINS[1], hairStyle: 'short', hairColour: HAIR_COLOURS[1], tunic: TUNICS[4] };
+  const p0 = { ...emptyProgress(), hero };
+  const item = COSMETICS.find(c => c.slot === 'skin');
+  assert.equal(buy(p0, item.id).reason, 'price', 'too few coins');
+  const p1 = { ...p0, coins: 100 };
+  const b = buy(p1, item.id);
+  assert.equal(b.ok, true);
+  assert.equal(b.progress.coins, 100 - item.price);
+  assert.ok(b.progress.looks.includes(item.id));
+  assert.equal(buy(b.progress, item.id).reason, 'owned');
+  const w = equip(b.progress, item.slot, item.id);
+  assert.equal(w.hero.skin, item.colour);
+  assert.equal(w.equipped.skin, undefined, 'cosmetics never touch the equipped slots');
+  const other = COSMETICS.find(c => c.slot === 'tunic');
+  assert.equal(equip(b.progress, 'skin', other.id), b.progress, 'wrong slot ignored');
+  assert.equal(equip(p0, item.slot, item.id), p0, 'unowned ignored');
+  assert.deepEqual(ownedCosmetics(b.progress, 'skin').map(c => c.id), [item.id], 'only the bought one is offered');
+  assert.deepEqual(ownedCosmetics(emptyProgress(), 'skin'), []);
 });

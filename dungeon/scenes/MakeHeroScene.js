@@ -2,7 +2,7 @@
 // hair colour 6, tunic 8) and a preset name + number (two arrows, no free text). 「出發！」 saves with
 // bridge.saveLook and opens data.then (default 'Map'). First visit (no hero yet) comes here from Boot;
 // later the Shop's 外觀 tab opens it (free changes, ← goes back without saving).
-import { SKINS, HAIR_STYLES, HAIR_COLOURS, TUNICS, HERO_NAMES } from '../../dungeon-logic.js?v=202610112341';
+import { SKINS, HAIR_STYLES, HAIR_COLOURS, TUNICS, SEXES, HERO_NAMES, ownedCosmetics } from '../../dungeon-logic.js?v=202610112341';
 import { UI, pill } from '../ui.js?v=202610112341';
 import { fx } from '../fx.js?v=202610112341';
 import { sfx } from '../sfx.js?v=202610112341';
@@ -69,12 +69,21 @@ export class MakeHeroScene extends Phaser.Scene {
     const rng = bridge.rng || Math.random;
     const h = p.hero || {};
     const idxOf = (list, v, d) => { const i = list.indexOf(v); return i >= 0 ? i : typeof v === 'number' && list[v] ? v : d; };
-    // choices as indices into the logic lists; saved as the colour / style ids themselves
+    // lists = the free starter options plus any cosmetics this player has bought (they add swatches)
+    this.lists = {
+      sex: SEXES,
+      skin: [...SKINS, ...ownedCosmetics(p, 'skin').map(c => c.colour)],
+      hairStyle: HAIR_STYLES,
+      hairColour: [...HAIR_COLOURS, ...ownedCosmetics(p, 'hairColour').map(c => c.colour)],
+      tunic: [...TUNICS, ...ownedCosmetics(p, 'tunic').map(c => c.colour)],
+    };
+    // choices as indices into the lists; saved as the colour / style ids themselves
     this.sel = {
-      skin: idxOf(SKINS, h.skin, 1),
+      sex: Math.max(0, SEXES.indexOf(h.sex)),
+      skin: idxOf(this.lists.skin, h.skin, 1),
       hairStyle: idxOf(HAIR_STYLES, h.hairStyle, 0),
-      hairColour: idxOf(HAIR_COLOURS, h.hairColour, 1),
-      tunic: idxOf(TUNICS, h.tunic, 4),
+      hairColour: idxOf(this.lists.hairColour, h.hairColour, 1),
+      tunic: idxOf(this.lists.tunic, h.tunic, 4),
     };
     this.name = h.name && HERO_NAMES[h.name.i] ? { ...h.name } : { i: Math.floor(rng() * HERO_NAMES.length), n: 1 + Math.floor(rng() * 99) };
     this.leaving = false;
@@ -101,18 +110,20 @@ export class MakeHeroScene extends Phaser.Scene {
 
   hero() {
     return {
-      skin: SKINS[this.sel.skin], hairStyle: HAIR_STYLES[this.sel.hairStyle],
-      hairColour: HAIR_COLOURS[this.sel.hairColour], tunic: TUNICS[this.sel.tunic], name: { ...this.name },
+      sex: SEXES[this.sel.sex],
+      skin: this.lists.skin[this.sel.skin], hairStyle: HAIR_STYLES[this.sel.hairStyle],
+      hairColour: this.lists.hairColour[this.sel.hairColour], tunic: this.lists.tunic[this.sel.tunic], name: { ...this.name },
     };
   }
   look() { return { hero: this.hero(), equipped: {} }; } // no helmet / pet here: the hair stays visible
 
   rows() {
     return [
-      { key: 'skin', zh: '皮膚', en: 'Skin', n: SKINS.length },
-      { key: 'hairStyle', zh: '髮型', en: 'Hair', n: HAIR_STYLES.length },
-      { key: 'hairColour', zh: '髮色', en: 'Hair colour', n: HAIR_COLOURS.length },
-      { key: 'tunic', zh: '衣服', en: 'Tunic', n: TUNICS.length },
+      { key: 'sex', zh: '性別', en: 'Boy / girl', n: this.lists.sex.length },
+      { key: 'skin', zh: '皮膚', en: 'Skin', n: this.lists.skin.length },
+      { key: 'hairStyle', zh: '髮型', en: 'Hair', n: this.lists.hairStyle.length },
+      { key: 'hairColour', zh: '髮色', en: 'Hair colour', n: this.lists.hairColour.length },
+      { key: 'tunic', zh: '衣服', en: 'Tunic', n: this.lists.tunic.length },
     ];
   }
 
@@ -217,14 +228,15 @@ export class MakeHeroScene extends Phaser.Scene {
     if (!reduced()) this.tweens.add({ targets: go, scale: { from: 1, to: 1.05 }, duration: 700, yoyo: true, repeat: 2, delay: 600 });
   }
 
-  /** Swatch face: colour dot, or (hair style) a little hero head with that style. */
+  /** Swatch face: colour dot, or a little hero head (hair style / sex). */
   face(c, key, i, r) {
     const g = this.add.graphics();
     c.add(g);
-    if (key === 'hairStyle') {
-      g.fillStyle(0xdbeafe, 1).fillCircle(0, 0, r);
+    if (key === 'hairStyle' || key === 'sex') {
+      g.fillStyle(key === 'sex' ? (SEXES[i] === 'girl' ? 0xfbcfe8 : 0xcfe4ff) : 0xdbeafe, 1).fillCircle(0, 0, r);
       const look = this.look();
-      look.hero.hairStyle = HAIR_STYLES[i];
+      if (key === 'sex') { look.hero.sex = SEXES[i]; look.hero.hairStyle = SEXES[i] === 'girl' ? 'long' : 'short'; }
+      else look.hero.hairStyle = HAIR_STYLES[i];
       const m = makeHero(this, look, { view: 'front' }).setScale(Math.max(2, Math.floor((r * 2) / 12)));
       m.setPosition(0, r * 1.25 + m.scale * 4);
       // only the head shows: clip with a circular mask
@@ -234,21 +246,21 @@ export class MakeHeroScene extends Phaser.Scene {
       c.add(m);
       return;
     }
-    const list = key === 'skin' ? SKINS : key === 'hairColour' ? HAIR_COLOURS : TUNICS;
-    g.fillStyle(hexN(list[i]), 1).fillCircle(0, 0, r);
+    g.fillStyle(hexN(this.lists[key][i]), 1).fillCircle(0, 0, r);
     g.fillStyle(0xffffff, 0.35).fillCircle(-r * 0.35, -r * 0.35, r * 0.28);
   }
 
   paintSwatches() {
     for (const [key, list] of Object.entries(this.sw)) list.forEach((s, i) => s.setOn(this.sel[key] === i));
-    // hair style faces follow skin / hair colour; their masks follow the swatch position
-    (this.sw.hairStyle || []).forEach((s, i) => {
-      const face = s.list[1], m = face.hairHero;
+    // mini-hero faces follow skin / hair colour / tunic; their masks follow the swatch position
+    const refresh = (s, look) => {
+      const face = s.list[1], m = face && face.hairHero;
       if (!m) return;
-      const look = this.look(); look.hero.hairStyle = HAIR_STYLES[i];
       m.setLook(look);
       face.maskG.clear().fillStyle(0xffffff).fillCircle(s.x, s.y + this.ctrl.y, face.maskR * s.scale);
-    });
+    };
+    (this.sw.hairStyle || []).forEach((s, i) => { const look = this.look(); look.hero.hairStyle = HAIR_STYLES[i]; refresh(s, look); });
+    (this.sw.sex || []).forEach((s, i) => { const look = this.look(); look.hero.sex = SEXES[i]; look.hero.hairStyle = SEXES[i] === 'girl' ? 'long' : 'short'; refresh(s, look); });
   }
 
   paintName() {
@@ -275,6 +287,8 @@ export class MakeHeroScene extends Phaser.Scene {
     if (this.leaving) return;
     sfx.pop();
     this.sel[key] = i;
+    // choosing boy / girl also picks a fitting hair style (still free to change straight after)
+    if (key === 'sex') this.sel.hairStyle = HAIR_STYLES.indexOf(SEXES[i] === 'girl' ? 'long' : 'short');
     this.heroC.setLook(this.look());
     this.paintSwatches();
     this.happy();

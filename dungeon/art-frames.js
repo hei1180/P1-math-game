@@ -658,6 +658,17 @@ export const PIX = {
     '................',
     '................',
   ] },
+
+  // A girl's hair bow (10 × 7), drawn over the hair, under a helmet.
+  'hero.bow': { outline: false, size: [10, 7], pal: { P: '#ff77c8', w: '#ffd0ec' }, rows: [
+    '..........',
+    '..PP..PP..',
+    '.PwwPPwwP.',
+    '.PPwwwwPP.',
+    '..PPwwPP..',
+    '...PPPP...',
+    '..........',
+  ] },
 };
 
 /** Back-view hair per style ('h' hair colour, 's' its shade), drawn over the eye-less body. */

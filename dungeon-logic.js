@@ -1001,6 +1001,8 @@ export const SKINS = ['#ffe0c4', '#f6c9a0', '#e0a878', '#c68a5a', '#9a6440', '#6
 export const HAIR_STYLES = ['short', 'spiky', 'bob', 'long', 'buns'];
 export const HAIR_COLOURS = ['#2b2118', '#5a3a22', '#a0642c', '#e0b050', '#c8452c', '#7a7f8c'];
 export const TUNICS = ['#d94c4c', '#e8903a', '#e8c94a', '#5bb35b', '#3fa7c9', '#4a6fd6', '#9a5bd6', '#e06fa8'];
+/** Boy or girl — sets the default look (a girl also gets a little bow). Free to change later. */
+export const SEXES = ['boy', 'girl'];
 export const HERO_NAMES = [
   { zh: '勇勇', en: 'Brave' }, { zh: '叮叮', en: 'Ding-ding' }, { zh: '星星', en: 'Star' }, { zh: '閃閃', en: 'Shiny' },
   { zh: '樂樂', en: 'Happy' }, { zh: '跳跳', en: 'Hoppy' }, { zh: '小虎', en: 'Tiger' }, { zh: '小熊', en: 'Bear' },
@@ -1032,6 +1034,33 @@ export const SHOP = [
 ];
 export const LATER_SLOTS = ['cape', 'badge', 'trail'];
 
+/**
+ * Extra looks to buy in the shop — the game's "more characters": new skins, hair colours and outfits.
+ * Owning one (progress.looks) adds its colour as a swatch in 製作英雄. slot is 'skin' | 'hairColour' | 'tunic'.
+ * Colours avoid the free starter palettes so every bought one looks different.
+ */
+export const COSMETICS = [
+  { id: 'skinRose',   slot: 'skin',       zh: '玫瑰膚', en: 'Rose skin',   colour: '#f8c8bd', price: 12 },
+  { id: 'skinOlive',  slot: 'skin',       zh: '小麥膚', en: 'Olive skin',  colour: '#d9a06b', price: 12 },
+  { id: 'skinDeep',   slot: 'skin',       zh: '深膚色', en: 'Deep skin',   colour: '#7a4a2b', price: 12 },
+  { id: 'hairPink',   slot: 'hairColour', zh: '粉紅髮', en: 'Pink hair',   colour: '#ff77c8', price: 12 },
+  { id: 'hairBlue',   slot: 'hairColour', zh: '藍髮',   en: 'Blue hair',   colour: '#4aa3ff', price: 12 },
+  { id: 'hairGreen',  slot: 'hairColour', zh: '綠髮',   en: 'Green hair',  colour: '#5ad17a', price: 12 },
+  { id: 'hairWhite',  slot: 'hairColour', zh: '白髮',   en: 'White hair',  colour: '#f2f2f2', price: 14 },
+  { id: 'hairPurple', slot: 'hairColour', zh: '紫髮',   en: 'Purple hair', colour: '#b07aff', price: 14 },
+  { id: 'tunicMint',  slot: 'tunic',      zh: '薄荷衫', en: 'Mint tunic',  colour: '#7ee0c0', price: 12 },
+  { id: 'tunicSky',   slot: 'tunic',      zh: '天藍衫', en: 'Sky tunic',   colour: '#7ec8f0', price: 12 },
+  { id: 'tunicPlum',  slot: 'tunic',      zh: '梅紫衫', en: 'Plum tunic',  colour: '#a06fd0', price: 12 },
+  { id: 'tunicSun',   slot: 'tunic',      zh: '陽光衫', en: 'Sun tunic',   colour: '#ffd24a', price: 12 },
+  { id: 'tunicRose',  slot: 'tunic',      zh: '玫紅衫', en: 'Rose tunic',  colour: '#ef6fa4', price: 12 },
+  { id: 'tunicLime',  slot: 'tunic',      zh: '青檸衫', en: 'Lime tunic',  colour: '#b6e05a', price: 12 },
+];
+export const COSMETIC_SLOTS = ['skin', 'hairColour', 'tunic'];
+const itemById = id => SHOP.find(s => s.id === id) || COSMETICS.find(c => c.id === id);
+/** Owned cosmetic colours for a slot, in COSMETICS order (used by 製作英雄 to add swatches). */
+export const ownedCosmetics = (progress, slot) =>
+  COSMETICS.filter(c => c.slot === slot && ((progress && progress.looks) || []).includes(c.id));
+
 const emptyEquipped = () => ({ helmet: null, pet: null, cape: null, badge: null, trail: null });
 const norm = p => ({
   ...emptyProgress(), ...p,
@@ -1039,9 +1068,9 @@ const norm = p => ({
   equipped: { ...emptyEquipped(), ...((p && p.equipped) || {}) }, floorBonus: ((p && p.floorBonus) || []).slice(),
 });
 
-/** Buy a shop item. reason: 'notForSale' (unknown, boss or chest only), 'owned', 'price' (not enough coins). */
+/** Buy a shop item or a cosmetic. reason: 'notForSale' (unknown, boss or chest only), 'owned', 'price' (too few coins). */
 export function buy(progress, id) {
-  const item = SHOP.find(s => s.id === id);
+  const item = itemById(id);
   if (!item || item.price === null) return { ok: false, progress, reason: 'notForSale' };
   if ((progress.looks || []).includes(id)) return { ok: false, progress, reason: 'owned' };
   if ((progress.coins || 0) < item.price) return { ok: false, progress, reason: 'price' };
@@ -1050,8 +1079,18 @@ export function buy(progress, id) {
   p.looks.push(id);
   return { ok: true, progress: p };
 }
-/** Wear an owned item in its slot (or null to take it off). Not owned / wrong slot → unchanged. */
+/**
+ * Wear an owned item in its slot (or null to take a helmet / pet off). A cosmetic slot ('skin' / 'hairColour' /
+ * 'tunic') is never removed — it just sets the hero's colour. Not owned / wrong slot / no hero → unchanged.
+ */
 export function equip(progress, slot, id) {
+  if (COSMETIC_SLOTS.includes(slot)) {
+    const item = COSMETICS.find(c => c.id === id);
+    if (!item || item.slot !== slot || !(progress.looks || []).includes(id) || !progress.hero) return progress;
+    const p = norm(progress);
+    p.hero = { ...p.hero, [slot]: item.colour };
+    return p;
+  }
   if (!(slot in emptyEquipped())) return progress;
   if (id !== null) {
     const item = SHOP.find(s => s.id === id);

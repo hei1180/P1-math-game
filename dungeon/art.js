@@ -59,7 +59,7 @@ function dotted(id) { return id.replace(/^([a-z]+)([A-Z])(.*)$/, (_, a, b, c) =>
 // ---------------------------------------------------------------- registry
 const ART = {};   // art key -> { texture, frame }
 for (const [k, [sheet, idx]] of Object.entries(KENNEY)) ART[k] = { texture: sheet, frame: idx };
-const CODE_KEYS = ['bat', 'mole', 'owl', 'dragon', 'dragon.sleep',
+const CODE_KEYS = ['bat', 'mole', 'owl', 'dragon', 'dragon.sleep', 'hero.bow',
   'pet.slime', 'pet.ghost', 'pet.cat', 'pet.owlet', 'pet.dragon', 'pet.chick', 'pet.bunny', 'pet.frog',
   'bow', 'book', 'key', 'gem', 'crate', 'helmet', 'torch', 'torch.2',
   'ladder', 'shelf', 'tag.frame', 'hand.left', 'hand.right', 'foot', 'sparkle', 'coin', 'sword.foam', 'hero'];
@@ -278,8 +278,9 @@ export function makeHero(scene, look, { view = 'front' } = {}) {
   c.setSize(16, 16);
   const img = () => scene.add.image(0, 0, T('missing')).setOrigin(0.5, 1);
   c.pet = scene.add.image(-12, 0, T('missing')).setOrigin(0.5, 1).setScale(PET_SCALE).setVisible(false);
-  c.parts = { body: img(), pants: img(), tunic: img(), hair: img(), helmet: img() };
-  c.add([c.pet, c.parts.body, c.parts.pants, c.parts.tunic, c.parts.hair, c.parts.helmet]);
+  c.parts = { body: img(), pants: img(), tunic: img(), hair: img(),
+    bow: scene.add.image(0, -12, T('hero.bow')).setOrigin(0.5, 1).setVisible(false), helmet: img() };
+  c.add([c.pet, c.parts.body, c.parts.pants, c.parts.tunic, c.parts.hair, c.parts.bow, c.parts.helmet]);
   // hand positions (art px, relative to the bottom-centre origin)
   c.hands = { left: { x: -6, y: -3 }, right: { x: 6, y: -3 } };
   if (view === 'back') {
@@ -296,6 +297,8 @@ export function makeHero(scene, look, { view = 'front' } = {}) {
     else c.parts.helmet.setVisible(false);
     if (k.pet) c.pet.setTexture(k.pet.texture, k.pet.frame).setVisible(true);
     else c.pet.setVisible(false);
+    const girl = !!(newLook && newLook.hero && newLook.hero.sex === 'girl');
+    c.parts.bow.setVisible(girl && !k.helmet);
     return c;
   };
   /** Put the pet on one side, facing the hero (it trails behind the walking direction). */

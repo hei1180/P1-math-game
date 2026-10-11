@@ -1,8 +1,8 @@
-// 裝備室 Shop: a mirror with the hero; tabs 頭盔 Helmets / 寵物 Pets / 外觀 Looks (opens MakeHero).
-// Tapping an item tries it on for free. The button under the mirror: 「買」 (price) → buy and wear;
-// owned → 「穿上」 / 「除下」. Items not for sale (chest pieces, the boss's baby dragon) show a silhouette and how
-// to get them until owned. Fixed prices, nothing random, no timers. Later slots (cape, badge, trail) are not shown.
-import { SHOP, buy, equip } from '../../dungeon-logic.js?v=202610112341';
+// 裝備室 Shop: a mirror with the hero; tabs 頭盔 Helmets / 寵物 Pets / 裝扮 Looks (skins, hair, outfits to buy)
+// / 改造型 My hero (opens MakeHero). Tapping an item tries it on for free. The button under the mirror:
+// 「買」 (price) → buy and wear; owned → 「穿上」 / 「除下」. Items not for sale (chest pieces, the boss's baby
+// dragon) show a silhouette and how to get them until owned. Fixed prices, nothing random, no timers.
+import { SHOP, COSMETICS, buy, equip } from '../../dungeon-logic.js?v=202610112341';
 import { UI, pill } from '../ui.js?v=202610112341';
 import { fx } from '../fx.js?v=202610112341';
 import { sfx } from '../sfx.js?v=202610112341';
@@ -13,10 +13,13 @@ import { drawMirror } from './MakeHeroScene.js?v=202610112341';
 
 const reduced = () => fx.lessMotion || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+const hexN = s => parseInt(String(s).slice(1), 16);
+const itemById = id => SHOP.find(s => s.id === id) || COSMETICS.find(c => c.id === id);
 const TABS = [
   { id: 'helmet', zh: '頭盔', en: 'Helmets' },
   { id: 'pet', zh: '寵物', en: 'Pets' },
-  { id: 'looks', zh: '外觀', en: 'Looks' },
+  { id: 'dress', zh: '裝扮', en: 'Looks' },
+  { id: 'looks', zh: '改造型', en: 'My hero' },
 ];
 const HOW = {
   chest: { zh: '在寶箱裏找到', en: 'Find it in a chest' },
@@ -52,14 +55,21 @@ export class ShopScene extends Phaser.Scene {
 
   get p() { return this.bridge.progress; }
   owned(id) { return (this.p.looks || []).includes(id); }
-  wearing(item) { return (this.p.equipped || {})[item.slot] === item.id; }
+  wearing(item) {
+    if (item.colour) return ((this.p.hero || {})[item.slot]) === item.colour;
+    return (this.p.equipped || {})[item.slot] === item.id;
+  }
   hidden(item) { return item.price == null && !this.owned(item.id); } // chest / boss piece not found yet
 
   look() {
     const eq = { ...(this.p.equipped || {}) };
-    const it = this.tryOn && SHOP.find(s => s.id === this.tryOn);
-    if (it) eq[it.slot] = it.id;
-    return { hero: this.p.hero, equipped: eq };
+    const hero = { ...(this.p.hero || {}) };
+    const it = this.tryOn && itemById(this.tryOn);
+    if (it) {
+      if (it.colour) hero[it.slot] = it.colour; // a cosmetic recolours the hero itself
+      else eq[it.slot] = it.id;
+    }
+    return { hero, equipped: eq };
   }
 
   rebuild() { if (this.layer) this.layer.destroy(); if (this.gridMask) this.gridMask.destroy(); this.build(); }
@@ -93,18 +103,18 @@ export class ShopScene extends Phaser.Scene {
     this.paintAction();
 
     // tabs
-    const tabH = 56, tw = Math.min(150, (gw - 16) / 3);
+    const tabH = 56, n = TABS.length, tw = Math.min(150, (gw - 16) / n);
     this.tabBtns = {};
     TABS.forEach((t, i) => {
       const on = this.tab === t.id;
       const b = pill(this, { zh: t.zh, en: t.en, w: tw - 8, h: tabH, size: 20, fill: on ? 0xfde047 : 0xffffff, rim: on ? 0xb45309 : 0xa8a29e }, () => this.pickTab(t.id));
-      b.setPosition(gx + gw / 2 + (i - 1) * tw, gy + tabH / 2);
+      b.setPosition(gx + gw / 2 + (i - (n - 1) / 2) * tw, gy + tabH / 2);
       this.layer.add(b);
       this.tabBtns[t.id] = b;
     });
 
     // item grid (scrolls when it does not fit)
-    const items = SHOP.filter(s => s.slot === this.tab);
+    const items = this.tab === 'dress' ? COSMETICS : SHOP.filter(s => s.slot === this.tab);
     const area = { x: gx, y: gy + tabH + 10, w: gw, h: Math.max(100, gh - tabH - 10) };
     const cols = Math.max(2, Math.min(6, Math.floor(area.w / 104)));
     const cw = Math.min(140, Math.floor(area.w / cols)), ch = Math.round(cw * 1.12);
@@ -148,12 +158,21 @@ export class ShopScene extends Phaser.Scene {
     g.fillStyle(fill, 1).fillRoundedRect(-w / 2, -h / 2, w, h, 14);
     g.lineStyle(trying ? 6 : 3, rim, 1).strokeRoundedRect(-w / 2, -h / 2, w, h, 14);
     c.add(g);
-    // picture
-    const f = artFrame(it.id);
-    const k = Math.max(2, Math.floor(Math.min(w, h * 0.55) / 16));
-    const img = this.add.image(0, -h / 2 + 6 + 8 * k, f.texture, f.frame).setScale(k);
-    if (hid) img.setTintFill(0x1c1917);
-    c.add(img);
+    // picture: a sprite, or a colour dot for a cosmetic (skin / hair colour / outfit)
+    if (it.colour) {
+      const cd = this.add.graphics(), rad = Math.min(w, h * 0.55) * 0.3;
+      cd.fillStyle(0x000000, 0.25).fillCircle(2, 3, rad);
+      cd.fillStyle(hexN(it.colour), 1).fillCircle(0, 0, rad);
+      cd.fillStyle(0xffffff, 0.35).fillCircle(-rad * 0.35, -rad * 0.35, rad * 0.3);
+      cd.setPosition(0, -h / 2 + 6 + h * 0.22);
+      c.add(cd);
+    } else {
+      const f = artFrame(it.id);
+      const k = Math.max(2, Math.floor(Math.min(w, h * 0.55) / 16));
+      const img = this.add.image(0, -h / 2 + 6 + 8 * k, f.texture, f.frame).setScale(k);
+      if (hid) img.setTintFill(0x1c1917);
+      c.add(img);
+    }
     // name
     const nz = this.add.text(0, h * 0.14, hid ? '？？？' : it.zh, textStyle(17, hid ? '#e7e5e4' : '#1f2937')).setOrigin(0.5);
     if (nz.width > w - 8) nz.setScale((w - 8) / nz.width);
@@ -192,19 +211,24 @@ export class ShopScene extends Phaser.Scene {
   paintAction() {
     if (this.actBtn) { this.actBtn.destroy(); this.actBtn = null; }
     if (this.actCoin) { this.actCoin.destroy(); this.actCoin = null; }
-    const it = this.tryOn && SHOP.find(s => s.id === this.tryOn);
-    let spec = null;
+    const it = this.tryOn && itemById(this.tryOn);
+    let spec = null, note = null;
     if (it) {
-      if (this.wearing(it)) spec = { zh: '除下', en: 'Take off', act: 'off' };
-      else if (this.owned(it.id)) spec = { zh: '穿上', en: 'Wear', act: 'wear' };
-      else if (it.price != null) {
+      const buySpec = () => {
         const ok = this.bridge.coins >= it.price;
-        spec = ok ? { zh: `買 ${it.price}`, en: 'Buy', act: 'buy' } : { zh: `買 ${it.price}`, en: `Need ${it.price - this.bridge.coins} more coins`, act: 'short', dim: true };
-      }
+        return ok ? { zh: `買 ${it.price}`, en: 'Buy', act: 'buy' } : { zh: `買 ${it.price}`, en: `Need ${it.price - this.bridge.coins} more coins`, act: 'short', dim: true };
+      };
+      if (it.colour) {
+        if (this.wearing(it)) note = { zh: `穿着中：${it.zh}`, en: 'Wearing' };
+        else if (this.owned(it.id)) spec = { zh: '穿上', en: 'Wear', act: 'wear' };
+        else if (it.price != null) spec = buySpec();
+      } else if (this.wearing(it)) spec = { zh: '除下', en: 'Take off', act: 'off' };
+      else if (this.owned(it.id)) spec = { zh: '穿上', en: 'Wear', act: 'wear' };
+      else if (it.price != null) spec = buySpec();
     }
     if (!spec) {
-      const t = this.add.text(this.actPos.x, this.actPos.y, '揀一件試穿', textStyle(18, '#e7e5e4', { fontStyle: 'normal' })).setOrigin(0.5);
-      const e = this.add.text(this.actPos.x, this.actPos.y + 20, 'Tap an item to try it on', textStyle(12, '#a8a29e', { fontStyle: 'normal' })).setOrigin(0.5);
+      const t = this.add.text(this.actPos.x, this.actPos.y, note ? note.zh : '揀一件試穿', textStyle(18, note ? '#fde68a' : '#e7e5e4', { fontStyle: 'normal' })).setOrigin(0.5);
+      const e = this.add.text(this.actPos.x, this.actPos.y + 20, note ? note.en : 'Tap an item to try it on', textStyle(12, note ? '#fde68a' : '#a8a29e', { fontStyle: 'normal' })).setOrigin(0.5);
       this.actBtn = this.add.container(0, 0, [t, e]);
       this.layer.add(this.actBtn);
       return;

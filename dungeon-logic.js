@@ -1102,6 +1102,43 @@ export function equip(progress, slot, id) {
 }
 
 // ======================================================================
+// class gallery
+// ======================================================================
+
+const colourOrIndex = v => (Number.isInteger(v) && v >= 0 && v < 40) || (typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v));
+/**
+ * Validate one class-gallery entry (never trust other players' data). The gallery stores only the look:
+ * playerName, hero { sex, skin, hairStyle, hairColour, tunic, name }, equipped { helmet, pet } and hidden.
+ * @returns {boolean}
+ */
+export function validateGalleryEntry(e) {
+  if (!e || typeof e !== 'object' || Array.isArray(e)) return false;
+  if (typeof e.playerName !== 'string' || e.playerName.length > 40) return false;
+  const h = e.hero;
+  if (!h || typeof h !== 'object' || Array.isArray(h)) return false;
+  if (h.sex != null && !SEXES.includes(h.sex)) return false;
+  if (h.skin != null && !colourOrIndex(h.skin)) return false;
+  if (h.hairColour != null && !colourOrIndex(h.hairColour)) return false;
+  if (h.tunic != null && !colourOrIndex(h.tunic)) return false;
+  if (h.hairStyle != null && !(typeof h.hairStyle === 'string' && h.hairStyle.length <= 16)) return false;
+  if (h.name != null) {
+    if (typeof h.name !== 'object' || Array.isArray(h.name)) return false;
+    if (h.name.i != null && !(Number.isInteger(h.name.i) && h.name.i >= 0 && h.name.i < HERO_NAMES.length)) return false;
+    if (h.name.n != null && !(Number.isInteger(h.name.n) && h.name.n >= 0 && h.name.n <= 99)) return false;
+  }
+  const eq = e.equipped;
+  if (eq != null) {
+    if (typeof eq !== 'object' || Array.isArray(eq)) return false;
+    for (const slot of ['helmet', 'pet']) {
+      const id = eq[slot];
+      if (id != null && !SHOP.some(s => s.id === id && s.slot === slot)) return false;
+    }
+  }
+  if (e.hidden != null && typeof e.hidden !== 'boolean') return false;
+  return true;
+}
+
+// ======================================================================
 // progress
 // ======================================================================
 

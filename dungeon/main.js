@@ -1,9 +1,9 @@
 // Treasure Dungeon entry: DOM shell wiring, the bridge to shared.js / Firestore, Phaser boot.
 // The bridge is the only link between scenes and shared.js; scenes read it with this.registry.get('bridge').
 import { signIn, onUser, player, settings, session, enterTestMode, initAudio, engine, resetEngine, registerHit, endFever,
-         startTimer, stopTimer, saveScore, renderLeaderboard, showRankPopup, mountTeacherModal, sharedSound, logAttempt } from '../shared.js?v=202610112341';
+         startTimer, stopTimer, saveScore, renderLeaderboard, showRankPopup, mountTeacherModal, sharedSound, logAttempt, isTeacherEmail } from '../shared.js?v=202610112341';
 import { lcg, recordResult, levelFor, roomByKey, roomsOf } from '../dungeon-logic.js?v=202610112341';
-import { loadProgress, saveProgress } from '../dungeon-progress.js?v=202610112341';
+import { loadProgress, saveProgress, loadGallery, saveGalleryEntry, setGalleryHidden } from '../dungeon-progress.js?v=202610112341';
 import { sfx } from './sfx.js?v=202610112341';
 import { voice } from './voice.js?v=202610112341';
 import { fx } from './fx.js?v=202610112341';
@@ -12,6 +12,7 @@ import { BootScene } from './scenes/BootScene.js?v=202610112341';
 import { MapScene } from './scenes/MapScene.js?v=202610112341';
 import { MakeHeroScene } from './scenes/MakeHeroScene.js?v=202610112341';
 import { ShopScene } from './scenes/ShopScene.js?v=202610112341';
+import { GalleryScene } from './scenes/GalleryScene.js?v=202610112341';
 import { RoomScene } from './RoomScene.js?v=202610112341';
 import { WavesScene } from './scenes/WavesScene.js?v=202610112341';
 import { RushScene } from './scenes/RushScene.js?v=202610112341';
@@ -79,11 +80,27 @@ const bridge = {
     return { newBest: r.newBest, floorCleared: r.floorCleared, bonus: r.bonus, chestLook: r.chestLook || null };
   },
 
-  /** Hero / buy / equip changes: fn(progress) -> new progress, then save (not in test mode). */
+  /** Hero / buy / equip changes: fn(progress) -> new progress, then save (not in test mode) and refresh the class gallery. */
   async saveLook(fn) {
     this.progress = fn(this.progress);
     if (session.testMode) return;
     await saveProgress(player.uid, this.progress);
+    await this.gallery.publish();
+  },
+
+  /** The class gallery (see dungeon-progress.js). The teacher reads every entry and may hide/ show any of them. */
+  gallery: {
+    isTeacher: false,
+    get enabled() { return settings.dungeonGallery !== false; },
+    async load() { return bridge.gallery.enabled ? loadGallery({ teacher: bridge.gallery.isTeacher }) : []; },
+    /** Write this player's hero to the gallery (never in test mode or when signed out). */
+    async publish() {
+      if (!bridge.gallery.enabled || session.testMode || !player.uid) return;
+      const p = bridge.progress || {};
+      await saveGalleryEntry(player.uid, { playerName: player.name, hero: p.hero || null, equipped: p.equipped || {} });
+    },
+    /** Teacher only, and never in dev / test mode (nothing is written then). */
+    async setHidden(uid, hidden) { return bridge.gallery.isTeacher && !session.testMode && !DEV ? setGalleryHidden(uid, hidden) : false; },
   },
 
   rushStart(onTimeUp) {
@@ -136,7 +153,7 @@ function startGame() {
     scale: scaleConfig('phaser'), // device-pixel canvas for retina screens (bonds/hidpi.js)
     input: { activePointers: 2 },
     render: { antialias: true, roundPixels: true }, // no global pixelArt: text stays smooth; art textures are NEAREST (art.js)
-    scene: [BootScene, MapScene, MakeHeroScene, ShopScene, RoomScene, WavesScene, RushScene, ...(Sandbox ? [Sandbox] : [])],
+    scene: [BootScene, MapScene, MakeHeroScene, ShopScene, GalleryScene, RoomScene, WavesScene, RushScene, ...(Sandbox ? [Sandbox] : [])],
   });
   installHiDPI(game, 'phaser');
   game.registry.set('bridge', bridge);
@@ -175,10 +192,14 @@ if (DEV) {
     const room = roomByKey(want);
     if (room) bridge.devStart = { key: room.wave ? 'Waves' : 'Room', data: { key: want } };
     else if (want === 'Waves') bridge.devStart = { key: 'Waves', data: { key: 'F1R6' } };
-    else if (['Map', 'Shop', 'MakeHero', 'Rush', 'Sandbox'].includes(want)) bridge.devStart = { key: want, data: {} };
+    else if (['Map', 'Shop', 'MakeHero', 'Rush', 'Sandbox', 'Gallery'].includes(want)) bridge.devStart = { key: want, data: {} };
   }
   loadProgress(null).then(p => { bridge.progress = p; startGame(); });
 } else {
-  onUser(async p => { bridge.progress = await loadProgress(p.uid); startGame(); },
+  onUser(async p => {
+    bridge.progress = await loadProgress(p.uid);
+    try { bridge.gallery.isTeacher = await isTeacherEmail(p.email); } catch (e) { /* not the teacher */ }
+    startGame();
+  },
          () => { $('loginSpinner').classList.add('hidden'); $('loginBtn').classList.remove('hidden'); });
 }

@@ -42,7 +42,7 @@ const defaultShapesUnlock = () => Object.fromEntries(SHAPES_KEYS.map(k => [k, fa
 export const DUNGEON_KEYS = ['f1', 'f2', 'f3', 'f4'];
 const defaultDungeonUnlock = () => Object.fromEntries(DUNGEON_KEYS.map(k => [k, false]));
 export const DEFAULT_SETTINGS = { timeLimit: 30, unlockMedium: false, unlockHard: false, numTimeLimit: 30, numUnlock: defaultNumUnlock(), bondsUnlock: defaultBondsUnlock(), bondsTimeLimit: 60, shapesUnlock: defaultShapesUnlock(), shapesTimeLimit: 60, shapesGallery: true, lessMotion: false, trophy: { ...DEFAULT_TROPHY }, sheetUrl: '' };
-Object.assign(DEFAULT_SETTINGS, { dungeonUnlock: defaultDungeonUnlock(), dungeonTimeLimit: 60 });
+Object.assign(DEFAULT_SETTINGS, { dungeonUnlock: defaultDungeonUnlock(), dungeonTimeLimit: 60, dungeonGallery: true });
 
 export const player = { name: 'Guest', uid: null, email: '', highScores: {} };
 export const settings = { ...DEFAULT_SETTINGS, numUnlock: defaultNumUnlock(), bondsUnlock: defaultBondsUnlock(), shapesUnlock: defaultShapesUnlock(), trophy: { ...DEFAULT_TROPHY } };
@@ -460,6 +460,7 @@ const TEACHER_MODAL_HTML = `
           <label class="flex items-center gap-2 font-bold text-gray-700 cursor-pointer"><input type="checkbox" id="settingDungeonF4" class="w-6 h-6 accent-amber-500 rounded"> Floor 4 綜合</label>
         </div>
         <label class="flex items-center gap-2 font-bold text-gray-700 mt-3">Rush time (s)<input type="number" id="settingDungeonTime" min="10" max="300" class="border-2 border-gray-300 p-1 rounded-lg w-20 text-center font-bold outline-none"></label>
+        <label class="flex items-center gap-2 font-bold text-gray-700 mt-2 cursor-pointer"><input type="checkbox" id="settingDungeonGallery" class="w-6 h-6 accent-amber-500 rounded"> Class gallery 班級展覽廳</label>
         <div class="text-xs text-gray-500 mt-2">Before Floor 1: 老師話 left/right game (textbook p72). Before Floor 2: line-up activity (p73).</div>
       </div>
       <div class="grid grid-cols-2 gap-3 mb-4">
@@ -515,7 +516,7 @@ export function mountTeacherModal(onSaved) {
     BONDS_KEYS.forEach((k, i) => { $('settingBonds' + (i + 1)).checked = !!settings.bondsUnlock[k]; });
     $('settingBondsTime').value = settings.bondsTimeLimit; $('settingLessMotion').checked = !!settings.lessMotion;
     $('settingShapesA').checked = !!settings.shapesUnlock.a; $('settingShapesB').checked = !!settings.shapesUnlock.b; $('settingShapesTime').value = settings.shapesTimeLimit; $('settingShapesGallery').checked = settings.shapesGallery !== false;
-    DUNGEON_KEYS.forEach((k, i) => { $('settingDungeonF' + (i + 1)).checked = !!settings.dungeonUnlock[k]; }); $('settingDungeonTime').value = settings.dungeonTimeLimit;
+    DUNGEON_KEYS.forEach((k, i) => { $('settingDungeonF' + (i + 1)).checked = !!settings.dungeonUnlock[k]; }); $('settingDungeonTime').value = settings.dungeonTimeLimit; $('settingDungeonGallery').checked = settings.dungeonGallery !== false;
     $('settingTime').value = settings.timeLimit; $('settingNumTime').value = settings.numTimeLimit;
     $('settingSheetUrl').value = settings.sheetUrl || '';
     $('settingBronze').value = settings.trophy.bronze; $('settingSilver').value = settings.trophy.silver; $('settingGold').value = settings.trophy.gold;
@@ -532,7 +533,7 @@ export function mountTeacherModal(onSaved) {
       bondsUnlock: Object.fromEntries(BONDS_KEYS.map((k, i) => [k, $('settingBonds' + (i + 1)).checked])),
       bondsTimeLimit: parseInt($('settingBondsTime').value) || 60,
       shapesUnlock: { a: $('settingShapesA').checked, b: $('settingShapesB').checked }, shapesTimeLimit: parseInt($('settingShapesTime').value) || 60, shapesGallery: $('settingShapesGallery').checked,
-      dungeonUnlock: Object.fromEntries(DUNGEON_KEYS.map((k, i) => [k, $('settingDungeonF' + (i + 1)).checked])), dungeonTimeLimit: parseInt($('settingDungeonTime').value) || 60,
+      dungeonUnlock: Object.fromEntries(DUNGEON_KEYS.map((k, i) => [k, $('settingDungeonF' + (i + 1)).checked])), dungeonTimeLimit: parseInt($('settingDungeonTime').value) || 60, dungeonGallery: $('settingDungeonGallery').checked,
       lessMotion: $('settingLessMotion').checked,
       trophy, sheetUrl
     };

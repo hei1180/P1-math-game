@@ -187,14 +187,14 @@ export class MapScene extends Phaser.Scene {
     const topZ = this.add.zone(0, 0, L.W, L.top).setOrigin(0).setInteractive();
     const botZ = this.add.zone(0, L.H - BOTTOM, L.W, BOTTOM).setOrigin(0).setInteractive();
     this.fixed.add([cover, topZ, botZ]);
-    const bw = Math.min(170, (L.W - 32) / 2 - 8), by = L.H - BOTTOM / 2;
+    const bw = Math.min(150, (L.W - 32 - 16) / 3 - 6), by = L.H - BOTTOM / 2;
     const shop = pill(this, { zh: '裝備室', en: 'Shop', icon: '🛡️', w: bw, h: 64, size: 22, fill: 0xfde047, rim: 0xb45309 }, () => this.goShop());
     shop.setPosition(16 + bw / 2, by);
+    const gal = pill(this, { zh: '展覽廳', en: 'Gallery', icon: '🖼️', w: bw, h: 64, size: 22, fill: 0xffffff, rim: 0xb45309 }, () => this.goGallery());
+    gal.setPosition(L.W / 2, by);
     const lb = pill(this, { zh: '排行榜', en: 'Leaderboard', icon: '🏆', w: bw, h: 64, size: 22, fill: 0xffffff, rim: 0xb45309 }, () => { if (!this.busy && !this.ui.modalOpen) b.showLeaderboard(); });
     lb.setPosition(L.W - 16 - bw / 2, by);
-    this.fixed.add([shop, lb]);
-    const name = heroName(p.hero);
-    if (name && L.W - 2 * bw - 48 >= 90) this.fixed.add(this.add.text(L.W / 2, by, name, textStyle(18, '#fde68a')).setOrigin(0.5));
+    this.fixed.add([shop, gal, lb]);
 
     // start scrolled so the hero is in view
     this.setScroll(this.heroWorldY() - L.viewH / 2);
@@ -472,6 +472,13 @@ export class MapScene extends Phaser.Scene {
     this.leaving = true;
     sfx.door();
     fx.iris(this, 'Shop', {});
+  }
+
+  goGallery() {
+    if (this.busy || this.ui.modalOpen || this.leaving) return;
+    this.leaving = true;
+    sfx.door();
+    fx.iris(this, 'Gallery', {});
   }
 
   /** The room just finished: its stars fly from the middle of the screen to the door; then (Next) walk on. */

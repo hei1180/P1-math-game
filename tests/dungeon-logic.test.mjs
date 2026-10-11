@@ -7,7 +7,7 @@ import {
   FLOORS, ROOMS, roomByKey, roomsOf, nextRoom, DEFAULT_LEVEL, levelFor, genRoom, genRush,
   hintStep, mistakesFor, starsFor, coinsPerAnswer, chestCoins, FLOOR_BONUS, FLOOR_LOOK, CHEST_LOOKS, floorMedal,
   SKINS, HAIR_STYLES, HAIR_COLOURS, TUNICS, SEXES, HERO_NAMES, heroName, SHOP, LATER_SLOTS, buy, equip,
-  COSMETICS, COSMETIC_SLOTS, ownedCosmetics,
+  COSMETICS, COSMETIC_SLOTS, ownedCosmetics, validateGalleryEntry,
   emptyProgress, recordResult, mergeProgress,
   isFloorCleared, isFloorOpen, isRoomOpen, isRushOpen,
 } from '../dungeon-logic.js';
@@ -491,4 +491,19 @@ test('cosmetics: buy then wear adds a swatch; only owned items of the right slot
   assert.equal(equip(p0, item.slot, item.id), p0, 'unowned ignored');
   assert.deepEqual(ownedCosmetics(b.progress, 'skin').map(c => c.id), [item.id], 'only the bought one is offered');
   assert.deepEqual(ownedCosmetics(emptyProgress(), 'skin'), []);
+});
+
+test('gallery entry validation accepts the real look and rejects junk', () => {
+  const look = { playerName: '勇勇 3', hero: { sex: 'girl', skin: '#ffe0c4', hairStyle: 'long', hairColour: '#2b2118', tunic: '#d94c4c', name: { i: 0, n: 3 } }, equipped: { helmet: 'helmetCrown', pet: 'petCat' }, hidden: false };
+  assert.equal(validateGalleryEntry(look), true);
+  assert.equal(validateGalleryEntry({ playerName: 'x', hero: { skin: 1 } }), true, 'minimal look is fine');
+  assert.equal(validateGalleryEntry(null), false);
+  assert.equal(validateGalleryEntry({ playerName: 'x', hero: null }), false);
+  assert.equal(validateGalleryEntry({ hero: {} }), false, 'a name is required');
+  assert.equal(validateGalleryEntry({ playerName: 'x'.repeat(41), hero: {} }), false);
+  assert.equal(validateGalleryEntry({ playerName: 'x', hero: { sex: 'cat' } }), false);
+  assert.equal(validateGalleryEntry({ playerName: 'x', hero: { tunic: 'blue' } }), false, 'not a hex colour');
+  assert.equal(validateGalleryEntry({ playerName: 'x', hero: { hairStyle: 3 } }), false, 'style is a string id');
+  assert.equal(validateGalleryEntry({ playerName: 'x', hero: {}, equipped: { helmet: 'petCat' } }), false, 'id must match the slot');
+  assert.equal(validateGalleryEntry({ playerName: 'x', hero: {}, hidden: 'no' }), false);
 });

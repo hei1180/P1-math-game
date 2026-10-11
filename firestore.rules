@@ -8,7 +8,7 @@ rules_version = '2';
 // Rules tab -> paste this whole file -> Publish. See docs/teacher-data-setup.md
 // for a teacher-friendly walkthrough.
 //
-// Collections used by the app today: settings, scores, bondsProgress, shapesProgress, robotGallery, dungeonProgress, attempts.
+// Collections used by the app today: settings, scores, bondsProgress, shapesProgress, robotGallery, dungeonProgress, dungeonGallery, attempts.
 // Everything else is denied by default.
 
 service cloud.firestore {
@@ -155,6 +155,35 @@ service cloud.firestore {
         && d.playerName is string && d.playerName.size() <= 100
         && d.robot is map && d.robot.size() <= 10
         && d.creations is list && d.creations.size() <= 6
+        && d.hidden is bool;
+    }
+
+    // ---- dungeonGallery/{uid} --------------------------------------------------
+    // Treasure Dungeon's class gallery: one doc per player holding their hero look
+    // and equipment, and the name they already show on the leaderboard. Same shape
+    // as robotGallery: any signed-in player may read the non-hidden docs (their own
+    // and the teacher's reads always work); a player may create/edit only their OWN
+    // doc and can never change "hidden"; the teacher flips "hidden" (and nothing
+    // else) on any doc, and only the teacher may delete.
+    match /dungeonGallery/{uid} {
+      allow read: if isSignedIn() && (resource.data.hidden == false || request.auth.uid == uid || isTeacher());
+      allow create: if isSignedIn() && request.auth.uid == uid
+        && validDungeonGallery(request.resource.data) && request.resource.data.hidden == false;
+      allow update: if isSignedIn() && (
+          (request.auth.uid == uid && validDungeonGallery(request.resource.data)
+            && request.resource.data.hidden == resource.data.hidden)
+        || (isTeacher() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['hidden'])
+            && request.resource.data.hidden is bool));
+      allow delete: if isTeacher();
+    }
+
+    // Field checks for a dungeon gallery doc: only these keys, a bounded name and
+    // small look maps, so nobody can stuff a huge payload into the shared gallery.
+    function validDungeonGallery(d) {
+      return d.keys().hasOnly(['playerName', 'hero', 'equipped', 'hidden', 'updatedAt'])
+        && d.playerName is string && d.playerName.size() <= 100
+        && d.hero is map && d.hero.size() <= 8
+        && d.equipped is map && d.equipped.size() <= 8
         && d.hidden is bool;
     }
 

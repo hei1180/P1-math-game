@@ -322,6 +322,27 @@ export function makeHero(scene, look, { view = 'front' } = {}) {
   return c;
 }
 
+/**
+ * A hero in a fixed preview box for shop cards: makeHero scaled by a whole number to fit w × h, feet on a soft
+ * shadow, centred. Nothing is clipped (so it stays crisp at any scroll position). Returns the container; call
+ * .setLook(look) to change the look. The pet is dropped unless `showPet` (only pet cards show it), so the art
+ * stays the same width for every other card.
+ */
+export function heroPreview(scene, look, { w, h, view = 'front', showPet = false } = {}) {
+  const c = scene.add.container(0, 0);
+  const lk = showPet ? look : { hero: look.hero, equipped: { ...look.equipped, pet: null } };
+  const shadow = scene.add.ellipse(0, h / 2 - 3, Math.min(w * 0.5, h * 0.34), Math.max(5, h * 0.09), 0x000000, 0.16);
+  const hero = makeHero(scene, lk, { view });
+  const bound = showPet ? 34 : 24;              // widest art: pet sits at ±12 + its own width
+  hero.setScale(Math.max(2, Math.floor(Math.min(w / bound, h / 20))));
+  hero.setPosition(0, h / 2 - 3);
+  c.add([shadow, hero]);
+  c.setSize(w, h);
+  c.hero = hero;
+  c.setLook = l => { hero.setLook(l); return c; };
+  return c;
+}
+
 // ---------------------------------------------------------------- creatures
 /** A creature or object sprite (origin bottom-centre). Code-drawn creatures face right; .setFacing('left') flips. */
 export function makeCreature(scene, kind, facing = 'right') {

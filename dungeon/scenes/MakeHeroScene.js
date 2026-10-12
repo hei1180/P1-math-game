@@ -1,7 +1,7 @@
 // 製作英雄 Make your hero: a big front-view hero in a mirror, rows of swatches (sex 2, skin 6, hair style 5,
 // hair colour 6, outfit 4, clothes colour 8, weapon 5) and a preset name + number (two arrows, no free text).
 // 「出發！」 saves with bridge.saveLook and opens data.then (default 'Map'). First visit (no hero yet) comes
-// here from Boot; later the Shop's 改造型 tab opens it (free changes, ← goes back without saving). Swatches for
+// here from Boot; later the Shop's 換造型 tab opens it (free changes, ← goes back without saving). Swatches for
 // paid outfits, weapons and cosmetics only appear once bought in the shop.
 import { SKINS, HAIR_STYLES, HAIR_COLOURS, TUNICS, SEXES, HERO_NAMES, OUTFITS, WEAPONS, ownedCosmetics } from '../../dungeon-logic.js?v=202610112341';
 import { UI, pill } from '../ui.js?v=202610112341';

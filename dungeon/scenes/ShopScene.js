@@ -1,26 +1,26 @@
-// 裝備室 Shop: a mirror with the hero; tabs 頭盔 Helmets / 寵物 Pets / 裝扮 Looks (skins, hair, outfits to buy)
-// / 改造型 My hero (opens MakeHero). Tapping an item tries it on for free. The button under the mirror:
-// 「買」 (price) → buy and wear; owned → 「穿上」 / 「除下」. Items not for sale (chest pieces, the boss's baby
-// dragon) show a silhouette and how to get them until owned. Fixed prices, nothing random, no timers.
-import { SHOP, COSMETICS, SHOP_LOOKS, OUTFITS, WEAPONS, buy, equip } from '../../dungeon-logic.js?v=202610112341';
+// 裝備室 Shop: a mirror with the hero; tabs 裝扮 Looks (a sectioned catalogue: 膚色 / 髮色 / 服裝 / 衣服顏色 /
+// 武器) · 頭盔 Helmets · 寵物 Pets · 換造型 My hero (opens MakeHero). Every card shows a little hero wearing /
+// holding the item (or a silhouette + how to get it for chest / boss pieces). A header control switches every
+// card between 我的英雄 (your own hero) and 示範英雄 (a plain example hero) for easy comparing. Tapping an item
+// tries it on for free; the button under the mirror is 買 (price) → buy and wear, owned → 穿上 / 除下.
+import { SHOP, COSMETICS, OUTFITS, WEAPONS, buy, equip } from '../../dungeon-logic.js?v=202610112341';
 import { UI, pill } from '../ui.js?v=202610112341';
 import { fx } from '../fx.js?v=202610112341';
 import { sfx } from '../sfx.js?v=202610112341';
 import { voice } from '../voice.js?v=202610112341';
 import { textStyle } from '../theme.js?v=202610112341';
-import { makeHero, artFrame } from '../art.js?v=202610112341';
+import { makeHero, artFrame, heroPreview } from '../art.js?v=202610112341';
 import { drawMirror } from './MakeHeroScene.js?v=202610112341';
 
 const reduced = () => fx.lessMotion || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
-const hexN = s => parseInt(String(s).slice(1), 16);
 const itemById = id => SHOP.find(s => s.id === id) || COSMETICS.find(c => c.id === id)
   || OUTFITS.find(o => o.id === id) || WEAPONS.find(w => w.id === id);
 const TABS = [
+  { id: 'dress', zh: '裝扮', en: 'Looks' },
   { id: 'helmet', zh: '頭盔', en: 'Helmets' },
   { id: 'pet', zh: '寵物', en: 'Pets' },
-  { id: 'dress', zh: '裝扮', en: 'Looks' },
-  { id: 'looks', zh: '改造型', en: 'My hero' },
+  { id: 'looks', zh: '換造型', en: 'My hero' },
 ];
 const HOW = {
   chest: { zh: '在寶箱裏找到', en: 'Find it in a chest' },
@@ -37,11 +37,12 @@ export class ShopScene extends Phaser.Scene {
   create() {
     this.bridge = this.registry.get('bridge');
     this.then = this.startData.then || 'Map';
-    this.tab = this.registry.get('dungeon.shopTab') || 'helmet';
+    this.tab = this.registry.get('dungeon.shopTab') || 'dress';
+    this.previewBase = this.registry.get('dungeon.shopBase') || 'hero'; // 'hero' (your hero) | 'model' (example)
     this.tryOn = null; // item id being tried on (free)
     this.leaving = false; this.busy = false;
     this.ui = new UI(this);
-    this.ui.prompt('裝備室', 'Shop: tap to try on', { speak: !this.registry.get('dungeon.shopSaid') });
+    this.ui.prompt('裝備室', 'Tap an item to try it on', { speak: !this.registry.get('dungeon.shopSaid') });
     this.registry.set('dungeon.shopSaid', true);
     this.ui.back(() => this.leave(this.then));
     this.ui.coins(this.bridge.coins, false);
@@ -60,7 +61,7 @@ export class ShopScene extends Phaser.Scene {
     if (item.colour) return ((this.p.hero || {})[item.slot]) === item.colour;
     return (this.p.equipped || {})[item.slot] === item.id;
   }
-  hidden(item) { return item.price == null && !this.owned(item.id); } // chest / boss piece not found yet
+  hidden(item) { return item.earnedBy != null && !this.owned(item.id); } // chest / boss piece not found yet
 
   look() {
     const eq = { ...(this.p.equipped || {}) };
@@ -73,22 +74,49 @@ export class ShopScene extends Phaser.Scene {
     return { hero, equipped: eq };
   }
 
+  /** The look each card previews: the chosen base hero with just this item applied. */
+  previewLook(it) {
+    const model = this.previewBase === 'model';
+    const hero = model
+      ? { sex: 'boy', skin: '#ffe0c4', hairStyle: 'short', hairColour: '#5a3a22', tunic: '#d94c4c' }
+      : { ...(this.p.hero || {}) };
+    const eq = model ? {} : { ...(this.p.equipped || {}) };
+    if (it.colour) hero[it.slot] = it.colour;
+    else eq[it.slot] = it.id;
+    if (it.slot !== 'pet') eq.pet = null; // keep the art the same width on every non-pet card
+    return { hero, equipped: eq };
+  }
+
+  /** The catalogue, grouped into sections (only the 裝扮 tab has more than one). */
+  sections() {
+    const bySlot = slot => COSMETICS.filter(c => c.slot === slot);
+    if (this.tab === 'helmet') return [{ key: 'helmet', zh: '頭盔', en: 'Helmets', items: SHOP.filter(s => s.slot === 'helmet') }];
+    if (this.tab === 'pet') return [{ key: 'pet', zh: '寵物', en: 'Pets', items: SHOP.filter(s => s.slot === 'pet') }];
+    return [
+      { key: 'skin', zh: '膚色', en: 'Skin', items: bySlot('skin') },
+      { key: 'hair', zh: '髮色', en: 'Hair colour', items: bySlot('hairColour') },
+      { key: 'outfit', zh: '服裝', en: 'Outfits', items: OUTFITS },
+      { key: 'cloth', zh: '衣服顏色', en: 'Clothes colour', items: bySlot('tunic') },
+      { key: 'weapon', zh: '武器', en: 'Weapons', items: WEAPONS },
+    ];
+  }
+
   rebuild() { if (this.layer) this.layer.destroy(); if (this.gridMask) this.gridMask.destroy(); this.build(); }
 
   build() {
     const W = this.scale.width, H = this.scale.height, top = this.ui.topH + 6;
     this.layer = this.add.container(0, 0);
     const wide = W >= 640 && W > H * 1.05;
-    const actH = 76;
+    const actH = 76, toggleH = 46;
     let mx, my, mw, mh, gx, gy, gw, gh;
     if (wide) {
-      mw = clamp(W * 0.32, 200, 320); mh = Math.min(H - top - actH - 24, mw * 1.2);
+      mw = clamp(W * 0.32, 200, 320); mh = Math.min(H - top - actH - toggleH - 24, mw * 1.2);
       mx = 16 + mw / 2; my = top + 6 + mh / 2;
       gx = 16 + mw + 24; gy = top + 4; gw = W - gx - 16; gh = H - gy - 12;
     } else {
-      mh = clamp(H * 0.24, 120, 220); mw = Math.min(W - 32, mh * 1.15);
+      mh = clamp(H * 0.22, 110, 200); mw = Math.min(W - 32, mh * 1.15);
       mx = W / 2; my = top + mh / 2;
-      gx = 12; gy = top + mh + actH + 4; gw = W - 24; gh = H - gy - 8;
+      gx = 12; gy = top + mh + actH + toggleH + 4; gw = W - 24; gh = H - gy - 8;
     }
     // mirror with the hero (+ pet)
     const mirror = drawMirror(this, mx, my, mw, mh);
@@ -102,46 +130,24 @@ export class ShopScene extends Phaser.Scene {
     // action button under the mirror
     this.actPos = { x: mx, y: my + mh / 2 + actH / 2 + 2 };
     this.paintAction();
+    // 我的英雄 / 示範英雄 preview-base control, under the action button
+    this.buildBaseToggle(mx, my + mh / 2 + actH + toggleH / 2 + 4);
 
     // tabs
-    const tabH = 56, n = TABS.length, tw = Math.min(150, (gw - 16) / n);
-    this.tabBtns = {};
+    const tabH = 52, n = TABS.length, tw = Math.min(150, (gw - 16) / n);
     TABS.forEach((t, i) => {
       const on = this.tab === t.id;
       const b = pill(this, { zh: t.zh, en: t.en, w: tw - 8, h: tabH, size: 20, fill: on ? 0xfde047 : 0xffffff, rim: on ? 0xb45309 : 0xa8a29e }, () => this.pickTab(t.id));
       b.setPosition(gx + gw / 2 + (i - (n - 1) / 2) * tw, gy + tabH / 2);
       this.layer.add(b);
-      this.tabBtns[t.id] = b;
     });
 
-    // item grid (scrolls when it does not fit)
-    const items = this.tab === 'dress' ? SHOP_LOOKS : SHOP.filter(s => s.slot === this.tab);
-    const area = { x: gx, y: gy + tabH + 10, w: gw, h: Math.max(100, gh - tabH - 10) };
-    const cols = Math.max(2, Math.min(6, Math.floor(area.w / 104)));
-    const cw = Math.min(140, Math.floor(area.w / cols)), ch = Math.round(cw * 1.12);
-    const x0 = area.x + (area.w - cols * cw) / 2;
-    this.grid = this.add.container(0, 0);
-    this.cards = {};
-    items.forEach((it, i) => {
-      const card = this.card(it, cw - 8, ch - 8);
-      card.setPosition(x0 + (i % cols) * cw + cw / 2, area.y + Math.floor(i / cols) * ch + ch / 2);
-      this.grid.add(card);
-      this.cards[it.id] = card;
-    });
-    this.layer.addAt(this.grid, 0); // under the tabs and the action button (cards scroll beneath them)
-    const contentH = Math.ceil(items.length / cols) * ch;
-    this.gridArea = area;
-    this.gridMax = Math.max(0, contentH - area.h);
-    this.gridScroll = 0;
-    if (this.gridMax > 0) {
-      this.gridMask = this.make.graphics({ add: false });
-      this.gridMask.fillStyle(0xffffff).fillRect(area.x - 4, area.y - 4, area.w + 8, area.h + 8);
-      this.grid.setMask(this.gridMask.createGeometryMask());
-      // a hint that there is more below
-      const more = this.add.text(area.x + area.w - 6, area.y + area.h - 4, '▼', textStyle(18, '#fde68a')).setOrigin(1, 1).setAlpha(0.8);
-      this.layer.add(more);
-      this.moreHint = more;
-    } else this.gridMask = null;
+    // sectioned catalogue (a jump-bar when there is more than one section)
+    const secs = this.sections();
+    const jumpH = secs.length > 1 ? 42 : 4;
+    if (secs.length > 1) this.buildJump(gx, gy + tabH + 4, gw, 36, secs);
+    const area = { x: gx, y: gy + tabH + jumpH + 4, w: gw, h: Math.max(80, gh - tabH - jumpH - 4) };
+    this.buildGrid(area, secs);
   }
 
   placeHero() {
@@ -149,7 +155,86 @@ export class ShopScene extends Phaser.Scene {
     h.setPosition(gl.x + gl.w / 2 + (pet ? 7 * h.scale : 0), gl.y + gl.h - Math.max(4, gl.h * 0.08));
   }
 
-  /** One item card: picture (silhouette while hidden), name, price / status. */
+  /** Two little pills: preview every card on 我的英雄 or on a plain 示範英雄. */
+  buildBaseToggle(cx, cy) {
+    const opts = [['hero', '我的英雄'], ['model', '示範英雄']];
+    const w = 112, h = 34;
+    opts.forEach(([id, zh], i) => {
+      const on = this.previewBase === id;
+      const b = pill(this, { zh, en: '', w: w - 6, h, size: 16, fill: on ? 0xfde047 : 0xffffff, rim: on ? 0xb45309 : 0xa8a29e }, () => this.setBase(id));
+      b.setPosition(cx + (i - 0.5) * w, cy);
+      this.layer.add(b);
+    });
+  }
+
+  setBase(id) {
+    if (this.previewBase === id) return;
+    sfx.tick(3);
+    this.previewBase = id;
+    this.registry.set('dungeon.shopBase', id);
+    this.repaintGrid();
+  }
+
+  /** A row of category pills that scroll the catalogue to a section. */
+  buildJump(x, y, w, h, secs) {
+    const n = secs.length, pw = Math.min(118, (w - 8) / n), total = n * pw;
+    const x0 = x + (w - total) / 2;
+    secs.forEach((s, i) => {
+      const b = pill(this, { zh: s.zh, en: '', w: pw - 6, h: 34, size: 16, fill: 0xffffff, rim: 0xa8a29e }, () => this.jumpTo(s.key));
+      b.setPosition(x0 + i * pw + pw / 2, y + h / 2);
+      this.layer.add(b);
+    });
+  }
+
+  jumpTo(key) {
+    const y = this.sectionY && this.sectionY[key];
+    if (y == null) return;
+    sfx.tick(3);
+    this.setGridScroll(y - 4);
+  }
+
+  buildGrid(area, secs) {
+    const cols = Math.max(2, Math.min(6, Math.floor(area.w / 104)));
+    const cw = Math.min(150, Math.floor(area.w / cols)), ch = Math.round(cw * 1.28);
+    const x0 = area.x + (area.w - cols * cw) / 2;
+    const headH = secs.length > 1 ? 38 : 0;
+    this.grid = this.add.container(0, 0);
+    this.cards = {};
+    this.sectionY = {};
+    let y = 0;
+    secs.forEach(s => {
+      if (headH) {
+        this.sectionY[s.key] = y;
+        const zh = this.add.text(area.x + 4, area.y + y + headH / 2, s.zh, textStyle(20, '#fde68a')).setOrigin(0, 0.5);
+        const en = this.add.text(area.x + 8 + zh.width, area.y + y + headH / 2 + 2, s.en, textStyle(12, '#a8a29e', { fontStyle: 'normal' })).setOrigin(0, 0.5);
+        const line = this.add.graphics();
+        line.lineStyle(2, 0xfacc15, 0.25).lineBetween(area.x + 4, area.y + y + headH - 5, area.x + area.w - 4, area.y + y + headH - 5);
+        this.grid.add([zh, en, line]);
+        y += headH;
+      }
+      s.items.forEach((it, i) => {
+        const card = this.card(it, cw - 8, ch - 8);
+        card.setPosition(x0 + (i % cols) * cw + cw / 2, area.y + y + Math.floor(i / cols) * ch + ch / 2);
+        this.grid.add(card);
+        this.cards[it.id] = card;
+      });
+      y += Math.ceil(s.items.length / cols) * ch + 8;
+    });
+    this.layer.addAt(this.grid, 0); // under the tabs, the jump-bar and the action button
+    this.gridArea = area;
+    this.gridMax = Math.max(0, y - area.h);
+    this.gridScroll = 0;
+    if (this.gridMax > 0) {
+      this.gridMask = this.make.graphics({ add: false });
+      this.gridMask.fillStyle(0xffffff).fillRect(area.x - 4, area.y - 4, area.w + 8, area.h + 8);
+      this.grid.setMask(this.gridMask.createGeometryMask());
+      const more = this.add.text(area.x + area.w - 6, area.y + area.h - 4, '▼', textStyle(18, '#fde68a')).setOrigin(1, 1).setAlpha(0.8);
+      this.layer.add(more);
+      this.moreHint = more;
+    } else { this.gridMask = null; this.moreHint = null; }
+  }
+
+  /** One item card: a hero preview, the name, and a price / status footer. */
   card(it, w, h) {
     const c = this.add.container(0, 0), g = this.add.graphics();
     const hid = this.hidden(it), own = this.owned(it.id), wear = this.wearing(it), trying = this.tryOn === it.id;
@@ -159,43 +244,34 @@ export class ShopScene extends Phaser.Scene {
     g.fillStyle(fill, 1).fillRoundedRect(-w / 2, -h / 2, w, h, 14);
     g.lineStyle(trying ? 6 : 3, rim, 1).strokeRoundedRect(-w / 2, -h / 2, w, h, 14);
     c.add(g);
-    // picture: a sprite, a colour dot for a cosmetic, or a little hero wearing an outfit / holding a weapon
-    if (it.colour) {
-      const cd = this.add.graphics(), rad = Math.min(w, h * 0.55) * 0.3;
-      cd.fillStyle(0x000000, 0.25).fillCircle(2, 3, rad);
-      cd.fillStyle(hexN(it.colour), 1).fillCircle(0, 0, rad);
-      cd.fillStyle(0xffffff, 0.35).fillCircle(-rad * 0.35, -rad * 0.35, rad * 0.3);
-      cd.setPosition(0, -h / 2 + 6 + h * 0.22);
-      c.add(cd);
-    } else if (it.slot === 'outfit' || it.slot === 'weapon') {
-      const mini = makeHero(this, { hero: { ...(this.p.hero || {}) }, equipped: { ...(this.p.equipped || {}), [it.slot]: it.id } }, { view: 'front' });
-      mini.setScale(Math.max(2, Math.floor(Math.min(w, h * 0.55) / 22)));
-      mini.setPosition(0, -h / 2 + h * 0.62);
-      c.add(mini);
-    } else {
+    // preview: a little hero wearing / holding the item; hidden (chest / boss) pieces stay a silhouette
+    const boxW = w - 12, boxH = Math.round(h * 0.60);
+    const boxCy = -h / 2 + 6 + boxH / 2;
+    if (hid) {
       const f = artFrame(it.id);
-      const k = Math.max(2, Math.floor(Math.min(w, h * 0.55) / 16));
-      const img = this.add.image(0, -h / 2 + 6 + 8 * k, f.texture, f.frame).setScale(k);
-      if (hid) img.setTintFill(0x1c1917);
-      c.add(img);
+      const k = Math.max(2, Math.floor(Math.min(boxW / 20, boxH / 18)));
+      c.add(this.add.image(0, boxCy + boxH / 2 - 4 - 8 * k, f.texture, f.frame).setScale(k).setTintFill(0x1c1917));
+    } else {
+      c.add(heroPreview(this, this.previewLook(it), { w: boxW, h: boxH, showPet: it.slot === 'pet' }).setPosition(0, boxCy));
     }
     // name
-    const nz = this.add.text(0, h * 0.14, hid ? '？？？' : it.zh, textStyle(17, hid ? '#e7e5e4' : '#1f2937')).setOrigin(0.5);
+    const nz = this.add.text(0, -h / 2 + 6 + boxH + 12, hid ? '？？？' : it.zh, textStyle(17, hid ? '#e7e5e4' : '#1f2937')).setOrigin(0.5);
     if (nz.width > w - 8) nz.setScale((w - 8) / nz.width);
     c.add(nz);
     // price / status
     let st;
     if (hid) st = HOW[it.earnedBy] || HOW.chest;
-    else if (wear) st = { zh: '穿着', en: 'Wearing' };
+    else if (wear) st = { zh: '穿著', en: 'Wearing' };
     else if (own) st = { zh: '已擁有', en: 'Yours' };
+    else if (it.price == null) st = { zh: '免費', en: 'Free' };
     else st = null;
     if (st) {
-      const t = this.add.text(0, h / 2 - 16, st.zh, textStyle(14, hid ? '#fde68a' : wear ? '#15803d' : '#57534e')).setOrigin(0.5);
+      const t = this.add.text(0, h / 2 - 15, st.zh, textStyle(14, hid ? '#fde68a' : wear ? '#15803d' : '#57534e')).setOrigin(0.5);
       if (t.width > w - 8) t.setScale((w - 8) / t.width);
       c.add(t);
     } else {
-      const coin = this.add.image(-15, h / 2 - 16, 'art:coin').setScale(1.6);
-      c.add([coin, this.add.text(3, h / 2 - 16, String(it.price), textStyle(18, '#a16207')).setOrigin(0, 0.5)]);
+      const coin = this.add.image(-15, h / 2 - 15, 'art:coin').setScale(1.6);
+      c.add([coin, this.add.text(3, h / 2 - 15, String(it.price), textStyle(18, '#a16207')).setOrigin(0, 0.5)]);
     }
     if (wear && !hid) c.add(this.add.text(w / 2 - 14, -h / 2 + 14, '✓', textStyle(18, '#15803d')).setOrigin(0.5));
     c.setSize(w, h).setInteractive({ useHandCursor: true });
@@ -225,11 +301,11 @@ export class ShopScene extends Phaser.Scene {
         return ok ? { zh: `買 ${it.price}`, en: 'Buy', act: 'buy' } : { zh: `買 ${it.price}`, en: `Need ${it.price - this.bridge.coins} more coins`, act: 'short', dim: true };
       };
       if (it.colour) {
-        if (this.wearing(it)) note = { zh: `穿着中：${it.zh}`, en: 'Wearing' };
+        if (this.wearing(it)) note = { zh: `穿著中：${it.zh}`, en: 'Wearing' };
         else if (this.owned(it.id)) spec = { zh: '穿上', en: 'Wear', act: 'wear' };
         else if (it.price != null) spec = buySpec();
       } else if (this.wearing(it)) spec = { zh: '除下', en: 'Take off', act: 'off' };
-      else if (this.owned(it.id)) spec = { zh: '穿上', en: 'Wear', act: 'wear' };
+      else if (this.owned(it.id) || it.price == null) spec = { zh: '穿上', en: 'Wear', act: 'wear' };
       else if (it.price != null) spec = buySpec();
     }
     if (!spec) {

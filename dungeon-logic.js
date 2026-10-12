@@ -1051,7 +1051,7 @@ export const COSMETICS = [
   { id: 'tunicMint',  slot: 'tunic',      zh: '薄荷衫', en: 'Mint tunic',  colour: '#7ee0c0', price: 12 },
   { id: 'tunicSky',   slot: 'tunic',      zh: '天藍衫', en: 'Sky tunic',   colour: '#7ec8f0', price: 12 },
   { id: 'tunicPlum',  slot: 'tunic',      zh: '梅紫衫', en: 'Plum tunic',  colour: '#a06fd0', price: 12 },
-  { id: 'tunicSun',   slot: 'tunic',      zh: '陽光衫', en: 'Sun tunic',   colour: '#ffd24a', price: 12 },
+  { id: 'tunicSun',   slot: 'tunic',      zh: '金黃衫', en: 'Sun tunic',   colour: '#ffd24a', price: 12 },
   { id: 'tunicRose',  slot: 'tunic',      zh: '玫紅衫', en: 'Rose tunic',  colour: '#ef6fa4', price: 12 },
   { id: 'tunicLime',  slot: 'tunic',      zh: '青檸衫', en: 'Lime tunic',  colour: '#b6e05a', price: 12 },
 ];
@@ -1067,7 +1067,7 @@ export const ownedCosmetics = (progress, slot) =>
  * creation; the rest are bought in the shop. Maps to a Roguelike Characters sheet frame in art.js (RC.outfits).
  */
 export const OUTFITS = [
-  { id: 'tunic',   slot: 'outfit', zh: '外衣',   en: 'Tunic',   price: null },
+  { id: 'tunic',   slot: 'outfit', zh: '上衣',   en: 'Tunic',   price: null },
   { id: 'cropped', slot: 'outfit', zh: '短衣',   en: 'Cropped', price: null },
   { id: 'dress',   slot: 'outfit', zh: '連身裙', en: 'Dress',   price: 10 },
   { id: 'armour',  slot: 'outfit', zh: '盔甲',   en: 'Armour',  price: 15 },

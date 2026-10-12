@@ -66,6 +66,8 @@ export const RC = {
     sword:  { tex: 'rc', frame: 366, ox: 0.20, oy: 0.95, x: 6, y: -1 },
     axe:    { tex: 'rc', frame: 51,  ox: 0.15, oy: 0.95, x: 6, y: -1 },
     hammer: { tex: 'rc', frame: 50,  ox: 0.15, oy: 0.95, x: 6, y: -1 },
+    mace:   { tex: 'rc', frame: 48,  ox: 0.15, oy: 0.95, x: 6, y: -1 },
+    bow:    { tex: 'rc', frame: 52,  ox: 0.30, oy: 0.55, x: 7, y: -5 },
   },
   hair: { short: 19, spiky: 130, bob: 129, long: 20, buns: 128 },        // brown hair styles
   helmets: { helmetPlain: 28, helmetHorned: 352, helmetCrown: 139, helmetWizard: 462, helmetGold: 30 },

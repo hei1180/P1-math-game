@@ -1011,17 +1011,20 @@ export const HERO_NAMES = [
 /** hero.name = { i: index into HERO_NAMES, n: 1..99 } → '勇勇 3'; '' when not set. */
 export const heroName = hero => (hero && hero.name && HERO_NAMES[hero.name.i] ? `${HERO_NAMES[hero.name.i].zh} ${hero.name.n}` : '');
 
+/** One flat price for every shop item and set (owner chose flat pricing). */
+export const SHOP_PRICE = 12;
+
 /** Fixed prices, nothing random. petDragon only from beating the boss. */
 export const SHOP = [
-  { id: 'helmetPlain',  slot: 'helmet', zh: '頭盔',   en: 'Plain helm',  price: 10 },
-  { id: 'helmetHood',   slot: 'helmet', zh: '斗篷帽', en: 'Hood',        price: 12 },
-  { id: 'helmetHorned', slot: 'helmet', zh: '角頭盔', en: 'Horned helm', price: 15 },
-  { id: 'helmetWizard', slot: 'helmet', zh: '巫師帽', en: 'Wizard hat',  price: 20 },
-  { id: 'helmetCrown',  slot: 'helmet', zh: '皇冠',   en: 'Crown',       price: 25 },
-  { id: 'petSlime',     slot: 'pet',    zh: '小史萊姆', en: 'Slime',     price: 15 },
-  { id: 'petGhost',     slot: 'pet',    zh: '小幽靈', en: 'Ghost',       price: 20 },
-  { id: 'petCat',       slot: 'pet',    zh: '小貓',   en: 'Cat',         price: 25 },
-  { id: 'petOwlet',     slot: 'pet',    zh: '小貓頭鷹', en: 'Owlet',     price: 30 },
+  { id: 'helmetPlain',  slot: 'helmet', zh: '頭盔',   en: 'Plain helm',  price: SHOP_PRICE },
+  { id: 'helmetHood',   slot: 'helmet', zh: '斗篷帽', en: 'Hood',        price: SHOP_PRICE },
+  { id: 'helmetHorned', slot: 'helmet', zh: '角頭盔', en: 'Horned helm', price: SHOP_PRICE },
+  { id: 'helmetWizard', slot: 'helmet', zh: '巫師帽', en: 'Wizard hat',  price: SHOP_PRICE },
+  { id: 'helmetCrown',  slot: 'helmet', zh: '皇冠',   en: 'Crown',       price: SHOP_PRICE },
+  { id: 'petSlime',     slot: 'pet',    zh: '小史萊姆', en: 'Slime',     price: SHOP_PRICE },
+  { id: 'petGhost',     slot: 'pet',    zh: '小幽靈', en: 'Ghost',       price: SHOP_PRICE },
+  { id: 'petCat',       slot: 'pet',    zh: '小貓',   en: 'Cat',         price: SHOP_PRICE },
+  { id: 'petOwlet',     slot: 'pet',    zh: '小貓頭鷹', en: 'Owlet',     price: SHOP_PRICE },
   { id: 'petDragon',    slot: 'pet',    zh: '小龍',   en: 'Baby dragon', price: null, earnedBy: 'boss' },
   // chest-only pieces (CHEST_LOOKS)
   { id: 'helmetCap',    slot: 'helmet', zh: '紅帽子', en: 'Red cap',     price: null, earnedBy: 'chest' },
@@ -1040,24 +1043,35 @@ export const LATER_SLOTS = ['cape', 'badge', 'trail'];
  * Colours avoid the free starter palettes so every bought one looks different.
  */
 export const COSMETICS = [
-  { id: 'skinRose',   slot: 'skin',       zh: '玫瑰膚', en: 'Rose skin',   colour: '#f8c8bd', price: 12 },
-  { id: 'skinOlive',  slot: 'skin',       zh: '小麥膚', en: 'Olive skin',  colour: '#d9a06b', price: 12 },
-  { id: 'skinDeep',   slot: 'skin',       zh: '深膚色', en: 'Deep skin',   colour: '#7a4a2b', price: 12 },
-  { id: 'hairPink',   slot: 'hairColour', zh: '粉紅髮', en: 'Pink hair',   colour: '#ff77c8', price: 12 },
-  { id: 'hairBlue',   slot: 'hairColour', zh: '藍髮',   en: 'Blue hair',   colour: '#4aa3ff', price: 12 },
-  { id: 'hairGreen',  slot: 'hairColour', zh: '綠髮',   en: 'Green hair',  colour: '#5ad17a', price: 12 },
-  { id: 'hairWhite',  slot: 'hairColour', zh: '白髮',   en: 'White hair',  colour: '#f2f2f2', price: 14 },
-  { id: 'hairPurple', slot: 'hairColour', zh: '紫髮',   en: 'Purple hair', colour: '#b07aff', price: 14 },
-  { id: 'tunicMint',  slot: 'tunic',      zh: '薄荷衫', en: 'Mint tunic',  colour: '#7ee0c0', price: 12 },
-  { id: 'tunicSky',   slot: 'tunic',      zh: '天藍衫', en: 'Sky tunic',   colour: '#7ec8f0', price: 12 },
-  { id: 'tunicPlum',  slot: 'tunic',      zh: '梅紫衫', en: 'Plum tunic',  colour: '#a06fd0', price: 12 },
-  { id: 'tunicSun',   slot: 'tunic',      zh: '金黃衫', en: 'Sun tunic',   colour: '#ffd24a', price: 12 },
-  { id: 'tunicRose',  slot: 'tunic',      zh: '玫紅衫', en: 'Rose tunic',  colour: '#ef6fa4', price: 12 },
-  { id: 'tunicLime',  slot: 'tunic',      zh: '青檸衫', en: 'Lime tunic',  colour: '#b6e05a', price: 12 },
+  { id: 'skinRose',    slot: 'skin',       zh: '玫瑰膚',   en: 'Rose skin',    colour: '#f8c8bd', price: SHOP_PRICE },
+  { id: 'skinOlive',   slot: 'skin',       zh: '小麥膚',   en: 'Olive skin',   colour: '#d9a06b', price: SHOP_PRICE },
+  { id: 'skinHoney',   slot: 'skin',       zh: '蜜糖膚',   en: 'Honey skin',   colour: '#e8b070', price: SHOP_PRICE },
+  { id: 'skinDeep',    slot: 'skin',       zh: '深膚色',   en: 'Deep skin',    colour: '#7a4a2b', price: SHOP_PRICE },
+  { id: 'skinCocoa',   slot: 'skin',       zh: '可可膚',   en: 'Cocoa skin',   colour: '#5a3a24', price: SHOP_PRICE },
+  { id: 'skinIvory',   slot: 'skin',       zh: '象牙膚',   en: 'Ivory skin',   colour: '#ffeadb', price: SHOP_PRICE },
+  { id: 'hairPink',    slot: 'hairColour', zh: '粉紅髮',   en: 'Pink hair',    colour: '#ff77c8', price: SHOP_PRICE },
+  { id: 'hairBlue',    slot: 'hairColour', zh: '藍髮',     en: 'Blue hair',    colour: '#4aa3ff', price: SHOP_PRICE },
+  { id: 'hairGreen',   slot: 'hairColour', zh: '綠髮',     en: 'Green hair',   colour: '#5ad17a', price: SHOP_PRICE },
+  { id: 'hairTeal',    slot: 'hairColour', zh: '青綠髮',   en: 'Teal hair',    colour: '#2fd6c0', price: SHOP_PRICE },
+  { id: 'hairWhite',   slot: 'hairColour', zh: '白髮',     en: 'White hair',   colour: '#f2f2f2', price: SHOP_PRICE },
+  { id: 'hairSilver',  slot: 'hairColour', zh: '銀髮',     en: 'Silver hair',  colour: '#c8d0dc', price: SHOP_PRICE },
+  { id: 'hairRed',     slot: 'hairColour', zh: '火紅髮',   en: 'Red hair',     colour: '#ff5a3c', price: SHOP_PRICE },
+  { id: 'hairPurple',  slot: 'hairColour', zh: '紫髮',     en: 'Purple hair',  colour: '#b07aff', price: SHOP_PRICE },
+  { id: 'hairBlack',   slot: 'hairColour', zh: '烏黑髮',   en: 'Black hair',   colour: '#1a1a22', price: SHOP_PRICE },
+  { id: 'tunicMint',   slot: 'tunic',      zh: '薄荷衫',   en: 'Mint tunic',   colour: '#7ee0c0', price: SHOP_PRICE },
+  { id: 'tunicSky',    slot: 'tunic',      zh: '天藍衫',   en: 'Sky tunic',    colour: '#7ec8f0', price: SHOP_PRICE },
+  { id: 'tunicAqua',   slot: 'tunic',      zh: '湖水衫',   en: 'Aqua tunic',   colour: '#3fd0d0', price: SHOP_PRICE },
+  { id: 'tunicIndigo', slot: 'tunic',      zh: '靛藍衫',   en: 'Indigo tunic', colour: '#3a4a9a', price: SHOP_PRICE },
+  { id: 'tunicPlum',   slot: 'tunic',      zh: '梅紫衫',   en: 'Plum tunic',   colour: '#a06fd0', price: SHOP_PRICE },
+  { id: 'tunicRose',   slot: 'tunic',      zh: '玫紅衫',   en: 'Rose tunic',   colour: '#ef6fa4', price: SHOP_PRICE },
+  { id: 'tunicCherry', slot: 'tunic',      zh: '櫻桃衫',   en: 'Cherry tunic', colour: '#e03050', price: SHOP_PRICE },
+  { id: 'tunicSun',    slot: 'tunic',      zh: '金黃衫',   en: 'Sun tunic',    colour: '#ffd24a', price: SHOP_PRICE },
+  { id: 'tunicLime',   slot: 'tunic',      zh: '青檸衫',   en: 'Lime tunic',   colour: '#b6e05a', price: SHOP_PRICE },
+  { id: 'tunicSlate',  slot: 'tunic',      zh: '石板衫',   en: 'Slate tunic',  colour: '#6a7a88', price: SHOP_PRICE },
 ];
 export const COSMETIC_SLOTS = ['skin', 'hairColour', 'tunic'];
 const itemById = id => SHOP.find(s => s.id === id) || COSMETICS.find(c => c.id === id)
-  || OUTFITS.find(o => o.id === id) || WEAPONS.find(w => w.id === id);
+  || OUTFITS.find(o => o.id === id) || WEAPONS.find(w => w.id === id) || LOOKS.find(l => l.id === id);
 /** Owned cosmetic colours for a slot, in COSMETICS order (used by 製作英雄 to add swatches). */
 export const ownedCosmetics = (progress, slot) =>
   COSMETICS.filter(c => c.slot === slot && ((progress && progress.looks) || []).includes(c.id));
@@ -1069,25 +1083,70 @@ export const ownedCosmetics = (progress, slot) =>
 export const OUTFITS = [
   { id: 'tunic',   slot: 'outfit', zh: '上衣',   en: 'Tunic',   price: null },
   { id: 'cropped', slot: 'outfit', zh: '短衣',   en: 'Cropped', price: null },
-  { id: 'dress',   slot: 'outfit', zh: '連身裙', en: 'Dress',   price: 10 },
-  { id: 'armour',  slot: 'outfit', zh: '盔甲',   en: 'Armour',  price: 15 },
+  { id: 'dress',   slot: 'outfit', zh: '連身裙', en: 'Dress',   price: SHOP_PRICE },
+  { id: 'armour',  slot: 'outfit', zh: '盔甲',   en: 'Armour',  price: SHOP_PRICE },
 ];
 /** Held weapons (equipped.weapon; null = empty hands). Maps to RC.weapons in art.js. */
 export const WEAPONS = [
   { id: 'staff',  slot: 'weapon', zh: '魔杖', en: 'Staff',  price: null },
   { id: 'sword',  slot: 'weapon', zh: '寶劍', en: 'Sword',  price: null },
-  { id: 'axe',    slot: 'weapon', zh: '斧頭', en: 'Axe',    price: 12 },
-  { id: 'hammer', slot: 'weapon', zh: '鐵鎚', en: 'Hammer', price: 14 },
+  { id: 'axe',    slot: 'weapon', zh: '斧頭', en: 'Axe',    price: SHOP_PRICE },
+  { id: 'hammer', slot: 'weapon', zh: '鐵鎚', en: 'Hammer', price: SHOP_PRICE },
+  { id: 'mace',   slot: 'weapon', zh: '釘鎚', en: 'Mace',   price: SHOP_PRICE },
+  { id: 'bow',    slot: 'weapon', zh: '弓箭', en: 'Bow',    price: SHOP_PRICE },
 ];
-/** Items the shop's 裝扮 tab can sell (cosmetics + the paid outfits and weapons). */
+/**
+ * 套裝 Preset looks taken from the Roguelike Characters sheet's own sample characters (girl = col 0, boy = col 1,
+ * rows 4-11) — the pack's examples of combining hair, clothes and weapons. Buying / wearing one applies the whole
+ * look (sex, skin, hair, clothes, outfit and weapon) in a single tap; every piece is still sold on its own too.
+ */
+export const LOOKS = [
+  // girl looks (sheet col 0, rows 4-11)
+  { id: 'princess',  slot: 'look', zh: '金髮公主', en: 'Golden Princess', price: SHOP_PRICE,
+    hero: { sex: 'girl', skin: '#ffe0c4', hairStyle: 'long', hairColour: '#e0b050', tunic: '#e8903a' }, equipped: { outfit: 'dress', weapon: null } },
+  { id: 'valkyrie',  slot: 'look', zh: '紅髮勇士', en: 'Red Warrior', price: SHOP_PRICE,
+    hero: { sex: 'girl', skin: '#f6c9a0', hairStyle: 'short', hairColour: '#c8452c', tunic: '#d94c4c' }, equipped: { outfit: 'cropped', weapon: null } },
+  { id: 'villagerG', slot: 'look', zh: '棕髮村民', en: 'Brown Villager', price: SHOP_PRICE,
+    hero: { sex: 'girl', skin: '#f6c9a0', hairStyle: 'long', hairColour: '#5a3a22', tunic: '#d8c08a' }, equipped: { outfit: 'tunic', weapon: null } },
+  { id: 'violetG',   slot: 'look', zh: '紫衣村民', en: 'Violet Villager', price: SHOP_PRICE,
+    hero: { sex: 'girl', skin: '#9a6440', hairStyle: 'buns', hairColour: '#2b2118', tunic: '#9a5bd6' }, equipped: { outfit: 'tunic', weapon: null } },
+  { id: 'wanderer',  slot: 'look', zh: '橙髮旅人', en: 'Orange Wanderer', price: SHOP_PRICE,
+    hero: { sex: 'girl', skin: '#f6c9a0', hairStyle: 'long', hairColour: '#e8903a', tunic: '#e8903a' }, equipped: { outfit: 'tunic', weapon: null } },
+  { id: 'elf',       slot: 'look', zh: '青髮精靈', en: 'Teal Elf', price: SHOP_PRICE,
+    hero: { sex: 'girl', skin: '#ffe0c4', hairStyle: 'long', hairColour: '#2fd6c0', tunic: '#3fa7c9' }, equipped: { outfit: 'tunic', weapon: null } },
+  { id: 'paladinG',  slot: 'look', zh: '白甲勇士', en: 'White Paladin', price: SHOP_PRICE,
+    hero: { sex: 'girl', skin: '#ffe0c4', hairStyle: 'long', hairColour: '#f2f2f2', tunic: '#c8d0dc' }, equipped: { outfit: 'armour', weapon: null } },
+  { id: 'guardG',    slot: 'look', zh: '金髮守衛', en: 'Blonde Guard', price: SHOP_PRICE,
+    hero: { sex: 'girl', skin: '#f6c9a0', hairStyle: 'long', hairColour: '#e0b050', tunic: '#d8c08a' }, equipped: { outfit: 'armour', weapon: 'axe' } },
+  // boy looks (sheet col 1, rows 4-11)
+  { id: 'sage',      slot: 'look', zh: '白鬚賢者', en: 'White Sage', price: SHOP_PRICE,
+    hero: { sex: 'boy', skin: '#ffe0c4', hairStyle: 'short', hairColour: '#f2f2f2', tunic: '#3fa7c9' }, equipped: { outfit: 'tunic', weapon: null } },
+  { id: 'captain',   slot: 'look', zh: '黑膚船長', en: 'Dark Captain', price: SHOP_PRICE,
+    hero: { sex: 'boy', skin: '#6b4428', hairStyle: 'short', hairColour: '#2b2118', tunic: '#3fa7c9' }, equipped: { outfit: 'tunic', weapon: null } },
+  { id: 'villagerB', slot: 'look', zh: '橙衣村民', en: 'Orange Villager', price: SHOP_PRICE,
+    hero: { sex: 'boy', skin: '#f6c9a0', hairStyle: 'short', hairColour: '#5a3a22', tunic: '#e8903a' }, equipped: { outfit: 'tunic', weapon: null } },
+  { id: 'violetB',   slot: 'look', zh: '紫褲村民', en: 'Violet Villager', price: SHOP_PRICE,
+    hero: { sex: 'boy', skin: '#c68a5a', hairStyle: 'short', hairColour: '#e0b050', tunic: '#9a5bd6' }, equipped: { outfit: 'cropped', weapon: null } },
+  { id: 'hunter',    slot: 'look', zh: '棕衣獵人', en: 'Brown Hunter', price: SHOP_PRICE,
+    hero: { sex: 'boy', skin: '#f6c9a0', hairStyle: 'short', hairColour: '#5a3a22', tunic: '#d8c08a' }, equipped: { outfit: 'tunic', weapon: 'bow' } },
+  { id: 'champion',  slot: 'look', zh: '橙衣勇士', en: 'Orange Champion', price: SHOP_PRICE,
+    hero: { sex: 'boy', skin: '#9a6440', hairStyle: 'short', hairColour: '#2b2118', tunic: '#e8903a' }, equipped: { outfit: 'tunic', weapon: 'sword' } },
+  { id: 'paladinB',  slot: 'look', zh: '白甲船長', en: 'White Captain', price: SHOP_PRICE,
+    hero: { sex: 'boy', skin: '#f6c9a0', hairStyle: 'short', hairColour: '#7a7f8c', tunic: '#c8d0dc' }, equipped: { outfit: 'armour', weapon: null } },
+  { id: 'guardB',    slot: 'look', zh: '藍甲守衛', en: 'Blue Guard', price: SHOP_PRICE,
+    hero: { sex: 'boy', skin: '#ffe0c4', hairStyle: 'short', hairColour: '#e0b050', tunic: '#4a6fd6' }, equipped: { outfit: 'armour', weapon: 'sword' } },
+];
+/** Items the shop's 裝扮 tab can sell (cosmetics + paid outfits / weapons + preset looks). */
 export const SHOP_LOOKS = [
   ...COSMETICS,
   ...OUTFITS.filter(o => o.price != null),
   ...WEAPONS.filter(w => w.price != null),
+  ...LOOKS,
 ];
-/** outfit / weapon by id (falls back to the first — the default outfit, or the first weapon). */
+/** outfit / weapon / look by id. */
 export const outfitById = id => OUTFITS.find(o => o.id === id) || OUTFITS[0];
 export const weaponById = id => WEAPONS.find(w => w.id === id) || WEAPONS[0];
+export const lookById = id => LOOKS.find(l => l.id === id) || null;
 
 const emptyEquipped = () => ({ helmet: null, pet: null, outfit: 'tunic', weapon: null, cape: null, badge: null, trail: null });
 const norm = p => ({
@@ -1108,9 +1167,23 @@ export function buy(progress, id) {
   return { ok: true, progress: p };
 }
 /**
+ * Apply a 套裝 preset look (owner must have bought it): sets the hero's sex / skin / hair / clothes and the
+ * equipped outfit / weapon in one go. No hero / not owned → unchanged.
+ */
+export function applyLook(progress, id) {
+  const look = lookById(id);
+  if (!look || !(progress && progress.hero) || !((progress.looks) || []).includes(id)) return progress;
+  const p = norm(progress);
+  p.hero = { ...p.hero, ...look.hero };
+  p.equipped = { ...p.equipped, ...look.equipped };
+  return p;
+}
+
+/**
  * Wear an owned item in its slot (or null to take a helmet / pet / weapon off). A cosmetic slot ('skin' /
  * 'hairColour' / 'tunic') just sets the hero's colour. outfit / weapon are equipped like helmet / pet, but a
- * free one (price null) may be worn without buying it. Not owned / wrong slot / no hero → unchanged.
+ * free one (price null) may be worn without buying it. 'look' applies a whole 套裝 preset. Not owned / wrong
+ * slot / no hero → unchanged.
  */
 export function equip(progress, slot, id) {
   if (COSMETIC_SLOTS.includes(slot)) {
@@ -1119,6 +1192,10 @@ export function equip(progress, slot, id) {
     const p = norm(progress);
     p.hero = { ...p.hero, [slot]: item.colour };
     return p;
+  }
+  if (slot === 'look') {
+    if (id === null || !lookById(id) || !(progress.looks || []).includes(id)) return progress;
+    return applyLook(progress, id);
   }
   if (slot === 'outfit' || slot === 'weapon') {
     if (id !== null) {

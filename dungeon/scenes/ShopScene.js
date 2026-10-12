@@ -3,7 +3,7 @@
 // holding the item (or a silhouette + how to get it for chest / boss pieces). A header control switches every
 // card between 我的英雄 (your own hero) and 示範英雄 (a plain example hero) for easy comparing. Tapping an item
 // tries it on for free; the button under the mirror is 買 (price) → buy and wear, owned → 穿上 / 除下.
-import { SHOP, COSMETICS, OUTFITS, WEAPONS, buy, equip } from '../../dungeon-logic.js?v=202610112341';
+import { SHOP, COSMETICS, OUTFITS, WEAPONS, LOOKS, buy, equip } from '../../dungeon-logic.js?v=202610112341';
 import { UI, pill } from '../ui.js?v=202610112341';
 import { fx } from '../fx.js?v=202610112341';
 import { sfx } from '../sfx.js?v=202610112341';
@@ -15,7 +15,7 @@ import { drawMirror } from './MakeHeroScene.js?v=202610112341';
 const reduced = () => fx.lessMotion || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 const itemById = id => SHOP.find(s => s.id === id) || COSMETICS.find(c => c.id === id)
-  || OUTFITS.find(o => o.id === id) || WEAPONS.find(w => w.id === id);
+  || OUTFITS.find(o => o.id === id) || WEAPONS.find(w => w.id === id) || LOOKS.find(l => l.id === id);
 const TABS = [
   { id: 'dress', zh: '裝扮', en: 'Looks' },
   { id: 'helmet', zh: '頭盔', en: 'Helmets' },
@@ -58,6 +58,12 @@ export class ShopScene extends Phaser.Scene {
   get p() { return this.bridge.progress; }
   owned(id) { return (this.p.looks || []).includes(id); }
   wearing(item) {
+    if (item.slot === 'look') {
+      const h = this.p.hero || {}, e = this.p.equipped || {};
+      return ['sex', 'skin', 'hairStyle', 'hairColour', 'tunic'].every(k => h[k] === item.hero[k])
+        && (e.outfit || 'tunic') === (item.equipped.outfit || 'tunic')
+        && (e.weapon || null) === (item.equipped.weapon || null);
+    }
     if (item.colour) return ((this.p.hero || {})[item.slot]) === item.colour;
     return (this.p.equipped || {})[item.slot] === item.id;
   }
@@ -65,10 +71,11 @@ export class ShopScene extends Phaser.Scene {
 
   look() {
     const eq = { ...(this.p.equipped || {}) };
-    const hero = { ...(this.p.hero || {}) };
+    let hero = { ...(this.p.hero || {}) };
     const it = this.tryOn && itemById(this.tryOn);
     if (it) {
-      if (it.colour) hero[it.slot] = it.colour; // a cosmetic recolours the hero itself
+      if (it.slot === 'look') { hero = { ...hero, ...it.hero }; Object.assign(eq, it.equipped); }
+      else if (it.colour) hero[it.slot] = it.colour; // a cosmetic recolours the hero itself
       else eq[it.slot] = it.id;
     }
     return { hero, equipped: eq };
@@ -77,11 +84,12 @@ export class ShopScene extends Phaser.Scene {
   /** The look each card previews: the chosen base hero with just this item applied. */
   previewLook(it) {
     const model = this.previewBase === 'model';
-    const hero = model
+    let hero = model
       ? { sex: 'boy', skin: '#ffe0c4', hairStyle: 'short', hairColour: '#5a3a22', tunic: '#d94c4c' }
       : { ...(this.p.hero || {}) };
-    const eq = model ? {} : { ...(this.p.equipped || {}) };
-    if (it.colour) hero[it.slot] = it.colour;
+    let eq = model ? {} : { ...(this.p.equipped || {}) };
+    if (it.slot === 'look') { hero = { ...hero, ...it.hero }; eq = { ...eq, ...it.equipped }; }
+    else if (it.colour) hero[it.slot] = it.colour;
     else eq[it.slot] = it.id;
     if (it.slot !== 'pet') eq.pet = null; // keep the art the same width on every non-pet card
     return { hero, equipped: eq };
@@ -93,6 +101,7 @@ export class ShopScene extends Phaser.Scene {
     if (this.tab === 'helmet') return [{ key: 'helmet', zh: '頭盔', en: 'Helmets', items: SHOP.filter(s => s.slot === 'helmet') }];
     if (this.tab === 'pet') return [{ key: 'pet', zh: '寵物', en: 'Pets', items: SHOP.filter(s => s.slot === 'pet') }];
     return [
+      { key: 'set', zh: '套裝', en: 'Sets', items: LOOKS },
       { key: 'skin', zh: '膚色', en: 'Skin', items: bySlot('skin') },
       { key: 'hair', zh: '髮色', en: 'Hair colour', items: bySlot('hairColour') },
       { key: 'outfit', zh: '服裝', en: 'Outfits', items: OUTFITS },
@@ -200,6 +209,7 @@ export class ShopScene extends Phaser.Scene {
     const headH = secs.length > 1 ? 38 : 0;
     this.grid = this.add.container(0, 0);
     this.cards = {};
+    this.cardBox = {};
     this.sectionY = {};
     let y = 0;
     secs.forEach(s => {
@@ -213,10 +223,12 @@ export class ShopScene extends Phaser.Scene {
         y += headH;
       }
       s.items.forEach((it, i) => {
+        const bx = x0 + (i % cols) * cw + cw / 2, by = area.y + y + Math.floor(i / cols) * ch + ch / 2;
         const card = this.card(it, cw - 8, ch - 8);
-        card.setPosition(x0 + (i % cols) * cw + cw / 2, area.y + y + Math.floor(i / cols) * ch + ch / 2);
+        card.setPosition(bx, by);
         this.grid.add(card);
         this.cards[it.id] = card;
+        this.cardBox[it.id] = { x: bx, y: by, w: cw - 8, h: ch - 8 };
       });
       y += Math.ceil(s.items.length / cols) * ch + 8;
     });
@@ -289,6 +301,17 @@ export class ShopScene extends Phaser.Scene {
     this.setGridScroll(scroll);
   }
 
+  /** Rebuild a single card in place (cheaper than a full repaint when only its state changed). */
+  refreshCard(id) {
+    const box = this.cardBox && this.cardBox[id], it = itemById(id);
+    if (!box || !this.cards[id] || !it) return;
+    this.cards[id].destroy();
+    const card = this.card(it, box.w, box.h);
+    card.setPosition(box.x, box.y);
+    this.grid.add(card);
+    this.cards[id] = card;
+  }
+
   /** The button under the mirror, for the item being tried on. */
   paintAction() {
     if (this.actBtn) { this.actBtn.destroy(); this.actBtn = null; }
@@ -300,7 +323,11 @@ export class ShopScene extends Phaser.Scene {
         const ok = this.bridge.coins >= it.price;
         return ok ? { zh: `買 ${it.price}`, en: 'Buy', act: 'buy' } : { zh: `買 ${it.price}`, en: `Need ${it.price - this.bridge.coins} more coins`, act: 'short', dim: true };
       };
-      if (it.colour) {
+      if (it.slot === 'look') {
+        if (this.wearing(it)) note = { zh: `穿著中：${it.zh}`, en: 'Wearing' };
+        else if (this.owned(it.id)) spec = { zh: '穿上', en: 'Wear', act: 'wear' };
+        else spec = buySpec();
+      } else if (it.colour) {
         if (this.wearing(it)) note = { zh: `穿著中：${it.zh}`, en: 'Wearing' };
         else if (this.owned(it.id)) spec = { zh: '穿上', en: 'Wear', act: 'wear' };
         else if (it.price != null) spec = buySpec();
@@ -336,6 +363,7 @@ export class ShopScene extends Phaser.Scene {
       return;
     }
     sfx.pop();
+    const prev = this.tryOn;
     this.tryOn = this.tryOn === it.id && !this.owned(it.id) ? null : it.id;
     this.heroC.setLook(this.look());
     this.placeHero();
@@ -344,7 +372,9 @@ export class ShopScene extends Phaser.Scene {
       this.tweens.add({ targets: this.heroC, y: y0 - this.heroC.scale * 2, duration: 110, yoyo: true, onComplete: () => { this.heroC.y = y0; } });
       fx.sparkle(this, this.heroC.x, this.heroC.y - 8 * this.heroC.scale);
     }
-    this.repaintGrid();
+    this.paintAction();
+    this.refreshCard(it.id);
+    if (prev && prev !== it.id) this.refreshCard(prev);
   }
 
   async act(what, it) {

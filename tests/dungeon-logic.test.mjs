@@ -8,7 +8,7 @@ import {
   hintStep, mistakesFor, starsFor, coinsPerAnswer, chestCoins, FLOOR_BONUS, FLOOR_LOOK, CHEST_LOOKS, floorMedal,
   SKINS, HAIR_STYLES, HAIR_COLOURS, TUNICS, SEXES, HERO_NAMES, heroName, SHOP, LATER_SLOTS, buy, equip,
   COSMETICS, COSMETIC_SLOTS, ownedCosmetics, validateGalleryEntry,
-  OUTFITS, WEAPONS, SHOP_LOOKS,
+  OUTFITS, WEAPONS, SHOP_LOOKS, LOOKS, lookById, applyLook, SHOP_PRICE,
   emptyProgress, recordResult, mergeProgress,
   isFloorCleared, isFloorOpen, isRoomOpen, isRushOpen,
 } from '../dungeon-logic.js';
@@ -523,4 +523,32 @@ test('outfits and weapons: free ones wearable, paid ones need buying, null weapo
   assert.equal(equip(p, 'weapon', null).equipped.weapon, null, 'empty hands');
   assert.equal(equip(p, 'weapon', paidW.id), p, 'a paid weapon is rejected until bought');
   assert.ok(SHOP_LOOKS.some(i => i.slot === 'outfit') && SHOP_LOOKS.some(i => i.slot === 'weapon') && SHOP_LOOKS.some(i => i.slot === 'tunic'));
+});
+
+test('shop is flat-priced and richer (more colours, weapons, preset looks)', () => {
+  const paid = [...SHOP, ...COSMETICS, ...OUTFITS, ...WEAPONS, ...LOOKS].filter(i => i.price != null);
+  assert.ok(paid.length > 0 && paid.every(i => i.price === SHOP_PRICE), 'every paid item is the flat price');
+  assert.ok(COSMETICS.filter(c => c.slot === 'skin').length >= 5, 'skins');
+  assert.ok(COSMETICS.filter(c => c.slot === 'hairColour').length >= 8, 'hair colours');
+  assert.ok(COSMETICS.filter(c => c.slot === 'tunic').length >= 10, 'cloth colours');
+  assert.ok(WEAPONS.some(w => w.id === 'mace') && WEAPONS.some(w => w.id === 'bow'), 'new weapons');
+  assert.ok(LOOKS.length >= 8 && LOOKS.every(l => l.slot === 'look' && l.hero && l.equipped), 'preset looks');
+  assert.ok(SHOP_LOOKS.some(i => i.slot === 'look'), 'the shop sells the looks');
+});
+
+test('套裝 preset looks: applying needs ownership and sets the whole hero in one go', () => {
+  const base = { ...emptyProgress(), hero: { sex: 'boy', skin: '#ffe0c4', hairStyle: 'short', hairColour: '#2b2118', tunic: '#d94c4c' } };
+  const look = LOOKS.find(l => l.hero.sex === 'girl');
+  assert.equal(equip(base, 'look', look.id), base, 'not owned → refused');
+  assert.equal(applyLook(base, look.id), base, 'applyLook needs ownership too');
+  const bought = buy({ ...base, coins: SHOP_PRICE }, look.id);
+  assert.equal(bought.ok, true);
+  const p = equip(bought.progress, 'look', look.id);
+  assert.equal(p.hero.sex, look.hero.sex);
+  assert.equal(p.hero.hairColour, look.hero.hairColour);
+  assert.equal(p.hero.tunic, look.hero.tunic);
+  assert.equal(p.equipped.outfit, look.equipped.outfit);
+  assert.equal(p.equipped.weapon, look.equipped.weapon);
+  assert.equal(lookById(look.id).id, look.id);
+  assert.equal(lookById('nope'), null);
 });

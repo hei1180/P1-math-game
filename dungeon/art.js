@@ -232,6 +232,18 @@ function pickId(v, order) {
   return order.includes(v) ? v : null;
 }
 
+/**
+ * The outfit layer alone (a 16 × 16 garment sprite, no body) recoloured to `colour`. Returns a texture key.
+ * Shared by the hero and by the shop / 製作英雄 swatches (itemIcon crops it to the garment).
+ */
+export function outfitTexture(scene, id, colour) {
+  const outfit = RC.outfits[id] != null ? id : 'tunic';
+  const t = colour || HERO_ART.tunics[0];
+  const U = RC.tunicSrc;
+  return recolour(scene, `hero.tunic.${outfit}.${t}`, 'rc', RC.outfits[outfit] ?? RC.tunic,
+    { [U.main]: t, [U.shade]: shade(t, 0.72), '#2e8d89': shade(t, 0.84), '#329a95': shade(t, 0.9), '#1f6360': shade(t, 0.6) });
+}
+
 /** Texture keys ({texture, frame}) for each hero layer of a look in one view. */
 function heroKeys(scene, look, view) {
   const h = (look && look.hero) || {}, eq = (look && look.equipped) || {};
@@ -241,15 +253,14 @@ function heroKeys(scene, look, view) {
   const style = pickStyle(h.hairStyle ?? 0);
   const female = h.sex === 'girl';
   const outfit = eq.outfit && RC.outfits[eq.outfit] != null ? eq.outfit : 'tunic';
-  const S = RC.bodySrc, H = RC.hairSrc, U = RC.tunicSrc;
+  const S = RC.bodySrc, H = RC.hairSrc;
   const back = view === 'back';
   const tex = key => ({ texture: key, frame: undefined });
 
   const body = tex(recolour(scene, `hero.body${back ? 'B' : ''}${female ? 'F' : ''}.${skin}`, 'rc',
     female ? RC.bodyFemale : RC.body,
     { [S.main]: skin, [S.shade]: shade(skin, 0.75), [S.eye]: back ? skin : shade(skin, 0.42) }));
-  const tun = tex(recolour(scene, `hero.tunic.${outfit}.${tunic}`, 'rc', RC.outfits[outfit] ?? RC.tunic,
-    { [U.main]: tunic, [U.shade]: shade(tunic, 0.72), '#2e8d89': shade(tunic, 0.84), '#329a95': shade(tunic, 0.9), '#1f6360': shade(tunic, 0.6) }));
+  const tun = tex(outfitTexture(scene, outfit, tunic));
   const hair = back
     ? tex(paint(scene, `hero.hairB.${style.id}.${hairC}`,
       { rows: HAIR_BACK[style.id], pal: { h: hairC, s: shade(hairC, 0.7) }, outline: false, size: [16, 16] }))
@@ -341,6 +352,48 @@ export function heroPreview(scene, look, { w, h, view = 'front', showPet = false
   c.hero = hero;
   c.setLook = l => { hero.setLook(l); return c; };
   return c;
+}
+
+/**
+ * One art frame as a centred icon: the frame is cropped to its opaque pixels (so a 16 × 16 weapon cell does not
+ * leave half the icon empty) and scaled by a whole number to fit `box` px. Cached per texture + frame. Returns
+ * the image (origin 0.5); add it to a container / scene.
+ */
+export function itemIcon(scene, texture, frame, box) {
+  const key = `icon.${texture}.${frame ?? 0}`;
+  if (!scene.textures.exists(key)) {
+    const src = scene.textures.get(texture).getSourceImage();
+    const fr = scene.textures.get(texture).get(frame);
+    const sx = fr ? fr.cutX : 0, sy = fr ? fr.cutY : 0;
+    const sw = fr ? fr.cutWidth : src.width, sh = fr ? fr.cutHeight : src.height;
+    const tmp = document.createElement('canvas');
+    tmp.width = sw; tmp.height = sh;
+    const t = tmp.getContext('2d');
+    t.imageSmoothingEnabled = false;
+    t.drawImage(src, sx, sy, sw, sh, 0, 0, sw, sh);
+    const d = t.getImageData(0, 0, sw, sh).data;
+    let x0 = sw, y0 = sh, x1 = -1, y1 = -1;
+    for (let i = 0; i < d.length; i += 4) {
+      if (d[i + 3] < 8) continue;
+      const px = (i / 4) % sw, py = Math.floor(i / 4 / sw);
+      if (px < x0) x0 = px;
+      if (px > x1) x1 = px;
+      if (py < y0) y0 = py;
+      if (py > y1) y1 = py;
+    }
+    if (x1 < x0) { x0 = 0; y0 = 0; x1 = sw - 1; y1 = sh - 1; } // fully transparent: keep the cell
+    const cw = x1 - x0 + 1, ch = y1 - y0 + 1;
+    const out = document.createElement('canvas');
+    out.width = cw; out.height = ch;
+    const o = out.getContext('2d');
+    o.imageSmoothingEnabled = false;
+    o.drawImage(tmp, x0, y0, cw, ch, 0, 0, cw, ch);
+    scene.textures.addCanvas(key, out);
+    scene.textures.get(key).setFilter(nearest());
+  }
+  const im = scene.add.image(0, 0, key);
+  const fit = Math.max(im.width, im.height);
+  return im.setScale(Math.max(1, Math.min(4, Math.floor(box / fit))));
 }
 
 // ---------------------------------------------------------------- creatures

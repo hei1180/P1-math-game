@@ -1,5 +1,6 @@
-// 製作英雄 Make your hero: a big front-view hero in a mirror, rows of swatches (sex 2, skin 6, hair style 5,
-// hair colour 6, outfit 4, clothes colour 8, weapon 5) and a preset name + number (two arrows, no free text).
+// 製作英雄 Make your hero: a big front-view hero in a mirror, rows of swatches (sex, skin, hair style,
+// hair colour, outfit, clothes colour, weapon) and a preset name + number (two arrows, no free text).
+// Outfit / weapon swatches show the garment or weapon itself (the others show a little head / colour dot).
 // 「出發！」 saves with bridge.saveLook and opens data.then (default 'Map'). First visit (no hero yet) comes
 // here from Boot; later the Shop's 換造型 tab opens it (free changes, ← goes back without saving). Swatches for
 // paid outfits, weapons and cosmetics only appear once bought in the shop.
@@ -9,7 +10,8 @@ import { fx } from '../fx.js?v=202610112341';
 import { sfx } from '../sfx.js?v=202610112341';
 import { voice } from '../voice.js?v=202610112341';
 import { textStyle } from '../theme.js?v=202610112341';
-import { makeHero } from '../art.js?v=202610112341';
+import { makeHero, outfitTexture, itemIcon } from '../art.js?v=202610112341';
+import { RC } from '../art-frames.js?v=202610112341';
 
 const reduced = () => fx.lessMotion || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
@@ -111,7 +113,7 @@ export class MakeHeroScene extends Phaser.Scene {
     this.input.on('pointerup', () => { this.drag = null; });
     this.input.on('wheel', (p, o, dx, dy) => this.setCtrlScroll((this.ctrlScroll || 0) + dy));
     let t = null;
-    const onResize = () => { if (t) t.remove(); t = this.time.delayedCall(120, () => { this.layer.destroy(); if (this.ctrlMaskG) this.ctrlMaskG.destroy(); this.ctrlMaskG = null; this.build(); }); };
+    const onResize = () => { if (t) t.remove(); t = this.time.delayedCall(120, () => this.build()); };
     this.scale.on('resize', onResize);
     this.events.once('shutdown', () => { this.scale.off('resize', onResize); voice.stop(); });
   }
@@ -140,8 +142,17 @@ export class MakeHeroScene extends Phaser.Scene {
     ];
   }
 
+  /** Destroy the built layer and every mask it created (masks live outside the display list, so they leak otherwise). */
+  teardown() {
+    if (this.layer) { this.layer.destroy(); this.layer = null; }
+    (this.swMasks || []).forEach(g => g.destroy());
+    this.swMasks = [];
+    if (this.ctrlMaskG) { this.ctrlMaskG.destroy(); this.ctrlMaskG = null; }
+  }
+
   build() {
     const W = this.scale.width, H = this.scale.height, top = this.ui.topH + 6;
+    this.teardown();
     this.layer = this.add.container(0, 0);
     const wide = W >= 640 && W > H * 1.1;
     const goH = 72, nameH = 66;
@@ -192,6 +203,7 @@ export class MakeHeroScene extends Phaser.Scene {
     this.ctrl = this.add.container(0, 0);
     this.layer.add(this.ctrl);
     this.sw = {};
+    this.swMasks = [];
     let y = cy0;
     rows.forEach(r => {
       const lab = this.add.text(cx0, inline ? y + S / 2 - 8 : y, r.zh, textStyle(20, '#fde68a')).setOrigin(0, inline ? 0.5 : 0);
@@ -241,23 +253,41 @@ export class MakeHeroScene extends Phaser.Scene {
     if (!reduced()) this.tweens.add({ targets: go, scale: { from: 1, to: 1.05 }, duration: 700, yoyo: true, repeat: 2, delay: 600 });
   }
 
-  /** Swatch face: colour dot, or a little hero showing a hair style / sex / outfit / weapon. */
+  /** Swatch face: colour dot, a little head (sex / hair style), or the item itself (outfit / weapon). */
   face(c, key, i, r) {
     const g = this.add.graphics();
     c.add(g);
-    if (key === 'hairStyle' || key === 'sex' || key === 'outfit' || key === 'weapon') {
-      const bg = key === 'sex' ? (SEXES[i] === 'girl' ? 0xfbcfe8 : 0xcfe4ff) : key === 'weapon' ? 0xfff1cf : 0xdbeafe;
+    if (key === 'outfit' || key === 'weapon') {
+      g.fillStyle(key === 'weapon' ? 0xfff1cf : 0xdbeafe, 1).fillCircle(0, 0, r);
+      if (key === 'weapon') {
+        const w = this.weaponList[i];
+        if (w) c.add(itemIcon(this, RC.weapons[w.id].tex, RC.weapons[w.id].frame, r * 1.7));
+        else c.add(this.add.text(0, 0, '空手', textStyle(Math.max(11, r * 0.55), '#78716c')).setOrigin(0.5));
+      } else {
+        // the garment on its own, recoloured like the hero's clothes (and kept in step when the colour changes)
+        c.setIcon = colour => {
+          if (c.icon && c.iconColour === colour) return;
+          if (c.icon) c.icon.destroy();
+          c.iconColour = colour;
+          c.icon = itemIcon(this, outfitTexture(this, this.outfitList[i].id, colour), undefined, r * 1.7);
+          c.add(c.icon);
+        };
+        c.setIcon(this.hero().tunic);
+      }
+      return;
+    }
+    if (key === 'hairStyle' || key === 'sex') {
+      const bg = key === 'sex' ? (SEXES[i] === 'girl' ? 0xfbcfe8 : 0xcfe4ff) : 0xdbeafe;
       g.fillStyle(bg, 1).fillCircle(0, 0, r);
       const look = this.look();
       if (key === 'sex') { look.hero.sex = SEXES[i]; look.hero.hairStyle = SEXES[i] === 'girl' ? 'long' : 'short'; }
-      else if (key === 'hairStyle') look.hero.hairStyle = HAIR_STYLES[i];
-      else if (key === 'outfit') look.equipped.outfit = this.outfitList[i].id;
-      else look.equipped.weapon = this.weaponList[i] ? this.weaponList[i].id : null;
+      else look.hero.hairStyle = HAIR_STYLES[i];
       const m = makeHero(this, look, { view: 'front' }).setScale(Math.max(2, Math.floor((r * 2) / 12)));
       m.setPosition(0, r * 1.25 + m.scale * 4);
       // only the head shows: clip with a circular mask
       const mk = this.make.graphics({ add: false });
       c.hairHero = m; c.maskG = mk; c.maskR = r;
+      this.swMasks.push(mk);
       m.setMask(mk.createGeometryMask());
       c.add(m);
       return;
@@ -277,8 +307,9 @@ export class MakeHeroScene extends Phaser.Scene {
     };
     (this.sw.hairStyle || []).forEach((s, i) => { const look = this.look(); look.hero.hairStyle = HAIR_STYLES[i]; refresh(s, look); });
     (this.sw.sex || []).forEach((s, i) => { const look = this.look(); look.hero.sex = SEXES[i]; look.hero.hairStyle = SEXES[i] === 'girl' ? 'long' : 'short'; refresh(s, look); });
-    (this.sw.outfit || []).forEach((s, i) => { const look = this.look(); look.equipped.outfit = this.outfitList[i].id; refresh(s, look); });
-    (this.sw.weapon || []).forEach((s, i) => { const look = this.look(); look.equipped.weapon = this.weaponList[i] ? this.weaponList[i].id : null; refresh(s, look); });
+    // outfit icons are recoloured with the hero's clothes, so keep them in step with the cloth-colour row
+    const tunic = this.hero().tunic;
+    (this.sw.outfit || []).forEach(s => { const f = s.list[1]; if (f && f.setIcon) f.setIcon(tunic); });
   }
 
   paintName() {

@@ -1119,7 +1119,7 @@ export const LOOKS = [
   { id: 'guardG',    slot: 'look', zh: '金髮守衛', en: 'Blonde Guard', price: SHOP_PRICE,
     hero: { sex: 'girl', skin: '#f6c9a0', hairStyle: 'long', hairColour: '#e0b050', tunic: '#d8c08a' }, equipped: { outfit: 'armour', weapon: 'axe' } },
   // boy looks (sheet col 1, rows 4-11)
-  { id: 'sage',      slot: 'look', zh: '白鬚賢者', en: 'White Sage', price: SHOP_PRICE,
+  { id: 'sage',      slot: 'look', zh: '白髮賢者', en: 'White Sage', price: SHOP_PRICE,
     hero: { sex: 'boy', skin: '#ffe0c4', hairStyle: 'short', hairColour: '#f2f2f2', tunic: '#3fa7c9' }, equipped: { outfit: 'tunic', weapon: null } },
   { id: 'captain',   slot: 'look', zh: '黑膚船長', en: 'Dark Captain', price: SHOP_PRICE,
     hero: { sex: 'boy', skin: '#6b4428', hairStyle: 'short', hairColour: '#2b2118', tunic: '#3fa7c9' }, equipped: { outfit: 'tunic', weapon: null } },

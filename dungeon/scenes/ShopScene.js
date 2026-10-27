@@ -153,8 +153,8 @@ export class ShopScene extends Phaser.Scene {
 
     // sectioned catalogue (a jump-bar when there is more than one section)
     const secs = this.sections();
-    const jumpH = secs.length > 1 ? 42 : 4;
-    if (secs.length > 1) this.buildJump(gx, gy + tabH + 4, gw, 36, secs);
+    const jumpH = secs.length > 1 ? 48 : 4;
+    if (secs.length > 1) this.buildJump(gx, gy + tabH + 4, gw, 40, secs);
     const area = { x: gx, y: gy + tabH + jumpH + 4, w: gw, h: Math.max(80, gh - tabH - jumpH - 4) };
     this.buildGrid(area, secs);
   }
@@ -167,7 +167,7 @@ export class ShopScene extends Phaser.Scene {
   /** Two little pills: preview every card on 我的英雄 or on a plain 示範英雄. */
   buildBaseToggle(cx, cy) {
     const opts = [['hero', '我的英雄'], ['model', '示範英雄']];
-    const w = 112, h = 34;
+    const w = 112, h = 40;
     opts.forEach(([id, zh], i) => {
       const on = this.previewBase === id;
       const b = pill(this, { zh, en: '', w: w - 6, h, size: 16, fill: on ? 0xfde047 : 0xffffff, rim: on ? 0xb45309 : 0xa8a29e }, () => this.setBase(id));
@@ -189,7 +189,7 @@ export class ShopScene extends Phaser.Scene {
     const n = secs.length, pw = Math.min(118, (w - 8) / n), total = n * pw;
     const x0 = x + (w - total) / 2;
     secs.forEach((s, i) => {
-      const b = pill(this, { zh: s.zh, en: '', w: pw - 6, h: 34, size: 16, fill: 0xffffff, rim: 0xa8a29e }, () => this.jumpTo(s.key));
+      const b = pill(this, { zh: s.zh, en: '', w: pw - 6, h: 40, size: 16, fill: 0xffffff, rim: 0xa8a29e }, () => this.jumpTo(s.key));
       b.setPosition(x0 + i * pw + pw / 2, y + h / 2);
       this.layer.add(b);
     });

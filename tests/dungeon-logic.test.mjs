@@ -361,6 +361,30 @@ test('17 mergeProgress', () => {
   assert.equal(mergeProgress(a, null), a);
 });
 
+test('rooms unlock one at a time inside a ticked floor', () => {
+  const all = { f1: true, f2: true, f3: true, f4: true };
+  const p0 = emptyProgress();
+  const f1 = roomsOf(1);
+  // Nothing cleared: only the first room in a ticked floor is open; every later room waits.
+  assert.equal(isRoomOpen(p0, f1[0], all, false), true);
+  for (const key of f1.slice(1)) assert.equal(isRoomOpen(p0, key, all, false), false, `${key} starts locked`);
+  // Clear the rooms in order: the next one opens, the one after that stays locked.
+  const stars = {};
+  for (let i = 0; i < f1.length; i++) {
+    stars[f1[i]] = 1;
+    const p = { ...p0, stars: { ...stars } };
+    if (f1[i + 1]) assert.equal(isRoomOpen(p, f1[i + 1], all, false), true, `clearing ${f1[i]} opens ${f1[i + 1]}`);
+    if (f1[i + 2]) assert.equal(isRoomOpen(p, f1[i + 2], all, false), false, `${f1[i + 2]} waits for ${f1[i + 1]}`);
+  }
+  // The next floor needs the previous floor complete *and* its teacher tick.
+  const almost = { ...p0, stars: Object.fromEntries(f1.slice(0, -1).map(k => [k, 1])) };
+  assert.equal(isRoomOpen(almost, 'F2R1', all, false), false, 'the last room of floor 1 still has to be cleared');
+  const f1done = { ...p0, stars: starsAll(f1) };
+  assert.equal(isRoomOpen(f1done, 'F2R1', all, false), true);
+  assert.equal(isRoomOpen(f1done, 'F2R2', all, false), false, 'floor 2 still starts with one room');
+  assert.equal(isRoomOpen(f1done, 'F2R1', { ...all, f2: false }, false), false, 'the teacher still gates floor 2');
+});
+
 test('18 unlocks', () => {
   const none = { f1: false, f2: false, f3: false, f4: false };
   const all = { f1: true, f2: true, f3: true, f4: true };

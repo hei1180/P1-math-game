@@ -33,6 +33,7 @@ Read with the plan (`2026-10-10-treasure-dungeon.md`) and the spec (`../specs/20
 ## Logic (`dungeon-logic.js`)
 
 - `T.make(fam)`: F1R5 「把寶物放好…」, F2R5 「把史萊姆排好隊…」, F3R5 「把箱子疊高…」; F3R5 make towers stack boxes only (`BOXES` = crate + 4 marked chests). Tested in `tests/dungeon-logic.test.mjs`.
+- **Unlock chain (`isFloorOpen` / `isRoomOpen` / `isRushOpen`)**: the teacher ticks the floors they release. Floor 1 opens when `f1` is ticked; inside a floor only **one new room** opens at a time — the next room needs the previous room at ≥1★ (cleared rooms stay replayable). Floor 2+ needs the **whole previous floor cleared** *and* its own teacher tick; Rush needs Floor 4 cleared and `f4` ticked. Test mode opens everything. The test `rooms unlock one at a time inside a ticked floor` pins this down.
 
 ## Dev
 

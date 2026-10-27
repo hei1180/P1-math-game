@@ -237,6 +237,20 @@ function pickId(v, order) {
  * Shared by the hero and by the shop / 製作英雄 swatches (itemIcon crops it to the garment).
  */
 export function outfitTexture(scene, id, colour) {
+  // Fixed-colour costume from one of the sheet's sample characters: copy it as-is (no tunic recolour) and,
+  // when the frame includes the head, drop the rows above the shoulders so the child's own hero shows.
+  const costume = RC.costumes[id];
+  if (costume) {
+    return canvasTex(scene, `hero.costume.${id}`, 16, 16, ctx => {
+      drawFrame(scene, ctx, 'rc', costume.frame);
+      const crop = costume.crop | 0;
+      if (crop > 0) {
+        const img = ctx.getImageData(0, 0, 16, 16), d = img.data;
+        for (let y = 0; y < crop; y++) for (let x = 0; x < 16; x++) d[(y * 16 + x) * 4 + 3] = 0;
+        ctx.putImageData(img, 0, 0);
+      }
+    });
+  }
   const outfit = RC.outfits[id] != null ? id : 'tunic';
   const t = colour || HERO_ART.tunics[0];
   const U = RC.tunicSrc;
@@ -252,7 +266,7 @@ function heroKeys(scene, look, view) {
   const tunic = pickColour(h.tunic ?? 0, HERO_ART.tunics);
   const style = pickStyle(h.hairStyle ?? 0);
   const female = h.sex === 'girl';
-  const outfit = eq.outfit && RC.outfits[eq.outfit] != null ? eq.outfit : 'tunic';
+  const outfit = eq.outfit && (RC.outfits[eq.outfit] != null || RC.costumes[eq.outfit]) ? eq.outfit : 'tunic';
   const S = RC.bodySrc, H = RC.hairSrc;
   const back = view === 'back';
   const tex = key => ({ texture: key, frame: undefined });
@@ -260,7 +274,8 @@ function heroKeys(scene, look, view) {
   const body = tex(recolour(scene, `hero.body${back ? 'B' : ''}${female ? 'F' : ''}.${skin}`, 'rc',
     female ? RC.bodyFemale : RC.body,
     { [S.main]: skin, [S.shade]: shade(skin, 0.75), [S.eye]: back ? skin : shade(skin, 0.42) }));
-  const tun = tex(outfitTexture(scene, outfit, tunic));
+  // Back view: a costume's front face / beard / gear would show on the back, so wear a plain tunic instead.
+  const tun = tex(outfitTexture(scene, back && RC.costumes[outfit] ? 'tunic' : outfit, tunic));
   const hair = back
     ? tex(paint(scene, `hero.hairB.${style.id}.${hairC}`,
       { rows: HAIR_BACK[style.id], pal: { h: hairC, s: shade(hairC, 0.7) }, outline: false, size: [16, 16] }))

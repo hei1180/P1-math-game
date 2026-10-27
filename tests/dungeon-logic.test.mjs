@@ -8,10 +8,11 @@ import {
   hintStep, mistakesFor, starsFor, coinsPerAnswer, chestCoins, FLOOR_BONUS, FLOOR_LOOK, CHEST_LOOKS, floorMedal,
   SKINS, HAIR_STYLES, HAIR_COLOURS, TUNICS, SEXES, HERO_NAMES, heroName, SHOP, LATER_SLOTS, buy, equip,
   COSMETICS, COSMETIC_SLOTS, ownedCosmetics, validateGalleryEntry,
-  OUTFITS, WEAPONS, SHOP_LOOKS, LOOKS, lookById, applyLook, SHOP_PRICE,
+  OUTFITS, COSTUMES, WEAPONS, SHOP_LOOKS, LOOKS, lookById, applyLook, SHOP_PRICE,
   emptyProgress, recordResult, mergeProgress,
   isFloorCleared, isFloorOpen, isRoomOpen, isRushOpen,
 } from '../dungeon-logic.js';
+import { RC, FANCY_WEAPON_IDS } from '../dungeon/art-frames.js';
 
 const SEEDS = Array.from({ length: 50 }, (_, i) => i + 1);
 const ALL_KEYS = ROOMS.map(r => r.key);
@@ -551,4 +552,29 @@ test('套裝 preset looks: applying needs ownership and sets the whole hero in o
   assert.equal(p.equipped.weapon, look.equipped.weapon);
   assert.equal(lookById(look.id).id, look.id);
   assert.equal(lookById('nope'), null);
+});
+
+test('the 14 sample outfits and 35 fancy weapons all have sheet art', () => {
+  assert.equal(LOOKS.length, 14, 'the owner picked 14 sample characters');
+  assert.equal(FANCY_WEAPON_IDS.length, 35, '5 material rows × 7 weapons');
+  for (const id of FANCY_WEAPON_IDS) {
+    const w = WEAPONS.find(x => x.id === id);
+    assert.ok(w, `fancy weapon ${id} is in WEAPONS`);
+    assert.equal(w.price, SHOP_PRICE);
+    assert.ok(RC.weapons[id], `fancy weapon ${id} has a frame`);
+  }
+  for (const look of LOOKS) {
+    const eq = look.equipped;
+    assert.ok(RC.outfits[eq.outfit] != null || RC.costumes[eq.outfit], `${look.id}: costume art`);
+    if (eq.weapon) assert.ok(RC.weapons[eq.weapon], `${look.id}: weapon art`);
+    if (eq.helmet) assert.ok(RC.helmets[eq.helmet] != null, `${look.id}: helmet art`);
+  }
+  assert.deepEqual(new Set(LOOKS.map(l => l.equipped.outfit).filter(id => RC.costumes[id])),
+    new Set(COSTUMES), 'COSTUMES matches the costumes used by the looks');
+  for (const id of ['goldenTunic', 'whiteDress', 'kilt', 'sunTunic', 'ivoryTunic', 'jadeDancer',
+    'hornedArmour', 'whitePlate']) {
+    assert.ok(OUTFITS.some(o => o.id === id && o.price === SHOP_PRICE), `${id} is sold on its own`);
+  }
+  assert.ok(validateGalleryEntry({ playerName: 'x', hero: { sex: 'boy' }, equipped: { outfit: 'whitePlate' } }),
+    'the class gallery accepts a 套裝 costume');
 });

@@ -58,6 +58,24 @@ export const RC = {
   // Outfit shapes (all share the teal base colour so art.js can recolour them to hero.tunic).
   // index = row * 54 + col in the sheet: row 0, cols 10 (cropped) / 11 (tunic) / 12 (dress) / 13 (belted armour).
   outfits: { cropped: 10, tunic: 11, dress: 12, armour: 13 },
+  // Fixed-colour costumes taken from the sheet's own sample characters (the 14 outfits the owner picked).
+  // They are complete garments: art.js copies the frame as-is (no tunic recolour). `crop` drops the rows above
+  // the shoulders so the child's own head/hair shows; 0 means the frame is already a clean garment.
+  costumes: {
+    goldenTunic:  { frame: 8,   crop: 0 },   // orange tunic + belt (sample 270)
+    whiteDress:   { frame: 118, crop: 0 },   // teal dress, long white sleeves (sample 271)
+    kilt:         { frame: 338, crop: 0 },   // black kilt + belt, bare chest (sample 324)
+    beardVest:    { frame: 325, crop: 6 },   // teal vest + big dark beard (sample 325)
+    mossCloak:    { frame: 378, crop: 6 },   // grey-green cloak (sample 378)
+    amberDress:   { frame: 379, crop: 6 },   // orange dress, long sleeves (sample 379)
+    sunTunic:     { frame: 6,   crop: 0 },   // lighter orange tunic (sample 432)
+    ivoryTunic:   { frame: 224, crop: 0 },   // tan tunic, white shirt front (sample 433)
+    apronDress:   { frame: 486, crop: 6 },   // orange dress + white apron (sample 486)
+    greyRobe:     { frame: 487, crop: 6 },   // brown robe + grey beard (sample 487)
+    jadeDancer:   { frame: 170, crop: 0 },   // orange + jade outfit (sample 540)
+    hornedArmour: { frame: 168, crop: 0 },   // orange armour, cream trim (sample 541)
+    whitePlate:   { frame: 228, crop: 0 },   // white plate armour (samples 594 + 595)
+  },
   // Weapons, held in the hero's right hand. Each: sheet, frame and the grip (origin + position in hero art px)
   // tuned so the handle sits in the hand. The Roguelike weapons are drawn at the frame's lower-left; the Tiny
   // Dungeon sword is centred.
@@ -76,6 +94,29 @@ export const RC = {
   hairSrc: { main: '#a17d52', shade: '#725839' },
   tunicSrc: { main: '#37aaa5', shade: '#287d79' },
 };
+
+/**
+ * The 5 × 7 fancy weapon set the owner picked (sheet rows 5–9, cols 45–51). Every frame is drawn at the
+ * lower-left like the base Roguelike weapons, so they share one grip. Frames, in sheet order:
+ *   row 5 royal (gold/steel), row 6 gold, row 7 ivory, row 8 jade, row 9 silver.
+ */
+const FANCY_WEAPON_FRAMES = {
+  royalMallet: 315, royalDoubleAxe: 316, royalMace: 317, royalSpike: 318,
+  royalHammer: 319, royalLongHammer: 320, royalGreataxe: 321,
+  goldStaff: 369, goldGemStaff: 370, goldMace: 371, goldSpike: 372,
+  goldHammer: 373, goldAxe: 374, goldDoubleAxe: 375,
+  ivoryStaff: 423, ivoryGemStaff: 424, ivoryDoubleHammer: 425, ivoryHammer: 426,
+  ivoryMallet: 427, ivoryHalberd: 428, ivoryDoubleAxe: 429,
+  jadeStaff: 477, jadeGemStaff: 478, jadeMace: 479, jadeSpike: 480,
+  jadeHammer: 481, jadeAxe: 482, jadeDoubleAxe: 483,
+  silverStaff: 531, silverGemStaff: 532, silverWarhammer: 533, silverHammer: 534,
+  silverMallet: 535, silverLongHammer: 536, silverDoubleAxe: 537,
+};
+for (const [id, frame] of Object.entries(FANCY_WEAPON_FRAMES)) {
+  RC.weapons[id] = { tex: 'rc', frame, ox: 0.16, oy: 0.95, x: 6, y: -1 };
+}
+/** Ids of the 35 fancy weapons, in sheet order (used by the tests to keep logic + art in step). */
+export const FANCY_WEAPON_IDS = Object.keys(FANCY_WEAPON_FRAMES);
 
 /** Shared palette for code-drawn sprites (Tiny Dungeon colours). Outline is added automatically. */
 export const PAL = {

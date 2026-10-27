@@ -72,13 +72,16 @@ export class MakeHeroScene extends Phaser.Scene {
     const rng = bridge.rng || Math.random;
     const h = p.hero || {};
     const idxOf = (list, v, d) => { const i = list.indexOf(v); return i >= 0 ? i : typeof v === 'number' && list[v] ? v : d; };
-    // lists = the free starter options plus any cosmetics this player has bought (they add swatches)
+    // lists = the free starter options plus any cosmetics this player has bought (they add swatches).
+    // A preset 套裝 can leave the hero on a colour that is not in the starter list; keep it as an extra swatch so
+    // opening 製作英雄 never silently changes the child's skin / hair / clothes.
+    const withCurrent = (list, v) => (typeof v === 'string' && v && !list.includes(v) ? [...list, v] : list);
     this.lists = {
       sex: SEXES,
-      skin: [...SKINS, ...ownedCosmetics(p, 'skin').map(c => c.colour)],
+      skin: withCurrent([...SKINS, ...ownedCosmetics(p, 'skin').map(c => c.colour)], h.skin),
       hairStyle: HAIR_STYLES,
-      hairColour: [...HAIR_COLOURS, ...ownedCosmetics(p, 'hairColour').map(c => c.colour)],
-      tunic: [...TUNICS, ...ownedCosmetics(p, 'tunic').map(c => c.colour)],
+      hairColour: withCurrent([...HAIR_COLOURS, ...ownedCosmetics(p, 'hairColour').map(c => c.colour)], h.hairColour),
+      tunic: withCurrent([...TUNICS, ...ownedCosmetics(p, 'tunic').map(c => c.colour)], h.tunic),
     };
     // choices as indices into the lists; saved as the colour / style ids themselves
     this.sel = {
@@ -92,9 +95,15 @@ export class MakeHeroScene extends Phaser.Scene {
     this.leaving = false;
     // outfit and weapon live in `equipped` (like helmet / pet). Paid ones appear only once bought.
     const owns = id => (p.looks || []).includes(id);
-    this.outfitList = OUTFITS.filter(o => o.price == null || owns(o.id));
-    this.weaponList = [null, ...WEAPONS.filter(w => w.price == null || owns(w.id))];
     const eq = p.equipped || {};
+    // A 套裝 costume is not in OUTFITS, so keep the one being worn as a synthetic row entry (otherwise opening
+    // 製作英雄 would quietly put the child back in a plain tunic).
+    const allOutfits = OUTFITS.slice();
+    if (eq.outfit && !allOutfits.some(o => o.id === eq.outfit)) {
+      allOutfits.unshift({ id: eq.outfit, slot: 'outfit', zh: '套裝', en: 'Costume', price: null });
+    }
+    this.outfitList = allOutfits.filter(o => o.price == null || owns(o.id));
+    this.weaponList = [null, ...WEAPONS.filter(w => w.price == null || owns(w.id))];
     this.sel.outfit = Math.max(0, this.outfitList.findIndex(o => o.id === (eq.outfit || 'tunic')));
     this.sel.weapon = Math.max(0, this.weaponList.findIndex(w => (w ? w.id : null) === (eq.weapon || null)));
 

@@ -1085,7 +1085,18 @@ export const OUTFITS = [
   { id: 'cropped', slot: 'outfit', zh: '短衣',   en: 'Cropped', price: null },
   { id: 'dress',   slot: 'outfit', zh: '連身裙', en: 'Dress',   price: SHOP_PRICE },
   { id: 'armour',  slot: 'outfit', zh: '盔甲',   en: 'Armour',  price: SHOP_PRICE },
+  // Fixed-colour costumes from the sheet's sample characters (RC.costumes). These 8 are clean garment
+  // layers, so they can be mixed with any skin / hair; the 5 full-design ones (beards, apron) are set-only.
+  { id: 'goldenTunic',  slot: 'outfit', zh: '金橙上衣', en: 'Golden tunic', price: SHOP_PRICE },
+  { id: 'whiteDress',   slot: 'outfit', zh: '白衣長裙', en: 'White dress',  price: SHOP_PRICE },
+  { id: 'kilt',         slot: 'outfit', zh: '黑褲腰帶', en: 'Black kilt',   price: SHOP_PRICE },
+  { id: 'sunTunic',     slot: 'outfit', zh: '陽光上衣', en: 'Sun tunic',    price: SHOP_PRICE },
+  { id: 'ivoryTunic',   slot: 'outfit', zh: '象牙上衣', en: 'Ivory tunic',  price: SHOP_PRICE },
+  { id: 'jadeDancer',   slot: 'outfit', zh: '翠玉舞衣', en: 'Jade costume', price: SHOP_PRICE },
+  { id: 'hornedArmour', slot: 'outfit', zh: '角盔戰甲', en: 'Horned armour', price: SHOP_PRICE },
+  { id: 'whitePlate',   slot: 'outfit', zh: '白銀鎧甲', en: 'White plate',  price: SHOP_PRICE },
 ];
+const fancyWeapon = (id, zh, en) => ({ id, slot: 'weapon', zh, en, price: SHOP_PRICE });
 /** Held weapons (equipped.weapon; null = empty hands). Maps to RC.weapons in art.js. */
 export const WEAPONS = [
   { id: 'staff',  slot: 'weapon', zh: '魔杖', en: 'Staff',  price: null },
@@ -1094,47 +1105,100 @@ export const WEAPONS = [
   { id: 'hammer', slot: 'weapon', zh: '鐵鎚', en: 'Hammer', price: SHOP_PRICE },
   { id: 'mace',   slot: 'weapon', zh: '釘鎚', en: 'Mace',   price: SHOP_PRICE },
   { id: 'bow',    slot: 'weapon', zh: '弓箭', en: 'Bow',    price: SHOP_PRICE },
+  // The 5 × 7 fancy set picked by the owner (RC.weapons): royal / gold / ivory / jade / silver.
+  fancyWeapon('royalMallet',      '皇家戰鎚',   'Royal mallet'),
+  fancyWeapon('royalDoubleAxe',   '皇家雙刃斧', 'Royal double axe'),
+  fancyWeapon('royalMace',        '皇家流星鎚', 'Royal mace'),
+  fancyWeapon('royalSpike',       '皇家釘球鎚', 'Royal spiked mace'),
+  fancyWeapon('royalHammer',      '皇家小鐵鎚', 'Royal hammer'),
+  fancyWeapon('royalLongHammer',  '皇家長柄鎚', 'Royal long hammer'),
+  fancyWeapon('royalGreataxe',    '皇家巨斧',   'Royal greataxe'),
+  fancyWeapon('goldStaff',        '黃金法杖',   'Gold staff'),
+  fancyWeapon('goldGemStaff',     '黃金寶石杖', 'Gold gem staff'),
+  fancyWeapon('goldMace',         '黃金流星鎚', 'Gold mace'),
+  fancyWeapon('goldSpike',        '黃金釘球鎚', 'Gold spiked mace'),
+  fancyWeapon('goldHammer',       '黃金鐵鎚',   'Gold hammer'),
+  fancyWeapon('goldAxe',          '黃金戰斧',   'Gold axe'),
+  fancyWeapon('goldDoubleAxe',    '黃金雙刃斧', 'Gold double axe'),
+  fancyWeapon('ivoryStaff',       '象牙法杖',   'Ivory staff'),
+  fancyWeapon('ivoryGemStaff',    '象牙寶石杖', 'Ivory gem staff'),
+  fancyWeapon('ivoryDoubleHammer','象牙雙頭鎚', 'Ivory double hammer'),
+  fancyWeapon('ivoryHammer',      '象牙鐵鎚',   'Ivory hammer'),
+  fancyWeapon('ivoryMallet',      '象牙小鎚',   'Ivory mallet'),
+  fancyWeapon('ivoryHalberd',     '象牙長柄斧', 'Ivory halberd'),
+  fancyWeapon('ivoryDoubleAxe',   '象牙雙刃斧', 'Ivory double axe'),
+  fancyWeapon('jadeStaff',        '翠玉法杖',   'Jade staff'),
+  fancyWeapon('jadeGemStaff',     '翠玉寶石杖', 'Jade gem staff'),
+  fancyWeapon('jadeMace',         '翠玉流星鎚', 'Jade mace'),
+  fancyWeapon('jadeSpike',        '翠玉釘球鎚', 'Jade spiked mace'),
+  fancyWeapon('jadeHammer',       '翠玉鐵鎚',   'Jade hammer'),
+  fancyWeapon('jadeAxe',          '翠玉戰斧',   'Jade axe'),
+  fancyWeapon('jadeDoubleAxe',    '翠玉雙刃斧', 'Jade double axe'),
+  fancyWeapon('silverStaff',      '白銀法杖',   'Silver staff'),
+  fancyWeapon('silverGemStaff',   '白銀寶石杖', 'Silver gem staff'),
+  fancyWeapon('silverWarhammer',  '白銀戰鎚',   'Silver warhammer'),
+  fancyWeapon('silverHammer',     '白銀鐵鎚',   'Silver hammer'),
+  fancyWeapon('silverMallet',     '白銀小鎚',   'Silver mallet'),
+  fancyWeapon('silverLongHammer', '白銀長柄鎚', 'Silver long hammer'),
+  fancyWeapon('silverDoubleAxe',  '白銀雙刃斧', 'Silver double axe'),
 ];
 /**
- * 套裝 Preset looks taken from the Roguelike Characters sheet's own sample characters (girl = col 0, boy = col 1,
- * rows 4-11) — the pack's examples of combining hair, clothes and weapons. Buying / wearing one applies the whole
- * look (sex, skin, hair, clothes, outfit and weapon) in a single tap; every piece is still sold on its own too.
+ * 套裝 Preset looks — the 14 sample characters on the Roguelike Characters sheet (cols 0–1, rows 5–11), chosen by
+ * the owner. Buying / wearing one applies the whole look (sex, skin, hair, fixed-colour costume, helmet, weapon)
+ * in a single tap. The costume art lives in RC.costumes (art-frames.js); the plain outfits are still sold on
+ * their own in the 服裝 section.
  */
 export const LOOKS = [
-  // girl looks (sheet col 0, rows 4-11)
-  { id: 'princess',  slot: 'look', zh: '金髮公主', en: 'Golden Princess', price: SHOP_PRICE,
-    hero: { sex: 'girl', skin: '#ffe0c4', hairStyle: 'long', hairColour: '#e0b050', tunic: '#e8903a' }, equipped: { outfit: 'dress', weapon: null } },
-  { id: 'valkyrie',  slot: 'look', zh: '紅髮勇士', en: 'Red Warrior', price: SHOP_PRICE,
-    hero: { sex: 'girl', skin: '#f6c9a0', hairStyle: 'short', hairColour: '#c8452c', tunic: '#d94c4c' }, equipped: { outfit: 'cropped', weapon: null } },
-  { id: 'villagerG', slot: 'look', zh: '棕髮村民', en: 'Brown Villager', price: SHOP_PRICE,
-    hero: { sex: 'girl', skin: '#f6c9a0', hairStyle: 'long', hairColour: '#5a3a22', tunic: '#d8c08a' }, equipped: { outfit: 'tunic', weapon: null } },
-  { id: 'violetG',   slot: 'look', zh: '紫衣村民', en: 'Violet Villager', price: SHOP_PRICE,
-    hero: { sex: 'girl', skin: '#9a6440', hairStyle: 'buns', hairColour: '#2b2118', tunic: '#9a5bd6' }, equipped: { outfit: 'tunic', weapon: null } },
-  { id: 'wanderer',  slot: 'look', zh: '橙髮旅人', en: 'Orange Wanderer', price: SHOP_PRICE,
-    hero: { sex: 'girl', skin: '#f6c9a0', hairStyle: 'long', hairColour: '#e8903a', tunic: '#e8903a' }, equipped: { outfit: 'tunic', weapon: null } },
-  { id: 'elf',       slot: 'look', zh: '青髮精靈', en: 'Teal Elf', price: SHOP_PRICE,
-    hero: { sex: 'girl', skin: '#ffe0c4', hairStyle: 'long', hairColour: '#2fd6c0', tunic: '#3fa7c9' }, equipped: { outfit: 'tunic', weapon: null } },
-  { id: 'paladinG',  slot: 'look', zh: '白甲勇士', en: 'White Paladin', price: SHOP_PRICE,
-    hero: { sex: 'girl', skin: '#ffe0c4', hairStyle: 'long', hairColour: '#f2f2f2', tunic: '#c8d0dc' }, equipped: { outfit: 'armour', weapon: null } },
-  { id: 'guardG',    slot: 'look', zh: '金髮守衛', en: 'Blonde Guard', price: SHOP_PRICE,
-    hero: { sex: 'girl', skin: '#f6c9a0', hairStyle: 'long', hairColour: '#e0b050', tunic: '#d8c08a' }, equipped: { outfit: 'armour', weapon: 'axe' } },
-  // boy looks (sheet col 1, rows 4-11)
-  { id: 'sage',      slot: 'look', zh: '白髮賢者', en: 'White Sage', price: SHOP_PRICE,
-    hero: { sex: 'boy', skin: '#ffe0c4', hairStyle: 'short', hairColour: '#f2f2f2', tunic: '#3fa7c9' }, equipped: { outfit: 'tunic', weapon: null } },
-  { id: 'captain',   slot: 'look', zh: '黑膚船長', en: 'Dark Captain', price: SHOP_PRICE,
-    hero: { sex: 'boy', skin: '#6b4428', hairStyle: 'short', hairColour: '#2b2118', tunic: '#3fa7c9' }, equipped: { outfit: 'tunic', weapon: null } },
-  { id: 'villagerB', slot: 'look', zh: '橙衣村民', en: 'Orange Villager', price: SHOP_PRICE,
-    hero: { sex: 'boy', skin: '#f6c9a0', hairStyle: 'short', hairColour: '#5a3a22', tunic: '#e8903a' }, equipped: { outfit: 'tunic', weapon: null } },
-  { id: 'violetB',   slot: 'look', zh: '紫褲村民', en: 'Violet Villager', price: SHOP_PRICE,
-    hero: { sex: 'boy', skin: '#c68a5a', hairStyle: 'short', hairColour: '#e0b050', tunic: '#9a5bd6' }, equipped: { outfit: 'cropped', weapon: null } },
-  { id: 'hunter',    slot: 'look', zh: '棕衣獵人', en: 'Brown Hunter', price: SHOP_PRICE,
-    hero: { sex: 'boy', skin: '#f6c9a0', hairStyle: 'short', hairColour: '#5a3a22', tunic: '#d8c08a' }, equipped: { outfit: 'tunic', weapon: 'bow' } },
-  { id: 'champion',  slot: 'look', zh: '橙衣勇士', en: 'Orange Champion', price: SHOP_PRICE,
-    hero: { sex: 'boy', skin: '#9a6440', hairStyle: 'short', hairColour: '#2b2118', tunic: '#e8903a' }, equipped: { outfit: 'tunic', weapon: 'sword' } },
-  { id: 'paladinB',  slot: 'look', zh: '白甲船長', en: 'White Captain', price: SHOP_PRICE,
-    hero: { sex: 'boy', skin: '#f6c9a0', hairStyle: 'short', hairColour: '#7a7f8c', tunic: '#c8d0dc' }, equipped: { outfit: 'armour', weapon: null } },
-  { id: 'guardB',    slot: 'look', zh: '藍甲守衛', en: 'Blue Guard', price: SHOP_PRICE,
-    hero: { sex: 'boy', skin: '#ffe0c4', hairStyle: 'short', hairColour: '#e0b050', tunic: '#4a6fd6' }, equipped: { outfit: 'armour', weapon: 'sword' } },
+  { id: 'goldenHeroine', slot: 'look', zh: '金髮女俠', en: 'Golden Heroine', price: SHOP_PRICE,
+    hero: { sex: 'girl', skin: '#e5c49d', hairStyle: 'long', hairColour: '#bfb183', tunic: '#c66527' },
+    equipped: { outfit: 'goldenTunic', weapon: null, helmet: null } },
+  { id: 'whiteMage', slot: 'look', zh: '白衣法師', en: 'White Mage', price: SHOP_PRICE,
+    hero: { sex: 'girl', skin: '#c8a480', hairStyle: 'long', hairColour: '#e8e8e8', tunic: '#37aaa5' },
+    equipped: { outfit: 'whiteDress', weapon: null, helmet: null } },
+  { id: 'wildWarrior', slot: 'look', zh: '黑褲野人', en: 'Wild Warrior', price: SHOP_PRICE,
+    hero: { sex: 'boy', skin: '#e5c49d', hairStyle: 'short', hairColour: '#725839', tunic: '#4f4f4f' },
+    equipped: { outfit: 'kilt', weapon: null, helmet: null } },
+  { id: 'beardedWarrior', slot: 'look', zh: '大鬍子勇士', en: 'Bearded Warrior', price: SHOP_PRICE,
+    hero: { sex: 'boy', skin: '#c8a480', hairStyle: 'short', hairColour: '#725839', tunic: '#37aaa5' },
+    equipped: { outfit: 'beardVest', weapon: null, helmet: null } },
+  { id: 'mossHunter', slot: 'look', zh: '苔綠獵人', en: 'Moss Hunter', price: SHOP_PRICE,
+    hero: { sex: 'boy', skin: '#e5c49d', hairStyle: 'short', hairColour: '#725839', tunic: '#9c9178' },
+    equipped: { outfit: 'mossCloak', weapon: null, helmet: null } },
+  { id: 'amberMaiden', slot: 'look', zh: '橙裙少女', en: 'Amber Maiden', price: SHOP_PRICE,
+    hero: { sex: 'girl', skin: '#c8a480', hairStyle: 'long', hairColour: '#725839', tunic: '#c66527' },
+    equipped: { outfit: 'amberDress', weapon: null, helmet: null } },
+  { id: 'sunWarrior', slot: 'look', zh: '陽光戰士', en: 'Sun Warrior', price: SHOP_PRICE,
+    hero: { sex: 'boy', skin: '#9f7c4d', hairStyle: 'short', hairColour: '#a17d52', tunic: '#d97a3c' },
+    equipped: { outfit: 'sunTunic', weapon: null, helmet: null } },
+  { id: 'ivoryTraveller', slot: 'look', zh: '象牙旅人', en: 'Ivory Traveller', price: SHOP_PRICE,
+    hero: { sex: 'boy', skin: '#e5c49d', hairStyle: 'short', hairColour: '#725839', tunic: '#b5946c' },
+    equipped: { outfit: 'ivoryTunic', weapon: null, helmet: null } },
+  { id: 'redMaid', slot: 'look', zh: '紅髮女僕', en: 'Red-haired Maid', price: SHOP_PRICE,
+    hero: { sex: 'girl', skin: '#e5c49d', hairStyle: 'long', hairColour: '#a35422', tunic: '#c66527' },
+    equipped: { outfit: 'apronDress', weapon: null, helmet: null } },
+  { id: 'greySage', slot: 'look', zh: '灰鬚賢者', en: 'Grey Sage', price: SHOP_PRICE,
+    hero: { sex: 'boy', skin: '#c8a480', hairStyle: 'short', hairColour: '#9c9178', tunic: '#a17d52' },
+    equipped: { outfit: 'greyRobe', weapon: null, helmet: null } },
+  { id: 'jadeDancer', slot: 'look', zh: '翠髮舞者', en: 'Jade Dancer', price: SHOP_PRICE,
+    hero: { sex: 'girl', skin: '#c8a480', hairStyle: 'long', hairColour: '#287d79', tunic: '#c66527' },
+    equipped: { outfit: 'jadeDancer', weapon: null, helmet: null } },
+  { id: 'hornedChampion', slot: 'look', zh: '角盔勇士', en: 'Horned Champion', price: SHOP_PRICE,
+    hero: { sex: 'boy', skin: '#9f7c4d', hairStyle: 'short', hairColour: '#725839', tunic: '#c66527' },
+    equipped: { outfit: 'hornedArmour', weapon: null, helmet: 'helmetHorned' } },
+  { id: 'whiteKnight', slot: 'look', zh: '白騎士', en: 'White Knight', price: SHOP_PRICE,
+    hero: { sex: 'boy', skin: '#e5c49d', hairStyle: 'short', hairColour: '#e0b050', tunic: '#e1e1e1' },
+    equipped: { outfit: 'whitePlate', weapon: 'sword', helmet: 'helmetPlain' } },
+  { id: 'silverGuard', slot: 'look', zh: '白銀守衛', en: 'Silver Guard', price: SHOP_PRICE,
+    hero: { sex: 'boy', skin: '#e5c49d', hairStyle: 'short', hairColour: '#e0b050', tunic: '#e1e1e1' },
+    equipped: { outfit: 'whitePlate', weapon: null, helmet: 'helmetPlain' } },
+];
+/**
+ * Fixed-colour costumes worn by the 14 preset looks (art: RC.costumes in art-frames.js). They are part of a
+ * 套裝 rather than the 服裝 section, but the class gallery must accept them as a valid equipped outfit.
+ */
+export const COSTUMES = [
+  'goldenTunic', 'whiteDress', 'kilt', 'beardVest', 'mossCloak', 'amberDress', 'sunTunic', 'ivoryTunic',
+  'apronDress', 'greyRobe', 'jadeDancer', 'hornedArmour', 'whitePlate',
 ];
 /** Items the shop's 裝扮 tab can sell (cosmetics + paid outfits / weapons + preset looks). */
 export const SHOP_LOOKS = [
@@ -1248,7 +1312,7 @@ export function validateGalleryEntry(e) {
       const id = eq[slot];
       if (id != null && !SHOP.some(s => s.id === id && s.slot === slot)) return false;
     }
-    if (eq.outfit != null && !OUTFITS.some(o => o.id === eq.outfit)) return false;
+    if (eq.outfit != null && !OUTFITS.some(o => o.id === eq.outfit) && !COSTUMES.includes(eq.outfit)) return false;
     if (eq.weapon != null && !WEAPONS.some(w => w.id === eq.weapon)) return false;
   }
   if (e.hidden != null && typeof e.hidden !== 'boolean') return false;

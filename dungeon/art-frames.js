@@ -1,0 +1,779 @@
+// Art data for Treasure Dungeon 尋寶地下城: Kenney CC0 frame indices + pixel maps for code-drawn sprites.
+//
+// Sheets (dungeon/assets, see License-kenney.txt):
+//   'td' tiny-dungeon.png          Kenney Tiny Dungeon, 12 × 11 tiles, 16 px, no spacing. index = row * 12 + col
+//   'rc' roguelike-characters.png  Kenney Roguelike Characters, 54 × 12 tiles, 16 px, 1 px spacing. index = row * 54 + col
+// Picked by eye with dungeon/dev/sheets.html. Pure data, no Phaser: art.js turns it into textures.
+
+/** Kenney frames used as they are: art key -> [sheet, frameIndex]. */
+export const KENNEY = {
+  shield: ['td', 101],          // round wooden shield
+  'shield.metal': ['td', 102],
+  sword: ['td', 104],
+  dagger: ['td', 103],
+  axe: ['td', 119],
+  hammer: ['td', 117],
+  'potion.red': ['td', 115],
+  'potion.blue': ['td', 116],
+  'potion.green': ['td', 114],
+  'potion.grey': ['td', 113],
+  chest: ['td', 89],            // closed chest (marked chests are composed on top of it)
+  'chest.closed': ['td', 89],   // end-of-room reward chest
+  'chest.open': ['td', 90],
+  barrel: ['td', 82],
+  table: ['td', 72],
+  stool: ['td', 73],
+  anvil: ['td', 74],
+  drawers: ['td', 63],
+  tomb: ['td', 65],
+  banner: ['td', 29],           // red and gold wall banner
+  door: ['td', 45],             // single door in a stone arch
+  'door.left': ['td', 46],      // double door, left half
+  'door.right': ['td', 47],
+  wall: ['td', 40],             // grey brick face
+  'wall.grate': ['td', 28],
+  'wall.pillar': ['td', 57],
+  'floor.slab': ['td', 37],     // stone slab face (floor strip)
+  'bat.front': ['td', 120],
+  ghost: ['td', 121],
+};
+
+/** Grey stone colours in the Tiny Dungeon wall / floor tiles (recoloured per floor). */
+export const TD_STONE = { mortar: '#52607c', stone: '#8b9bb4', hi: '#c0cbdc', deep: '#262b44', mid: '#5a6988' };
+
+/** Per-floor stone palettes for the backdrop (spec: 1 purple, 2 blue, 3 green, 4 gold; lifted, light stone). */
+export const FLOOR_STONE = {
+  1: { mortar: '#75679a', stone: '#ad9fd0', hi: '#d6ccef', deep: '#4a3f68', ceiling: '#3d3356' },
+  2: { mortar: '#5f789e', stone: '#a1b8da', hi: '#cfe0f4', deep: '#3a4c6c', ceiling: '#2f3d58' },
+  3: { mortar: '#5d8370', stone: '#9ec8ab', hi: '#cdeAd6', deep: '#3a5848', ceiling: '#2e4639' },
+  4: { mortar: '#907a50', stone: '#d2bd8c', hi: '#efe0b6', deep: '#5e4e30', ceiling: '#4a3d25' },
+};
+
+/** Roguelike Characters layers for the front-view hero, and the colours that get swapped. */
+export const RC = {
+  body: 0,            // base body (no mouth)
+  bodyFemale: 1,      // base body with painted lips (the pack's female base)
+  pants: 3,           // dark trousers
+  tunic: 11,          // teal tunic with a belt (the plain outfit)
+  // Outfit shapes (all share the teal base colour so art.js can recolour them to hero.tunic).
+  // index = row * 54 + col in the sheet: row 0, cols 10 (cropped) / 11 (tunic) / 12 (dress) / 13 (belted armour).
+  outfits: { cropped: 10, tunic: 11, dress: 12, armour: 13 },
+  // Fixed-colour costumes taken from the sheet's own sample characters (the 14 outfits the owner picked).
+  // They are complete garments: art.js copies the frame as-is (no tunic recolour). `crop` drops the rows above
+  // the shoulders so the child's own head/hair shows; 0 means the frame is already a clean garment.
+  costumes: {
+    goldenTunic:  { frame: 8,   crop: 0 },   // orange tunic + belt (sample 270)
+    whiteDress:   { frame: 118, crop: 0 },   // teal dress, long white sleeves (sample 271)
+    kilt:         { frame: 338, crop: 0 },   // black kilt + belt, bare chest (sample 324)
+    beardVest:    { frame: 325, crop: 6 },   // teal vest + big dark beard (sample 325)
+    mossCloak:    { frame: 378, crop: 6 },   // grey-green cloak (sample 378)
+    amberDress:   { frame: 379, crop: 6 },   // orange dress, long sleeves (sample 379)
+    sunTunic:     { frame: 6,   crop: 0 },   // lighter orange tunic (sample 432)
+    ivoryTunic:   { frame: 224, crop: 0 },   // tan tunic, white shirt front (sample 433)
+    apronDress:   { frame: 486, crop: 6 },   // orange dress + white apron (sample 486)
+    greyRobe:     { frame: 487, crop: 6 },   // brown robe + grey beard (sample 487)
+    jadeDancer:   { frame: 170, crop: 0 },   // orange + jade outfit (sample 540)
+    hornedArmour: { frame: 168, crop: 0 },   // orange armour, cream trim (sample 541)
+    whitePlate:   { frame: 228, crop: 0 },   // white plate armour (samples 594 + 595)
+  },
+  // Weapons, held in the hero's right hand. Each: sheet, frame and the grip (origin + position in hero art px)
+  // tuned so the handle sits in the hand. The Roguelike weapons are drawn at the frame's lower-left; the Tiny
+  // Dungeon sword is centred.
+  weapons: {
+    staff:  { tex: 'rc', frame: 46,  ox: 0.12, oy: 0.95, x: 6, y: -1 },
+    sword:  { tex: 'rc', frame: 366, ox: 0.20, oy: 0.95, x: 6, y: -1 },
+    axe:    { tex: 'rc', frame: 51,  ox: 0.15, oy: 0.95, x: 6, y: -1 },
+    hammer: { tex: 'rc', frame: 50,  ox: 0.15, oy: 0.95, x: 6, y: -1 },
+    mace:   { tex: 'rc', frame: 48,  ox: 0.15, oy: 0.95, x: 6, y: -1 },
+    bow:    { tex: 'rc', frame: 52,  ox: 0.30, oy: 0.55, x: 7, y: -5 },
+  },
+  hair: { short: 19, spiky: 130, bob: 129, long: 20, buns: 128 },        // brown hair styles
+  helmets: { helmetPlain: 28, helmetHorned: 352, helmetCrown: 139, helmetWizard: 462, helmetGold: 30 },
+  // helmetHood, helmetCap, helmetFlower, helmetPirate are drawn in code (PIX['<id>.front'] / ['<id>.back'])
+  bodySrc: { main: '#e5c49d', shade: '#aa8f6f', eye: '#a17d52' },
+  hairSrc: { main: '#a17d52', shade: '#725839' },
+  tunicSrc: { main: '#37aaa5', shade: '#287d79' },
+};
+
+/**
+ * The 5 × 7 fancy weapon set the owner picked (sheet rows 5–9, cols 45–51). Every frame is drawn at the
+ * lower-left like the base Roguelike weapons, so they share one grip. Frames, in sheet order:
+ *   row 5 royal (gold/steel), row 6 gold, row 7 ivory, row 8 jade, row 9 silver.
+ */
+const FANCY_WEAPON_FRAMES = {
+  royalMallet: 315, royalDoubleAxe: 316, royalMace: 317, royalSpike: 318,
+  royalHammer: 319, royalLongHammer: 320, royalGreataxe: 321,
+  goldStaff: 369, goldGemStaff: 370, goldMace: 371, goldSpike: 372,
+  goldHammer: 373, goldAxe: 374, goldDoubleAxe: 375,
+  ivoryStaff: 423, ivoryGemStaff: 424, ivoryDoubleHammer: 425, ivoryHammer: 426,
+  ivoryMallet: 427, ivoryHalberd: 428, ivoryDoubleAxe: 429,
+  jadeStaff: 477, jadeGemStaff: 478, jadeMace: 479, jadeSpike: 480,
+  jadeHammer: 481, jadeAxe: 482, jadeDoubleAxe: 483,
+  silverStaff: 531, silverGemStaff: 532, silverWarhammer: 533, silverHammer: 534,
+  silverMallet: 535, silverLongHammer: 536, silverDoubleAxe: 537,
+};
+for (const [id, frame] of Object.entries(FANCY_WEAPON_FRAMES)) {
+  RC.weapons[id] = { tex: 'rc', frame, ox: 0.16, oy: 0.95, x: 6, y: -1 };
+}
+/** Ids of the 35 fancy weapons, in sheet order (used by the tests to keep logic + art in step). */
+export const FANCY_WEAPON_IDS = Object.keys(FANCY_WEAPON_FRAMES);
+
+/** Shared palette for code-drawn sprites (Tiny Dungeon colours). Outline is added automatically. */
+export const PAL = {
+  outline: '#3f2631',
+  W: '#ffffff',   // eye white
+  K: '#1a1c2c',   // pupil
+  k: '#3f2631',   // mouth / dark detail
+  b: '#bd6c4a',   // wood
+  e: '#eaa56c',   // light wood
+  h: '#763b36',   // dark wood
+  g: '#8b9bb4',   // steel
+  G: '#c0cbdc',   // light steel
+  s: '#5a6988',   // dark steel
+  y: '#ffcd75',   // gold
+  Y: '#fff3b0',   // light gold
+  o: '#ef7d57',   // orange
+  r: '#e84537',   // red
+  p: '#f4b4c8',   // pink
+  c: '#f4e8c8',   // cream / paper
+};
+
+export const SLIME_COLOURS = {
+  green:  { m: '#38b764', l: '#a7f070', d: '#257179' },
+  pink:   { m: '#ef84b4', l: '#ffd0e4', d: '#a8507e' },
+  blue:   { m: '#41a6f6', l: '#a6dcff', d: '#3b5dc9' },
+  yellow: { m: '#f2c84b', l: '#fff3b0', d: '#b98a2c' },
+};
+
+// ---- pixel maps ('.' = empty; letters from PAL or the map's own pal; outline drawn around automatically) ----
+// Creatures face RIGHT (eyes on the right); art.js flips them for left.
+
+export const PIX = {
+  // 16 × 12 slime: pointed top leaning forward, two 2-px eyes on the facing side, darker back edge.
+  slime: { rows: [
+    '................',
+    '.........mmm....',
+    '.......mmmmmm...',
+    '.....dmmmmmmmm..',
+    '....dlmmmmmmmmm.',
+    '...dllmmmWKmWKm.',
+    '..dlmmmmmWKmWKm.',
+    '..dmmmmmmmmmmmm.',
+    '..dmmmmmmmmmkkm.',
+    '..dmmmmmmmmmmmm.',
+    '...ddmmmmmmmmm..',
+    '................',
+  ] },
+
+  // 16 × 12 bat, side view, facing right: rounded head, one big friendly eye, a small smile and soft wings.
+  bat: { pal: { m: '#8f7bd6', w: '#c0b0f0' }, rows: [
+    '................',
+    '.........m..m...',
+    '.w......mmmmm...',
+    '.ww....mmmmmmm..',
+    '.wwww.mmmWWKmm..',
+    '.wwwwwwmmWWKmm..',
+    '..wwwwwmmmmmm...',
+    '..wwwwwmmmmkm...',
+    '..w.w.wmmmkm....',
+    '........m..m....',
+    '................',
+    '................',
+  ] },
+
+  // 16 × 12 mole, facing right: pink nose and eye on the right, claws.
+  mole: { pal: { m: '#8a6a5a', l: '#b08c78', n: '#f28fb0', c: '#f4e8c8' }, rows: [
+    '................',
+    '................',
+    '.....mmmmmm.....',
+    '...mmmmmmmmmm...',
+    '..mlmmmmmmmmmm..',
+    '.mllmmmmmmKmmmm.',
+    '.mlmmmmmmmmmmnn.',
+    '.mmmmmmmmmmmmnn.',
+    '.mmmmmmmmmmmmm..',
+    '.mmmmmmmmmmmmm..',
+    '..cc.mmmmm.cc...',
+    '................',
+  ] },
+
+  // 16 × 16 owl, facing right: eyes and beak toward the right.
+  owl: { pal: { m: '#9a6440', l: '#f4e8c8', B: '#ffcd75' }, rows: [
+    '................',
+    '....m.....m.....',
+    '....mm...mm.....',
+    '....mmmmmmm.....',
+    '...mmmmmmmmm....',
+    '...mmmWKmWKmm...',
+    '...mmmWKmWKBB...',
+    '...mmllllllBm...',
+    '..mmllllllllm...',
+    '..mmllllllllm...',
+    '..mmllllllllm...',
+    '...mmllllllm....',
+    '....mmmmmmm.....',
+    '.....B...B......',
+    '................',
+    '................',
+  ] },
+
+  // 32 × 24 baby-faced dragon boss, facing right.
+  dragon: { pal: { m: '#5ab552', l: '#9de64e', w: '#8e6fb8', B: '#f4e8c8', h: '#fff3b0', n: '#2a5a3a' }, rows: [
+    '................................',
+    '......................h...h.....',
+    '......................h...h.....',
+    '.....................mmmmmmm....',
+    '....................mmmmmmmmm...',
+    '....................mmmWKmmmmm..',
+    '....................mmmWKmmmmmm.',
+    '....................mmmmmmmmmnm.',
+    '.......w............mlmmmmmmmmm.',
+    '......www...........mmmmmmkkkk..',
+    '.....wwwww..........mmmmmm......',
+    '....wwwwwww........mmmmmmm......',
+    '...wwwwwwwww....mmmmmmmmmm......',
+    '....wwwwwwwmmmmmmmmmmmmmm.......',
+    '..........mmmmmmmmBBBBBmm.......',
+    '.........mmmmmmmmBBBBBBBmm......',
+    '...mmmmmmmmmmmmmmBBBBBBBmm......',
+    '..mm....mmmmmmmmmBBBBBBmmm......',
+    '.mm......mmmmmmmmmBBBBmmm.......',
+    '.m........mmmmmmmmmmmmmm........',
+    '...........mmmm.....mmmm........',
+    '...........mmmm.....mmmm........',
+    '................................',
+    '................................',
+  ] },
+
+  // ---- pets, 12 × 12, facing right ----
+  'pet.slime': { pal: { m: '#38b764', l: '#a7f070', d: '#257179' }, rows: [
+    '............',
+    '......mm....',
+    '....mmmmm...',
+    '...dmmmmmm..',
+    '..dlmmmmmmm.',
+    '..dlmWKmWKm.',
+    '..dmmWKmWKm.',
+    '..dmmmmmmkm.',
+    '..dmmmmmmmm.',
+    '...ddmmmmm..',
+    '............',
+    '............',
+  ] },
+  'pet.ghost': { pal: { w: '#f4f4f4', l: '#c0cbdc' }, rows: [
+    '............',
+    '....wwww....',
+    '...wwwwww...',
+    '..wwwwwwww..',
+    '..lwwwWKWK..',
+    '..lwwwWKWK..',
+    '..lwwwwwkw..',
+    '..lwwwwwww..',
+    '..lwwwwwww..',
+    '..l.ww.ww.w.',
+    '............',
+    '............',
+  ] },
+  'pet.cat': { pal: { m: '#ef9d57', l: '#ffd29a', n: '#f28fb0', t: '#c8702e' }, rows: [
+    '............',
+    '......m..m..',
+    '......mmmm..',
+    '.t....mmWK..',
+    '.t....mmmmn.',
+    '.t...mmmmm..',
+    '..tmmmmmmm..',
+    '..mmllllmm..',
+    '..mmmmmmmm..',
+    '..m.m..m.m..',
+    '............',
+    '............',
+  ] },
+  'pet.owlet': { pal: { m: '#b07a52', l: '#f4e8c8', B: '#ffcd75' }, rows: [
+    '............',
+    '...m....m...',
+    '...mmmmmm...',
+    '..mmmmmmmm..',
+    '..mmWKmWKm..',
+    '..mmWKmWKBB.',
+    '..mllllllm..',
+    '..mllllllm..',
+    '...mllllm...',
+    '....B..B....',
+    '............',
+    '............',
+  ] },
+  'pet.dragon': { pal: { m: '#5ab552', l: '#9de64e', w: '#8e6fb8', B: '#f4e8c8', h: '#fff3b0' }, rows: [
+    '............',
+    '.......h.h..',
+    '......mmmmm.',
+    '..w...mmWKm.',
+    '.www..mmWKmm',
+    '.wwwmmmmmmk.',
+    '..mmmmBBmm..',
+    '.mmmmBBBBm..',
+    'mm.mmBBBmm..',
+    '....mm.mm...',
+    '............',
+    '............',
+  ] },
+
+  // ---- clue objects, 16 × 16 ----
+  bow: { rows: [
+    '................',
+    '.....eb.........',
+    '.....G.bb.......',
+    '.....G...b......',
+    '.....G....b.....',
+    '.....G....be....',
+    '.....G.....b....',
+    '.....G.....h....',
+    '.....G.....h....',
+    '.....G.....b....',
+    '.....G....be....',
+    '.....G....b.....',
+    '.....G...b......',
+    '.....G.bb.......',
+    '.....eb.........',
+    '................',
+  ] },
+  book: { pal: { C: '#3b5dc9', c: '#41a6f6', P: '#f4f4f4' }, rows: [
+    '................',
+    '................',
+    '...CCcccccccc...',
+    '...CCcccccccccP.',
+    '...CCcccccccccP.',
+    '...CCccyyyyccP..',
+    '...CCccyyyyccP..',
+    '...CCcccccccccP.',
+    '...CCcccccccccP.',
+    '...CCcccccccccP.',
+    '...CCcccccccccP.',
+    '...CCcccccccccP.',
+    '...CCcccccccccP.',
+    '...CCPPPPPPPPPP.',
+    '................',
+    '................',
+  ] },
+  key: { rows: [
+    '................',
+    '................',
+    '................',
+    '................',
+    '..yyyy..........',
+    '.yYYyyy.........',
+    '.yY..yy.........',
+    '.yy..yyyyyyyyyy.',
+    '.yyy.yyyyyyyyyy.',
+    '..yyyyy...y.yy..',
+    '...yyy....y.yy..',
+    '................',
+    '................',
+    '................',
+    '................',
+    '................',
+  ] },
+  gem: { pal: { m: '#41a6f6', l: '#d6f3ff', d: '#3b5dc9' }, rows: [
+    '................',
+    '................',
+    '................',
+    '.....llmmmm.....',
+    '....lllmmmmm....',
+    '...llmmmmmmdd...',
+    '..lmmmmmmmmmdd..',
+    '..dmmmmmmmmmmd..',
+    '...dmmmmmmmmd...',
+    '....dmmmmmmd....',
+    '.....dmmmmd.....',
+    '......dmmd......',
+    '.......dd.......',
+    '................',
+    '................',
+    '................',
+  ] },
+  crate: { rows: [
+    '................',
+    '................',
+    '..hhhhhhhhhhhh..',
+    '..heeeeeeeeeeh..',
+    '..hebbbbbbbbbh..',
+    '..hbebbbbbbebh..',
+    '..hbbebbbbebbh..',
+    '..hbbbebbebbbh..',
+    '..hbbbbeebbbbh..',
+    '..hbbbbeebbbbh..',
+    '..hbbbebbebbbh..',
+    '..hbbebbbbebbh..',
+    '..hbebbbbbbebh..',
+    '..hebbbbbbbbeh..',
+    '..hhhhhhhhhhhh..',
+    '................',
+  ] },
+  helmet: { rows: [
+    '................',
+    '................',
+    '................',
+    '......gggg......',
+    '....gGGGGggg....',
+    '...gGGggggggg...',
+    '...gGgggggggg...',
+    '...gggggggggg...',
+    '...gkkkkkkkkg...',
+    '...ggggsggggg...',
+    '...gggssssggg...',
+    '...ggs.ss.sgg...',
+    '...ggs.ss.sgg...',
+    '...sss....sss...',
+    '................',
+    '................',
+  ] },
+  torch: { rows: [
+    '................',
+    '.......r........',
+    '......rro.......',
+    '......roor......',
+    '.....rroYor.....',
+    '.....roYYor.....',
+    '.....roYYor.....',
+    '......oYYo......',
+    '......hbbh......',
+    '......hbbh......',
+    '......hbbh......',
+    '.....sggggs.....',
+    '......sggs......',
+    '.......gg.......',
+    '.......gg.......',
+    '................',
+  ] },
+  'torch.2': { rows: [
+    '................',
+    '........r.......',
+    '.......orr......',
+    '......roor......',
+    '.....roYorr.....',
+    '.....roYYor.....',
+    '.....roYYor.....',
+    '......oYYo......',
+    '......hbbh......',
+    '......hbbh......',
+    '......hbbh......',
+    '.....sggggs.....',
+    '......sggs......',
+    '.......gg.......',
+    '.......gg.......',
+    '................',
+  ] },
+
+  // ---- room parts ----
+  ladder: { outline: false, rows: [
+    '..kbk......kbk..',
+    '..kek......kek..',
+    '..kbkkkkkkkkbk..',
+    '..kbeeeeeeeebk..',
+    '..kbbbbbbbbbbk..',
+    '..kbkkkkkkkkbk..',
+    '..kek......kek..',
+    '..kbk......kbk..',
+    '..kbk......kbk..',
+    '..kek......kek..',
+    '..kbkkkkkkkkbk..',
+    '..kbeeeeeeeebk..',
+    '..kbbbbbbbbbbk..',
+    '..kbkkkkkkkkbk..',
+    '..kek......kek..',
+    '..kbk......kbk..',
+  ] },
+  shelf: { outline: false, rows: [
+    'kkkkkkkkkkkkkkkk',
+    'eeeeeeeeeeeeeeee',
+    'bbbbbbbbbbbbbbbb',
+    'hhhhhhhhhhhhhhhh',
+    'kkkkkkkkkkkkkkkk',
+    '..kbk......kbk..',
+    '...kbk......kk..',
+    '....kk..........',
+  ] },
+  'tag.frame': { outline: false, rows: [
+    '.kkkkkkkkkkkkkkkkkkkkkk.',
+    'kbbbbbbbbbbbbbbbbbbbbbbk',
+    'kbccccccccccccccccccccbk',
+    'kbccccccccccccccccccccbk',
+    'kbccccccccccccccccccccbk',
+    'kbccccccccccccccccccccbk',
+    'kbccccccccccccccccccccbk',
+    'kbccccccccccccccccccccbk',
+    'kbccccccccccccccccccccbk',
+    'kbccccccccccccccccccccbk',
+    'kbccccccccccccccccccccbk',
+    'kbccccccccccccccccccccbk',
+    'khhhhhhhhhhhhhhhhhhhhhhk',
+    '.kkkkkkkkkkkkkkkkkkkkkk.',
+  ] },
+
+  // ---- hints and effects ----
+  // Big mitten for the wave buttons: the hero's LEFT hand seen from behind (thumb toward the body, i.e. right).
+  'hand.left': { pal: { m: '#ffcd75', d: '#d89a48' }, rows: [
+    '................',
+    '....d.d.d.......',
+    '...mmmmmmmm.....',
+    '...mdmdmdmm.....',
+    '...mdmdmdmm.....',
+    '...mmmmmmmm.mm..',
+    '...mmmmmmmmmmm..',
+    '...mmmmmmmmmmm..',
+    '...mmmmmmmmmm...',
+    '...mmmmmmmmm....',
+    '....mmmmmmmm....',
+    '....mmmmmmmm....',
+    '.....dddddd.....',
+    '.....mmmmmm.....',
+    '................',
+    '................',
+  ] },
+  // Footprint arrow (support level S3): points RIGHT, flip for left.
+  foot: { pal: { f: '#f4f4f4' }, rows: [
+    '................',
+    '................',
+    '.........f......',
+    '.........ff.....',
+    '.........fff....',
+    '.........ffff...',
+    '..ffffffffffff..',
+    '..fffffffffffff.',
+    '..fffffffffffff.',
+    '..ffffffffffff..',
+    '.........ffff...',
+    '.........fff....',
+    '.........ff.....',
+    '.........f......',
+    '................',
+    '................',
+  ] },
+  sparkle: { outline: false, rows: [
+    '....W....',
+    '....W....',
+    '...WYW...',
+    '...YyY...',
+    'WWYyyyYWW',
+    '...YyY...',
+    '...WYW...',
+    '....W....',
+    '....W....',
+  ] },
+  coin: { rows: [
+    '............',
+    '....yyyy....',
+    '...yYYyyy...',
+    '..yYyyyyyy..',
+    '..yYyhhyyy..',
+    '..yyyhyyyy..',
+    '..yyyhyyyy..',
+    '..yyyhyyyy..',
+    '..yyhhhyyy..',
+    '...yyyyyy...',
+    '....yyyy....',
+    '............',
+  ] },
+  // Foam sword held by the back-view hero (grip at the bottom).
+  'sword.foam': { pal: { f: '#73bed3', F: '#c9f0ff' }, rows: [
+    '.......',
+    '...f...',
+    '..fFf..',
+    '..fFf..',
+    '..fFf..',
+    '.yyyyy.',
+    '...h...',
+    '.......',
+  ] },
+
+  // Chest-only costume helmets (front; back is the front with the face hole filled unless '.back' exists).
+  'helmetCap.front': { outline: false, size: [16, 16], pal: { r: '#e84537', R: '#ff8a7a', s: '#a8302a', S: '#7a2020' }, rows: [
+    '................',
+    '.....ssssss.....',
+    '....srrRRrrs....',
+    '....srrrrrrs....',
+    '...SSSSSSSSSS...',
+  ] },
+  'helmetCap.back': { outline: false, size: [16, 16], pal: { r: '#e84537', R: '#ff8a7a', s: '#a8302a' }, rows: [
+    '................',
+    '.....ssssss.....',
+    '....srrrrrrs....',
+    '....srrrrrrs....',
+    '....ssssssss....',
+  ] },
+  'helmetFlower.front': { outline: false, size: [16, 16], pal: { g: '#38b764', P: '#ef84b4', w: '#f4f4f4' }, rows: [
+    '................',
+    '................',
+    '....PP.ww.PP....',
+    '...gPYgwYgPYg...',
+    '....gggggggg....',
+  ] },
+  'helmetFlower.back': { outline: false, size: [16, 16], pal: { g: '#38b764', P: '#ef84b4', w: '#f4f4f4' }, rows: [
+    '................',
+    '................',
+    '....ww.PP.ww....',
+    '...gwYgPYgwYg...',
+    '....gggggggg....',
+  ] },
+  'helmetPirate.front': { outline: false, size: [16, 16], pal: { k: '#2b2b3a', K: '#45455a' }, rows: [
+    '................',
+    '.....kkkkkk.....',
+    '....kKKkkkkk....',
+    '..kkkkkYYkkkkk..',
+    '.kyyyyyyyyyyyyk.',
+    '..k..........k..',
+  ] },
+  'helmetPirate.back': { outline: false, size: [16, 16], pal: { k: '#2b2b3a', K: '#45455a' }, rows: [
+    '................',
+    '.....kkkkkk.....',
+    '....kkkkkkKk....',
+    '..kkkkkkkkkkkk..',
+    '.kyyyyyyyyyyyyk.',
+    '..k..........k..',
+  ] },
+
+  // Chest-only pets, 12 × 12, facing right.
+  'pet.chick': { pal: { m: '#ffd84a', l: '#fff3b0', B: '#ef7d57' }, rows: [
+    '............',
+    '.....mm.....',
+    '....mmmm....',
+    '...mmmmWKm..',
+    '...mmmmmmBB.',
+    '..mmmmmmmm..',
+    '..mllmmmmm..',
+    '..mllmmmmm..',
+    '...mmmmmm...',
+    '....B..B....',
+    '............',
+    '............',
+  ] },
+  'pet.bunny': { pal: { w: '#f4f4f4', l: '#c0cbdc', n: '#f28fb0' }, rows: [
+    '......ww....',
+    '......wnw...',
+    '......wnw...',
+    '......wwwww.',
+    '.....wwwWKw.',
+    '.....wwwwwn.',
+    '..wwwwwwww..',
+    '.wwwwwwwww..',
+    'lwwwwwwwww..',
+    '..ww....ww..',
+    '............',
+    '............',
+  ] },
+  'pet.frog': { pal: { m: '#5ab552', l: '#c8f08a', d: '#2f7a3a' }, rows: [
+    '............',
+    '............',
+    '.....mm.mm..',
+    '....mWKmWKm.',
+    '...mmmmmmmm.',
+    '..mmmmmmkkm.',
+    '..mllllllmm.',
+    '.mmllllllmm.',
+    '.dmmmmmmmmm.',
+    '.dd.m..m.mm.',
+    '............',
+    '............',
+  ] },
+
+  // ---- hero parts drawn in code (Kenney has no hood and no back view) ----
+  // 16 × 16 layers on the Kenney body grid: head rows 2–6, cols 4–11.
+  // No automatic outline on hero layers (Kenney's layers have none, and it would cover the eyes).
+  'helmetHood.front': { outline: false, pal: { h: '#5ea45a', s: '#3e7a3c' }, rows: [
+    '................',
+    '.....ssssss.....',
+    '....shhhhhhs....',
+    '...shhhhhhhhs...',
+    '...shs....shs...',
+    '...sh......hs...',
+    '...sh......hs...',
+    '..shhs....shhs..',
+    '..shhhhhhhhhhs..',
+    '................',
+    '................',
+    '................',
+    '................',
+    '................',
+    '................',
+    '................',
+  ] },
+  'helmetHood.back': { outline: false, pal: { h: '#5ea45a', s: '#3e7a3c' }, rows: [
+    '................',
+    '.....ssssss.....',
+    '....shhhhhhs....',
+    '...shhhhhhhhs...',
+    '...shhhhhhhhs...',
+    '...shhhhhhhhs...',
+    '...shhhhhhhhs...',
+    '..shhhhhhhhhhs..',
+    '..shhhhhhhhhhs..',
+    '...shhhhhhhhs...',
+    '....ssssssss....',
+    '................',
+    '................',
+    '................',
+    '................',
+    '................',
+  ] },
+};
+
+/** Back-view hair per style ('h' hair colour, 's' its shade), drawn over the eye-less body. */
+export const HAIR_BACK = {
+  short: [
+    '................',
+    '................',
+    '.....ssssss.....',
+    '....shhhhhhs....',
+    '....shhhhhhs....',
+    '....shhhhhhs....',
+    '................',
+  ],
+  spiky: [
+    '................',
+    '.....s..s..s....',
+    '.....hs.hs.hs...',
+    '....shhhhhhs....',
+    '....shhhhhhs....',
+    '....shhhhhhs....',
+    '................',
+  ],
+  bob: [
+    '.....ssssss.....',
+    '....shhhhhhs....',
+    '...shhhhhhhhs...',
+    '...shhhhhhhhs...',
+    '...shhhhhhhhs...',
+    '...shhhhhhhhs...',
+    '....ssssssss....',
+  ],
+  long: [
+    '................',
+    '.....ssssss.....',
+    '....shhhhhhs....',
+    '...shhhhhhhhs...',
+    '...shhhhhhhhs...',
+    '...shhhhhhhhs...',
+    '...shhhhhhhhs...',
+    '...shhhhhhhhs...',
+    '....shhhhhhs....',
+    '....shhhhhhs....',
+    '.....ssssss.....',
+  ],
+  buns: [
+    '......ssss......',
+    '......shhs......',
+    '.....sshhss.....',
+    '....shhhhhhs....',
+    '....shhhhhhs....',
+    '....shhhhhhs....',
+    '................',
+  ],
+};
+
+/** Marks on the chests: a cream badge (cols 4–11, rows 4–11) on the Tiny Dungeon chest with a 6 × 6 dark mark
+ *  (cols 5–10, rows 5–10). Same colours on every chest; only the shape differs. */
+export const CHEST_MARKS = {
+  star:  ['..##..', '..##..', '######', '.####.', '.####.', '##..##'],
+  moon:  ['..###.', '.##...', '##....', '##....', '.##...', '..###.'],
+  heart: ['......', '##..##', '######', '######', '.####.', '..##..'],
+  sun:   ['#.##.#', '.####.', '######', '######', '.####.', '#.##.#'],
+};

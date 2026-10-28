@@ -4,6 +4,7 @@ import {
   toDate, fallbackName, buildStudentIndex, countMedals, worldClearCounts, WORLD_TOTAL_LEVELS,
   buildOverviewRows, sortRows, buildAttemptRows, filterAttemptRows, formatDuration, scoreOrStars,
   csvEscape, toCSV, overviewToCSVRows, OVERVIEW_HEADERS, attemptsToCSVRows, ATTEMPTS_HEADERS, csvFilename,
+  DUNGEON_ROOMS, OVERVIEW_GAMES, MIXUP_PAIRS,
 } from '../teacher-data.js';
 
 // ---------- toDate ----------
@@ -233,4 +234,38 @@ test('buildOverviewRows splits attempts per game and picks best Robot Workshop s
   assert.equal(amy.shapesRush.a, 17);
   assert.equal(ben.byGame.numbers.active, true);
   assert.equal(ben.byGame.shapes.active, false);
+});
+
+test('DUNGEON_ROOMS lists the 22 Treasure Dungeon rooms in order', () => {
+  assert.equal(DUNGEON_ROOMS.length, 22);
+  assert.deepEqual(DUNGEON_ROOMS.slice(0, 7), ['F1R1', 'F1R2', 'F1R3', 'F1R4', 'F1R5', 'F1R6', 'F2R1']);
+  assert.equal(DUNGEON_ROOMS[21], 'F4R5');
+  assert.ok(OVERVIEW_GAMES.includes('dungeon'));
+  assert.deepEqual(MIXUP_PAIRS.map((p) => p.label), ['左↔右', '前↔後', '上↔下']);
+});
+
+test('buildOverviewRows picks best Treasure Dungeon stars / rush and counts mix-ups', () => {
+  const ts = (d) => new Date(d);
+  const rows = buildOverviewRows({
+    attempts: [
+      { uid: 'u1', name: 'Amy', game: 'dungeon', mode: 'dungeonF1R1', kind: 'level', stars: 2, durationSec: 60, ts: ts('2026-10-01T09:00:00Z'),
+        confusions: [{ item: 'left', picked: 'right' }, { item: 'right', picked: 'left' }] },
+      { uid: 'u1', name: 'Amy', game: 'dungeon', mode: 'dungeonF1R1', kind: 'level', stars: 3, durationSec: 60, ts: ts('2026-10-02T09:00:00Z'),
+        confusions: [{ want: 'front', picked: 'back' }, { item: 'above', picked: 'below' }, { item: 'left', picked: 'between' }] },
+      { uid: 'u1', name: 'Amy', game: 'dungeon', mode: 'dungeonRush', kind: 'timed', score: 12, durationSec: 60, ts: ts('2026-10-03T09:00:00Z') },
+    ],
+    scores: [{ uid: 'u1', playerName: 'Amy', mode: 'dungeonRush', score: 17 }, { uid: 'u2', playerName: 'Ben', mode: 'num1', score: 5 }],
+    bondsProgress: [],
+  });
+  const amy = rows.find((r) => r.uid === 'u1'), ben = rows.find((r) => r.uid === 'u2');
+  assert.equal(amy.byGame.dungeon.attempts, 3);
+  assert.equal(amy.byGame.dungeon.active, true);
+  assert.equal(amy.dungeonStars.F1R1, 3);
+  assert.equal(amy.dungeonStars.F4R5, null);
+  assert.equal(Object.keys(amy.dungeonStars).length, 22);
+  assert.equal(amy.dungeonRush, 17);
+  assert.deepEqual(amy.dungeonMixups, { lr: 2, fb: 1, ud: 1 });
+  assert.equal(ben.byGame.dungeon.active, false);
+  assert.equal(ben.dungeonRush, null);
+  assert.deepEqual(ben.dungeonMixups, { lr: 0, fb: 0, ud: 0 });
 });

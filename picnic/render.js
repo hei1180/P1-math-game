@@ -4,8 +4,8 @@
 //   api.partial(msg)            a correct inner step (count-on finished, one card equation found…)
 //   api.say(msg)                buddy speaks without judging
 // and returns { reveal() } — the last scaffold rung: show the right answer so the child can finish errorlessly.
-import { eqMatches, eqIsTrue } from '../picnic-logic.js?v=202610100109';
-import { audio } from './audio.js?v=202610100109';
+import { eqMatches, eqIsTrue } from '../picnic-logic.js?v=202610112341';
+import { audio } from './audio.js?v=202610112341';
 
 export function h(tag, attrs = {}, ...kids) {
   const el = document.createElement(tag);

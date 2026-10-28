@@ -1,16 +1,16 @@
 // Robot Workshop entry: DOM shell wiring, bridge to shared.js, three.js boot.
 import { signIn, onUser, player, settings, session, enterTestMode, initAudio, engine, resetEngine, registerHit, endFever,
-         startTimer, stopTimer, saveScore, renderLeaderboard, showRankPopup, mountTeacherModal, sharedSound, logAttempt, isTeacherEmail } from '../shared.js?v=202610100109';
-import { recordResult, validateGalleryEntry, ZONES, lcg, SLOTS, BASIC_PART, markSeen } from '../shapes-logic.js?v=202610100109';
-import { loadProgress, saveProgress, loadGallery, saveGalleryEntry, setGalleryHidden } from '../shapes-progress.js?v=202610100109';
-import { sfx } from './sfx.js?v=202610100109';
-import { voice } from './engine/voice.js?v=202610100109';
-import { motion } from './engine/tween.js?v=202610100109';
-import { Stage } from './engine/stage.js?v=202610100109';
-import { Input } from './engine/input.js?v=202610100109';
-import { SceneManager } from './engine/scenes.js?v=202610100109';
-import { ui } from './ui/overlay.js?v=202610100109';
-import { SCENES } from './scenes/index.js?v=202610100109';
+         startTimer, stopTimer, saveScore, renderLeaderboard, showRankPopup, mountTeacherModal, sharedSound, logAttempt, isTeacherEmail } from '../shared.js?v=202610112341';
+import { recordResult, validateGalleryEntry, ZONES, lcg, SLOTS, BASIC_PART, markSeen } from '../shapes-logic.js?v=202610112341';
+import { loadProgress, saveProgress, loadGallery, saveGalleryEntry, setGalleryHidden } from '../shapes-progress.js?v=202610112341';
+import { sfx } from './sfx.js?v=202610112341';
+import { voice } from './engine/voice.js?v=202610112341';
+import { motion } from './engine/tween.js?v=202610112341';
+import { Stage } from './engine/stage.js?v=202610112341';
+import { Input } from './engine/input.js?v=202610112341';
+import { SceneManager } from './engine/scenes.js?v=202610112341';
+import { ui } from './ui/overlay.js?v=202610112341';
+import { SCENES } from './scenes/index.js?v=202610112341';
 
 const $ = id => document.getElementById(id);
 const params = new URLSearchParams(location.search);

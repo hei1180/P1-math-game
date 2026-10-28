@@ -8,7 +8,7 @@ rules_version = '2';
 // Rules tab -> paste this whole file -> Publish. See docs/teacher-data-setup.md
 // for a teacher-friendly walkthrough.
 //
-// Collections used by the app today: settings, scores, bondsProgress, shapesProgress, picnicProgress, robotGallery, attempts.
+// Collections used by the app today: settings, scores, bondsProgress, shapesProgress, picnicProgress, robotGallery, dungeonProgress, dungeonGallery, attempts.
 // Everything else is denied by default.
 
 service cloud.firestore {
@@ -126,6 +126,17 @@ service cloud.firestore {
       allow write: if isSignedIn() && request.auth.uid == uid;
     }
 
+    // ---- dungeonProgress/{uid} -------------------------------------------------
+    // Treasure Dungeon's twin of shapesProgress: one doc per player (stars per
+    // room, coins, hero, looks). A player reads/writes only their own doc; the
+    // teacher may also read any doc for the dashboard, never write one. The
+    // shape comes from dungeon-progress.js and may keep changing, so it is not
+    // field-validated here beyond the ownership check.
+    match /dungeonProgress/{uid} {
+      allow read: if isSignedIn() && (request.auth.uid == uid || isTeacher());
+      allow write: if isSignedIn() && request.auth.uid == uid;
+    }
+
     // ---- robotGallery/{uid} ----------------------------------------------------
     // The class gallery: one doc per player holding their robot and up to six
     // creations. Any signed-in player may read the ones that are not hidden
@@ -156,6 +167,35 @@ service cloud.firestore {
         && d.hidden is bool;
     }
 
+    // ---- dungeonGallery/{uid} --------------------------------------------------
+    // Treasure Dungeon's class gallery: one doc per player holding their hero look
+    // and equipment, and the name they already show on the leaderboard. Same shape
+    // as robotGallery: any signed-in player may read the non-hidden docs (their own
+    // and the teacher's reads always work); a player may create/edit only their OWN
+    // doc and can never change "hidden"; the teacher flips "hidden" (and nothing
+    // else) on any doc, and only the teacher may delete.
+    match /dungeonGallery/{uid} {
+      allow read: if isSignedIn() && (resource.data.hidden == false || request.auth.uid == uid || isTeacher());
+      allow create: if isSignedIn() && request.auth.uid == uid
+        && validDungeonGallery(request.resource.data) && request.resource.data.hidden == false;
+      allow update: if isSignedIn() && (
+          (request.auth.uid == uid && validDungeonGallery(request.resource.data)
+            && request.resource.data.hidden == resource.data.hidden)
+        || (isTeacher() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['hidden'])
+            && request.resource.data.hidden is bool));
+      allow delete: if isTeacher();
+    }
+
+    // Field checks for a dungeon gallery doc: only these keys, a bounded name and
+    // small look maps, so nobody can stuff a huge payload into the shared gallery.
+    function validDungeonGallery(d) {
+      return d.keys().hasOnly(['playerName', 'hero', 'equipped', 'hidden', 'updatedAt'])
+        && d.playerName is string && d.playerName.size() <= 100
+        && d.hero is map && d.hero.size() <= 8
+        && d.equipped is map && d.equipped.size() <= 8
+        && d.hidden is bool;
+    }
+
     // ---- attempts/{autoId} -----------------------------------------------------
     // One document per finished game (the readable history the old
     // best-score-only data couldn't give). Students can only ever CREATE
@@ -181,7 +221,7 @@ service cloud.firestore {
     function validAttempt(d) {
       return d.keys().hasAll(['uid', 'game', 'mode', 'kind'])
         && d.uid is string
-        && d.game is string && d.game in ['market', 'numbers', 'bonds', 'shapes', 'picnic']
+        && d.game is string && d.game in ['market', 'numbers', 'bonds', 'shapes', 'picnic', 'dungeon']
         && d.mode is string && d.mode.size() <= 50
         && d.kind is string && d.kind in ['timed', 'level']
         && optionalString(d, 'name', 200)

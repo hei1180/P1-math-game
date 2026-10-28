@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Teacher Dashboard 老師資料板</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="shared.css?v=202610100109">
+    <link rel="stylesheet" href="shared.css?v=202610112341">
     <style>
         /* This page scrolls (unlike the games) — undo shared.css's fixed-body lock. */
         body { position: static; overflow: auto; user-select: text; -webkit-user-select: text; background-color: #f8fafc; }
@@ -146,17 +146,17 @@
     </div>
 
     <script type="module">
-        import { signIn, onUser, db, auth, isTeacherEmail } from './shared.js?v=202610100109';
+        import { signIn, onUser, db, auth, isTeacherEmail } from './shared.js?v=202610112341';
         import {
             collection, getDocs, query, where, orderBy, Timestamp,
         } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js';
         import {
             buildOverviewRows, buildAttemptRows, filterAttemptRows, sortRows,
-            MEDAL_ICON, WORLD_TOTAL_LEVELS, SHAPES_COURSES, PICNIC_LEVELS,
+            MEDAL_ICON, WORLD_TOTAL_LEVELS, SHAPES_COURSES, PICNIC_LEVELS, DUNGEON_ROOMS, MIXUP_PAIRS,
             toCSV, overviewToCSVRows, OVERVIEW_HEADERS, attemptsToCSVRows, ATTEMPTS_HEADERS, csvFilename,
             GAME_LABEL,
-        } from './teacher-data.js?v=202610100109';
-        import { WORLDS, LEVEL_COUNT, levelKey } from './bonds-logic.js?v=202610100109';
+        } from './teacher-data.js?v=202610112341';
+        import { WORLDS, LEVEL_COUNT, levelKey } from './bonds-logic.js?v=202610112341';
 
 
         const $ = id => document.getElementById(id);
@@ -294,7 +294,16 @@
                 col('shapesRush.b', 'Rush<br>平面', r => dash(r.shapesRush.b))] },
             { key: 'picnic', label: GAME_LABEL.picnic, cols: [nameCol, lastCol('picnic'), minCol('picnic'),
                 ...PICNIC_LEVELS.map(k => col(`picnicStars.${k}`, `${k.replace(/\d/, '<br>L$&')}<br>⭐`, r => starStr(r.picnicStars[k])))] },
+            { key: 'dungeon', label: GAME_LABEL.dungeon, cols: [nameCol, lastCol('dungeon'), minCol('dungeon'),
+                ...DUNGEON_ROOMS.map(k => col(`dungeonStars.${k}`, `${k}<br>⭐`, r => starStr(r.dungeonStars[k]))),
+                col('dungeonRush', 'Rush<br>寶藏快手', r => dash(r.dungeonRush)),
+                col('dungeonMixups.lr', '常見混淆<br>Top mix-ups', r => mixupStr(r.dungeonMixups))] },
         ];
+        /** '左↔右 ×3 · 前↔後 ×1', most frequent first; '-' when none. */
+        function mixupStr(m) {
+            const parts = MIXUP_PAIRS.filter(p => m[p.key] > 0).sort((a, b) => m[b.key] - m[a.key]).map(p => `${p.label} ×${m[p.key]}`);
+            return parts.length ? parts.join(' · ') : '-';
+        }
         const gameTab = () => GAME_TABS.find(t => t.key === state.gameTab) || GAME_TABS[0];
 
         function buildGameTabs() {
@@ -490,7 +499,7 @@
                 for (let i = 0; i < nAttempts; i++) {
                     const daysAgo = rand(0, 40);
                     const ts = fakeTimestamp(new Date(Date.now() - daysAgo * 86400000 - rand(0, 80000) * 1000));
-                    const pool = pick(['market', 'numbers', 'bonds-level', 'bonds-rush', 'shapes-level', 'shapes-rush', 'picnic-level']);
+                    const pool = pick(['market', 'numbers', 'bonds-level', 'bonds-rush', 'shapes-level', 'shapes-rush', 'picnic-level', 'dungeon-level', 'dungeon-rush']);
                     let attempt;
                     if (pool === 'market') {
                         const mode = pick(marketModes);
@@ -522,6 +531,18 @@
                         const mode = pick(['shapes3d', 'shapes2d']);
                         const score = rand(8, 90);
                         attempt = { uid: s.uid, name: s.name, email: s.email, game: 'shapes', mode, kind: 'timed', score, accuracy: rand(50, 100), maxCombo: rand(1, 8), stars: null, mistakes: null, durationSec: 60, ts, day: '' };
+                        const key = `${s.uid}_${mode}`;
+                        if (!scoreBest.has(key) || scoreBest.get(key).score < score) scoreBest.set(key, { uid: s.uid, playerName: s.name, email: s.email, mode, score });
+                    } else if (pool === 'dungeon-level') {
+                        const room = pick(DUNGEON_ROOMS);
+                        const mistakes = rand(0, 4);
+                        const pairs = room.startsWith('F1') ? [['left', 'right']] : room.startsWith('F2') ? [['front', 'back']] : room.startsWith('F3') ? [['above', 'below']] : [['left', 'right'], ['front', 'back'], ['above', 'below']];
+                        const confusions = Array.from({ length: Math.min(mistakes, 5) }, () => { const [a, b] = pick(pairs); return rand(0, 1) ? { item: a, picked: b } : { item: b, picked: a }; });
+                        attempt = { uid: s.uid, name: s.name, email: s.email, game: 'dungeon', mode: 'dungeon' + room, kind: 'level', score: null, accuracy: null, maxCombo: null, stars: mistakes === 0 ? 3 : mistakes <= 2 ? 2 : 1, mistakes, durationSec: rand(60, 180), confusions, ts, day: '' };
+                    } else if (pool === 'dungeon-rush') {
+                        const mode = 'dungeonRush';
+                        const score = rand(8, 90);
+                        attempt = { uid: s.uid, name: s.name, email: s.email, game: 'dungeon', mode, kind: 'timed', score, accuracy: rand(50, 100), maxCombo: rand(1, 8), stars: null, mistakes: null, durationSec: 60, ts, day: '' };
                         const key = `${s.uid}_${mode}`;
                         if (!scoreBest.has(key) || scoreBest.get(key).score < score) scoreBest.set(key, { uid: s.uid, playerName: s.name, email: s.email, mode, score });
                     } else {

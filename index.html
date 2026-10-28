@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Math Market Mini-Boss</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="shared.css?v=202610100109">
+    <link rel="stylesheet" href="shared.css?v=202610112341">
 </head>
 <body class="h-[100dvh] w-full flex flex-col relative">
 
@@ -30,6 +30,7 @@
             <a href="bonds.html" class="bubbly-btn bg-white text-orange-600 font-bold text-2xl md:text-3xl py-5 rounded-2xl border-4 border-orange-300 w-full text-center block">🚂 Rod Town 數棒鎮<br><span class="text-sm font-normal text-gray-500">合成與分解 2-18</span></a>
             <a href="shapes.html" class="bubbly-btn bg-white text-emerald-600 font-bold text-2xl md:text-3xl py-5 rounded-2xl border-4 border-emerald-300 w-full text-center block">🤖 Robot Workshop<br><span class="text-sm font-normal text-gray-500">形狀機械人工場 · 立體・平面</span></a>
             <a href="picnic.html" class="bubbly-btn bg-white text-lime-700 font-bold text-2xl md:text-3xl py-5 rounded-2xl border-4 border-lime-300 w-full text-center block">🧺 Picnic Park 野餐樂園<br><span class="text-sm font-normal text-gray-500">基本加法和減法 · 加法・減法・0</span></a>
+            <a href="position.html" class="bubbly-btn bg-white text-amber-600 font-bold text-2xl md:text-3xl py-5 rounded-2xl border-4 border-amber-300 w-full text-center block">🗝️ Treasure Dungeon<br><span class="text-sm font-normal text-gray-500">尋寶地下城 · 上下左右前後</span></a>
         </div>
     </div>
 
@@ -107,8 +108,8 @@
     <script type="module">
         import { signIn, onUser, settings, initAudio, playSound, spawnParticle, replay,
                  engine, resetEngine, registerHit, triggerWiggle, endFever, startTimer, stopTimer,
-                 saveScore, renderLeaderboard, refreshLevelButton, isUnlocked, showRankPopup, mountTeacherModal } from './shared.js?v=202610100109';
-        import { squish, bounce, popScore, flashRed, burst, flyTo, react } from './juice.js?v=202610100109';
+                 saveScore, renderLeaderboard, refreshLevelButton, isUnlocked, showRankPopup, mountTeacherModal } from './shared.js?v=202610112341';
+        import { squish, bounce, popScore, flashRed, burst, flyTo, react } from './juice.js?v=202610112341';
 
         const $ = id => document.getElementById(id);
         const TABS = [{ key: 'easy', label: 'Easy' }, { key: 'medium', label: 'Medium' }, { key: 'hard', label: 'Hard' }];

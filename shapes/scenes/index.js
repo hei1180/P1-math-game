@@ -1,20 +1,20 @@
 // Every scene of Robot Workshop, by key. Later tasks replace their own file; this list stays.
-import { BootScene } from './BootScene.js?v=202610100109';
-import { WorkshopScene } from './WorkshopScene.js?v=202610100109';
-import { A1Roll } from './courses/A1Roll.js?v=202610100109';
-import { A2Stack } from './courses/A2Stack.js?v=202610100109';
-import { A3Bag } from './courses/A3Bag.js?v=202610100109';
-import { A4Everyday } from './courses/A4Everyday.js?v=202610100109';
-import { B1Lines } from './courses/B1Lines.js?v=202610100109';
-import { B2Muncher } from './courses/B2Muncher.js?v=202610100109';
-import { B3Pegboard } from './courses/B3Pegboard.js?v=202610100109';
-import { B4Silhouette } from './courses/B4Silhouette.js?v=202610100109';
-import { BossScene } from './BossScene.js?v=202610100109';
-import { RushScene } from './RushScene.js?v=202610100109';
-import { GarageScene } from './GarageScene.js?v=202610100109';
-import { FreeBuildScene } from './FreeBuildScene.js?v=202610100109';
-import { GalleryScene } from './GalleryScene.js?v=202610100109';
-import { SandboxScene } from './SandboxScene.js?v=202610100109';
+import { BootScene } from './BootScene.js?v=202610112341';
+import { WorkshopScene } from './WorkshopScene.js?v=202610112341';
+import { A1Roll } from './courses/A1Roll.js?v=202610112341';
+import { A2Stack } from './courses/A2Stack.js?v=202610112341';
+import { A3Bag } from './courses/A3Bag.js?v=202610112341';
+import { A4Everyday } from './courses/A4Everyday.js?v=202610112341';
+import { B1Lines } from './courses/B1Lines.js?v=202610112341';
+import { B2Muncher } from './courses/B2Muncher.js?v=202610112341';
+import { B3Pegboard } from './courses/B3Pegboard.js?v=202610112341';
+import { B4Silhouette } from './courses/B4Silhouette.js?v=202610112341';
+import { BossScene } from './BossScene.js?v=202610112341';
+import { RushScene } from './RushScene.js?v=202610112341';
+import { GarageScene } from './GarageScene.js?v=202610112341';
+import { FreeBuildScene } from './FreeBuildScene.js?v=202610112341';
+import { GalleryScene } from './GalleryScene.js?v=202610112341';
+import { SandboxScene } from './SandboxScene.js?v=202610112341';
 
 export const SCENES = {
   Boot: BootScene, Workshop: WorkshopScene,

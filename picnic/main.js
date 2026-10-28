@@ -6,14 +6,14 @@
 //   then shows the answer so the child finishes errorlessly; adaptive difficulty follows first-try answers.
 // - Reinforcement: instant sound + praise, a treat flies to the basket for every answer, a bonus for three
 //   first-try answers in a row, stars per level, a sticker and unit notes when a chapter is finished.
-import { signIn, onUser, player, settings, session, enterTestMode, mountTeacherModal, logAttempt } from '../shared.js?v=202610100109';
+import { signIn, onUser, player, settings, session, enterTestMode, mountTeacherModal, logAttempt } from '../shared.js?v=202610112341';
 import {
   CHAPTERS, LEVELS, QUESTIONS_PER_LEVEL, chapter, levelOf, levelKey, modeKey, makeRng, makeQuestion, nextDiff, startDiff,
   starsFor, isChapterOpen, isLevelOpen, chapterStars, recordResult, PRAISE, RETRY,
-} from '../picnic-logic.js?v=202610100109';
-import { loadProgress, saveProgress } from '../picnic-progress.js?v=202610100109';
-import { audio } from './audio.js?v=202610100109';
-import { h, RENDER, visual, equation, burstAt, flyEmoji, shake, popIn } from './render.js?v=202610100109';
+} from '../picnic-logic.js?v=202610112341';
+import { loadProgress, saveProgress } from '../picnic-progress.js?v=202610112341';
+import { audio } from './audio.js?v=202610112341';
+import { h, RENDER, visual, equation, burstAt, flyEmoji, shake, popIn } from './render.js?v=202610112341';
 
 const $ = id => document.getElementById(id);
 const app = () => $('app');

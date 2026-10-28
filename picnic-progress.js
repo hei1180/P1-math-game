@@ -1,7 +1,7 @@
 // Picnic Park progress: Firestore picnicProgress/{uid} + localStorage mirror, merged on load.
-import { db, player } from './shared.js?v=202610100109';
+import { db, player } from './shared.js?v=202610112341';
 import { doc, getDoc, setDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js';
-import { emptyProgress, mergeProgress } from './picnic-logic.js?v=202610100109';
+import { emptyProgress, mergeProgress } from './picnic-logic.js?v=202610112341';
 
 const lsKey = uid => `picnicProgress:${uid}`;
 const readLocal = uid => { try { return JSON.parse(localStorage.getItem(lsKey(uid)) || 'null'); } catch (e) { return null; } };

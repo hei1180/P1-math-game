@@ -1,6 +1,6 @@
 // Picnic Park sounds (tiny Web Audio synth) and Cantonese read-aloud (speechSynthesis, zh-HK when available).
 // One 🔊 switch mutes both. Call audio.unlock() on the first user gesture.
-import { speakable } from '../picnic-logic.js?v=202610100109';
+import { speakable } from '../picnic-logic.js?v=202610112341';
 
 const AC = window.AudioContext || window.webkitAudioContext;
 let ctx = null;
